@@ -1,0 +1,158 @@
+Source: rdkit
+Section: science
+Priority: optional
+Maintainer: Debichem Team <debichem-devel@lists.alioth.debian.org>
+Uploaders: Michael Banck <mbanck@debian.org>
+Build-Depends: debhelper (>= 7.0.50~), cmake, flex, bison, python-support, python-dev, python-numpy, libsqlite3-dev, libboost-dev, libboost-regex-dev, libboost-python-dev
+Standards-Version: 3.9.2
+Homepage: http://www.rdkit.org
+Vcs-Browser: http://svn.debian.org/wsvn/debichem/unstable/rdkit/
+Vcs-Svn: svn://svn.debian.org/svn/debichem/unstable/rdkit/
+DM-Upload-Allowed: yes
+
+Package: python-rdkit
+Section: python
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, rdkit-data
+Suggests: rdkit-doc
+Description: Collection of cheminformatics and machine-learning software
+ RDKit is a Python/C++ based cheminformatics and machine-learning software
+ environment.  Features Include:
+ .
+  * Chemical reaction handling and transforms
+  * Substructure searching with SMARTS
+  * Canonical SMILES
+  * Molecule-molecule alignment
+  * Large number of descriptors
+  * Fragmentation using RECAP rules
+  * 2D coordinate generation and depiction
+  * 3D coordinate generation using geometry embedding
+  * UFF forcefield
+  * Calculation of (R/S) stereochemistry codes
+  * Pharmacophore searching
+  * Calculation of shape similarity
+  * Atom pairs and topological torsions fingerprints
+  * Feature maps and feature-maps vectors
+  * Machine-learning algorithms
+  * Gasteiger-Marsili partial charge calculation
+ .
+ File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
+ format.
+
+Package: rdkit-doc
+Section: science
+Architecture: all
+Description: Collection of cheminformatics and machine-learning software (documentation)
+ RDKit is a Python/C++ based cheminformatics and machine-learning software
+ environment.  Features Include:
+ .
+  * Chemical reaction handling and transforms
+  * Substructure searching with SMARTS
+  * Canonical SMILES
+  * Molecule-molecule alignment
+  * Large number of descriptors
+  * Fragmentation using RECAP rules
+  * 2D coordinate generation and depiction
+  * 3D coordinate generation using geometry embedding
+  * UFF forcefield
+  * Calculation of (R/S) stereochemistry codes
+  * Pharmacophore searching
+  * Calculation of shape similarity
+  * Atom pairs and topological torsions fingerprints
+  * Feature maps and feature-maps vectors
+  * Machine-learning algorithms
+  * Gasteiger-Marsili partial charge calculation
+ .
+ File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
+ format.
+ .
+ This package contains the documentation.
+
+Package: rdkit-data
+Section: science
+Architecture: all
+Description: Collection of cheminformatics and machine-learning software (data files)
+ RDKit is a Python/C++ based cheminformatics and machine-learning software
+ environment.  Features Include:
+ .
+  * Chemical reaction handling and transforms
+  * Substructure searching with SMARTS
+  * Canonical SMILES
+  * Molecule-molecule alignment
+  * Large number of descriptors
+  * Fragmentation using RECAP rules
+  * 2D coordinate generation and depiction
+  * 3D coordinate generation using geometry embedding
+  * UFF forcefield
+  * Calculation of (R/S) stereochemistry codes
+  * Pharmacophore searching
+  * Calculation of shape similarity
+  * Atom pairs and topological torsions fingerprints
+  * Feature maps and feature-maps vectors
+  * Machine-learning algorithms
+  * Gasteiger-Marsili partial charge calculation
+ .
+ File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
+ format.
+ .
+ This package contains data files.
+
+Package: librdkit1
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Collection of cheminformatics and machine-learning software (shared libraries)
+ RDKit is a Python/C++ based cheminformatics and machine-learning software
+ environment.  Features Include:
+ .
+  * Chemical reaction handling and transforms
+  * Substructure searching with SMARTS
+  * Canonical SMILES
+  * Molecule-molecule alignment
+  * Large number of descriptors
+  * Fragmentation using RECAP rules
+  * 2D coordinate generation and depiction
+  * 3D coordinate generation using geometry embedding
+  * UFF forcefield
+  * Calculation of (R/S) stereochemistry codes
+  * Pharmacophore searching
+  * Calculation of shape similarity
+  * Atom pairs and topological torsions fingerprints
+  * Feature maps and feature-maps vectors
+  * Machine-learning algorithms
+  * Gasteiger-Marsili partial charge calculation
+ .
+ File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
+ format.
+ .
+ This package contains the shared libraries.
+
+Package: librdkit-dev
+Section: libdevel
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Collection of cheminformatics and machine-learning software (development files)
+ RDKit is a Python/C++ based cheminformatics and machine-learning software
+ environment.  Features Include:
+ .
+  * Chemical reaction handling and transforms
+  * Substructure searching with SMARTS
+  * Canonical SMILES
+  * Molecule-molecule alignment
+  * Large number of descriptors
+  * Fragmentation using RECAP rules
+  * 2D coordinate generation and depiction
+  * 3D coordinate generation using geometry embedding
+  * UFF forcefield
+  * Calculation of (R/S) stereochemistry codes
+  * Pharmacophore searching
+  * Calculation of shape similarity
+  * Atom pairs and topological torsions fingerprints
+  * Feature maps and feature-maps vectors
+  * Machine-learning algorithms
+  * Gasteiger-Marsili partial charge calculation
+ .
+ File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
+ format.
+ .
+ This package contains the header files.

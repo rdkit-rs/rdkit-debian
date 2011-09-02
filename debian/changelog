@@ -1,0 +1,5 @@
+rdkit (201106-1) unstable; urgency=low
+
+  * Initial upload (Closes: #64011).
+
+ -- Michael Banck <mbanck@debian.org>  Fri, 02 Sep 2011 15:05:11 +0200
