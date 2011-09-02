@@ -42,6 +42,7 @@ Description: Collection of cheminformatics and machine-learning software
 Package: rdkit-doc
 Section: science
 Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Collection of cheminformatics and machine-learning software (documentation)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
@@ -71,6 +72,7 @@ Description: Collection of cheminformatics and machine-learning software (docume
 Package: rdkit-data
 Section: science
 Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Collection of cheminformatics and machine-learning software (data files)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
