@@ -6,14 +6,18 @@ It was downloaded from:
 
     http://sourceforge.net/projects/rdkit/files/rdkit/
 
+The files under Docs/Book have been removed due to licensing issues (CC-BY-SA
+2.5).
+
 Upstream Authors:
 
     Greg Landrum and Julie Penzotti
 
 Copyright:
 
-*: Copyright (c) 2006-2011 Rational Discovery LLC, Greg Landrum, and Julie Penzotti
-Code/cmake/Modules/FindInchi.cmake: Copyright (c) 2010 Marcus D. Hanwell, <marcus@cryos.org>
+*: Copyright (c) 2006-2011 Rational Discovery LLC, Novartis Institutes for
+	BioMedical Research Inc,  Greg Landrum, and Julie Penzotti
+Code/cmake/Modules/FindInchi.cmake: Copyright (c) 2010 Marcus D. Hanwell
 Code/cmake/Modules/FindBISON.cmake: Copyright (c) 2006 Tristan Carel
 Code/cmake/Modules/FindFLEX.cmake: Copyright (c) 2006 Tristan Carel
 
@@ -48,6 +52,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Code/RDGeneral/hash/*: Copyright (c) 2005-2009 Daniel James
 Code/cmake/Modules/BoostUtils.cmake: Copyright (c) 2007 Douglas Gregor <doug.gregor@gmail.com>
 Code/cmake/Modules/BoostUtils.cmake: Copyright (c) 2007 Troy Straszheim
+Code/GraphMol/Substruct/ullmann.hpp: Copyright (c) 2003-2008 Vladimir J. Sykora
+                                     Copyright (c) 2007-2008 NCU Studies Ltd
 
 License: Boost Software License, Version 1.0.
 
@@ -72,6 +78,73 @@ SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE
 FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
+
+rdkit/sping/pid.py: Copyright (c) 1999 Joseph J. Strout
+rdkit/sping/PIL/pidPIL.py: Copyright (c) 1999 Joseph J. Strout
+rdkit/sping/Qt/pidQt.py: Copyright (c) 2002 Greg Landrum and Rational Discovery LLC
+rdkit/sping/ReportLab/pidReportLab.py: Copyright (c) 2005 Greg Landrum and
+	Rational Discovery LLC 
+rdkit/sping/SVG/pidSVG.py: Copyright cC) 2000 Greg Landrum
+
+License: LGPLv2 or later
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+On Debian GNU/Linux systems, the complete text of the GNU Lesser General
+Public License can be found in `/usr/share/common-licenses/LGPL'.
+
+rdkit/sping/WX/pidWX.py: Copyright (c) 2000 Paul & Kevin Jacobs
+
+License: GPLv2 or later
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+On Debian GNU/Linux systems, the complete text of the GNU General
+Public License can be found in `/usr/share/common-licenses/GPL'.
+
+External/cmim-1.0/*: Copyright (c) 2004 EPFL
+
+License: GPLv2
+
+This program is free software; you can redistribute it and/or 
+modify it under the terms of the GNU General Public License 
+version 2 as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+On Debian GNU/Linux systems, the complete text of the GNU General
+Public License can be found in `/usr/share/common-licenses/GPL'.
 
 Numerics/Alignment/AlignPoints.cpp: Copyright (c) 1990 Ohio Supercomputer
 				    Center, David J. Heisterberg
