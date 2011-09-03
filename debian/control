@@ -40,7 +40,7 @@ Description: Collection of cheminformatics and machine-learning software
  format.
 
 Package: rdkit-doc
-Section: science
+Section: doc
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Collection of cheminformatics and machine-learning software (documentation)
