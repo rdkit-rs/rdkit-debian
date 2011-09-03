@@ -1,4 +1,4 @@
-rdkit (201106-1) unstable; urgency=low
+rdkit (201106+dfsg-1) unstable; urgency=low
 
   * Initial upload (Closes: #640118).
 
