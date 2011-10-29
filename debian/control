@@ -13,7 +13,7 @@ DM-Upload-Allowed: yes
 Package: python-rdkit
 Section: python
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, rdkit-data
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, python-numpy, rdkit-data
 Suggests: rdkit-doc
 Description: Collection of cheminformatics and machine-learning software
  RDKit is a Python/C++ based cheminformatics and machine-learning software

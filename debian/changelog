@@ -1,7 +1,7 @@
 rdkit (201106+dfsg-2) UNRELEASED; urgency=low
 
   [ Michael Banck ]
-  * 
+  * debian/control (python-rdkit): Added python-numpy to Depends.
 
   [ Daniel Leidert (dale) ]
   * debian/watch: Added.
