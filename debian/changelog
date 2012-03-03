@@ -1,4 +1,8 @@
-rdkit (201106+dfsg-2) UNRELEASED; urgency=low
+rdkit (201112-1) UNRELEASED; urgency=low
+
+  * New upstream release.  The RDKit book license has been clarified to
+    Creative Commons Attribution-ShareAlike 3.0 License, so a stripped
+    original tarball is no longer required.
 
   [ Michael Banck ]
   * debian/control (python-rdkit): Added python-numpy to Depends.
