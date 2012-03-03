@@ -6,6 +6,7 @@ rdkit (201112-1) UNRELEASED; urgency=low
 
   [ Michael Banck ]
   * debian/control (python-rdkit): Added python-numpy to Depends.
+  * debian/rdkit-doc.install: Fix path (Closes: #661976).
 
   [ Daniel Leidert (dale) ]
   * debian/watch: Added.
