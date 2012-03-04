@@ -10,6 +10,8 @@ rdkit (201112-1) UNRELEASED; urgency=low
   * debian/rules (override_dh_auto_test): Copy over python files into obj
     directory and set $PYTHONPATH correctly, thanks to Jakub Wilk.  Also set
     $RDBASE accordingly.
+  * debian/rules (override_dh_auto_clean): New target, remove some files added
+    during build which do not get removed by the default dh_auto_clean.
 
   [ Daniel Leidert (dale) ]
   * debian/watch: Added.
