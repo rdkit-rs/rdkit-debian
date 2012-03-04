@@ -7,6 +7,9 @@ rdkit (201112-1) UNRELEASED; urgency=low
   [ Michael Banck ]
   * debian/control (python-rdkit): Added python-numpy to Depends.
   * debian/rdkit-doc.install: Fix path (Closes: #661976).
+  * debian/rules (override_dh_auto_test): Copy over python files into obj
+    directory and set $PYTHONPATH correctly, thanks to Jakub Wilk.  Also set
+    $RDBASE accordingly.
 
   [ Daniel Leidert (dale) ]
   * debian/watch: Added.
