@@ -1,4 +1,4 @@
-rdkit (201112-1) UNRELEASED; urgency=low
+rdkit (201112-1) unstable; urgency=low
 
   * New upstream release.  The RDKit book license has been clarified to
     Creative Commons Attribution-ShareAlike 3.0 License, so a stripped
@@ -16,7 +16,7 @@ rdkit (201112-1) UNRELEASED; urgency=low
   [ Daniel Leidert (dale) ]
   * debian/watch: Added.
 
- -- Daniel Leidert (dale) <daniel.leidert@wgdd.de>  Sat, 29 Oct 2011 21:30:05 +0200
+ -- Michael Banck <mbanck@debian.org>  Sun, 04 Mar 2012 19:50:59 +0100
 
 rdkit (201106+dfsg-1) unstable; urgency=low
 
