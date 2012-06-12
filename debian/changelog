@@ -1,8 +1,8 @@
-rdkit (201203-1) UNRELEASED; urgency=low
+rdkit (201203-1) unstable; urgency=low
 
   * New upstream release.
 
- -- Michael Banck <mbanck@debian.org>  Sun, 04 Mar 2012 21:03:37 +0100
+ -- Michael Banck <mbanck@debian.org>  Fri, 18 May 2012 15:09:10 +0200
 
 rdkit (201112-1) unstable; urgency=low
 
