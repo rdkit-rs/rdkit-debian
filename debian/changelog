@@ -2,6 +2,8 @@ rdkit (201203-3) UNRELEASED; urgency=low
 
   * debian/patches/big-endian_support.patch: New patch, fixes big-endian
     architectures, taken from upstream revisions 2071, 2079, 2080 and 2140.
+  * debian/rules (override_dh_auto_test): Activate testsuite again 
+    (Closes: #678188).
 
  -- Michael Banck <mbanck@debian.org>  Tue, 12 Jun 2012 17:43:52 +0200
 
