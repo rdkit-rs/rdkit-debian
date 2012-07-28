@@ -1,0 +1,653 @@
+Description: Upstream changes to support big-endian architectures
+ This patch consists of upstream revisions 2071, 2079, 2080 and 2140.
+Author: Greg Landrum
+Origin: upstream
+Bug-Debian: http://bugs.debian.org/670054
+Last-Update: 2012-07-28
+
+--- rdkit-201203.orig/CMakeLists.txt
++++ rdkit-201203/CMakeLists.txt
+@@ -26,6 +26,9 @@ option(RDK_INSTALL_STATIC_LIBS "install
+ option(RDK_BUILD_SLN_SUPPORT "include support for the SLN format" ON )
+ option(RDK_TEST_MULTITHREADED "run some tests of multithreading" OFF )
+ 
++include(TestBigEndian)
++TEST_BIG_ENDIAN(RDK_BIG_ENDIAN)
++
+ # At build time put runtime binaries in the bin subdirectory
+ set(RDK_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
+ set(RDK_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib")
+--- rdkit-201203.orig/Code/CMakeLists.txt
++++ rdkit-201203/Code/CMakeLists.txt
+@@ -15,7 +15,11 @@ add_subdirectory(GraphMol)
+ add_subdirectory(Query)
+ 
+ add_subdirectory(DataManip)
+-add_subdirectory(SimDivPickers)
++if(RDK_BIG_ENDIAN)
++  message("Skipping build of SimDivPickers on big endian system")
++else(RDK_BIG_ENDIAN)
++  add_subdirectory(SimDivPickers)
++endif(RDK_BIG_ENDIAN)
+ 
+ add_subdirectory(ML)
+ add_subdirectory(ChemicalFeatures)
+--- rdkit-201203.orig/Code/DataStructs/BitVect.cpp
++++ rdkit-201203/Code/DataStructs/BitVect.cpp
+@@ -40,7 +40,7 @@ void BitVect::initFromText(const char *d
+   
+   // earlier versions of the code did not have the version number encoded, so
+   //  we'll use that to distinguish version 0
+-  ss.read((char *)&size,sizeof(size));
++  RDKit::streamRead(ss,size);
+   if(size<0){
+     version = -1*size;
+     if (version == 16) {
+@@ -52,12 +52,12 @@ void BitVect::initFromText(const char *d
+     else {
+       throw ValueErrorException("bad version in BitVect pickle");
+     }
+-
+-    ss.read((char *)&size,sizeof(size));
++    RDKit::streamRead(ss,size);
+   } else if( !allowOldFormat ) {
+     throw ValueErrorException("invalid BitVect pickle");
+   }
+-  ss.read((char *)&nOn,sizeof(nOn));
++
++  RDKit::streamRead(ss,nOn);
+   _initForSize(static_cast<int>(size));
+ 
+   // if the either have older version or or version 16 with ints for on bits
+@@ -65,13 +65,13 @@ void BitVect::initFromText(const char *d
+       ( (format == 1) && (size >= std::numeric_limits<unsigned short>::max()) ) ) {
+     boost::uint32_t tmp;
+     for(unsigned int i=0; i<nOn; i++){
+-      ss.read((char *)&tmp,sizeof(tmp));
++      RDKit::streamRead(ss,tmp);
+       setBit(tmp);
+     }
+   } else if (format == 1) { // version 16 and on bits stored as short ints
+     boost::uint16_t tmp;
+     for(unsigned int i=0; i<nOn; i++){
+-      ss.read((char *)&tmp,sizeof(tmp));
++      RDKit::streamRead(ss,tmp);
+       setBit(tmp);
+     }
+   } else if (format == 2) { // run length encoded format
+--- rdkit-201203.orig/Code/DataStructs/BitOps.cpp
++++ rdkit-201203/Code/DataStructs/BitOps.cpp
+@@ -21,18 +21,20 @@
+ 
+ #include <boost/lexical_cast.hpp>
+ 
++using namespace RDKit;
++
+ int getBitId(const char *&text,int format,int size,int curr){
+   PRECONDITION(text,"no text");
+   int res=-1;
+   if( (format==0) || 
+       ( (format == 1) && (size >= std::numeric_limits<unsigned short>::max()) ) ) {
+     int tmp;
+-    tmp = *(int *)text;
++    tmp = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)text);
+     text += sizeof(tmp);
+     res=tmp;
+   } else if (format == 1) { // version 16 and on bits sotred as short ints
+     unsigned short tmp;
+-    tmp = *(unsigned short *)text;
++    tmp = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(unsigned short *)text);
+     text += sizeof(tmp);
+     res=tmp;
+   } else if (format == 2) { // run length encoded format
+@@ -54,7 +56,7 @@ bool AllProbeBitsMatch(const char *probe
+   int refFormat=0;
+   int version=0;
+ 
+-  int probeSize = *(int *)probe;
++  int probeSize = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)probe);
+   probe+=sizeof(probeSize);
+   if(probeSize<0){
+     version = -1*probeSize;
+@@ -67,11 +69,11 @@ bool AllProbeBitsMatch(const char *probe
+     else {
+       throw("Unknown version type for the encode bit vect");
+     }
+-    probeSize = *(int *)probe;
++    probeSize = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)probe);
+     probe+=sizeof(probeSize);
+   }
+ 
+-  int refSize = *(int *)ref;
++  int refSize = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)ref);
+   ref+=sizeof(refSize);
+   if(refSize<0){
+     version = -1*refSize;
+@@ -84,14 +86,14 @@ bool AllProbeBitsMatch(const char *probe
+     else {
+       throw("Unknown version type for the encode bit vect");
+     }
+-    refSize = *(int *)ref;
++    refSize = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)ref);
+     ref+=sizeof(refSize);
+   }
+ 
+ 
+-  int nProbeOn = *(int *)probe;
++  int nProbeOn = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)probe);
+   probe+=sizeof(nProbeOn);
+-  int nRefOn = *(int *)ref;
++  int nRefOn = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)ref);
+   ref+=sizeof(nRefOn);
+ 
+   int currProbeBit=0;
+@@ -121,7 +123,7 @@ bool AllProbeBitsMatch(const T1 &probe,c
+   const char *text=pkl.c_str();
+   int format=0;
+   int nOn=0,size,version=0;
+-  size = *(int *)text;
++  size = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)text);
+   text+=sizeof(size);
+   if(size<0){
+     version = -1*size;
+@@ -134,10 +136,10 @@ bool AllProbeBitsMatch(const T1 &probe,c
+     else {
+       throw("Unknown version type for the encode bit vect");
+     }
+-    size = *(int *)text;
++    size = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)text);
+     text+=sizeof(size);
+   }
+-  nOn = *(int *)text;
++  nOn = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(*(int *)text);
+   text+=sizeof(nOn);
+ 
+   int currBit=0;
+--- rdkit-201203.orig/Code/DataStructs/DiscreteValueVect.cpp
++++ rdkit-201203/Code/DataStructs/DiscreteValueVect.cpp
+@@ -1,6 +1,6 @@
+ // $Id: DiscreteValueVect.cpp 1528 2010-09-26 17:04:37Z glandrum $
+ //
+-//  Copyright (C) 2004-2008 Greg Landrum and Rational Discovery LLC
++//  Copyright (C) 2004-2012 Greg Landrum and Rational Discovery LLC
+ //
+ //  @@ All Rights Reserved @@
+ //  This file is part of the RDKit.
+@@ -143,8 +143,15 @@ namespace RDKit {
+     streamWrite(ss,tInt);
+     tInt=d_numInts;
+     streamWrite(ss,tInt);
++
++#if defined(BOOST_BIG_ENDIAN)
++    boost::uint32_t *td = new boost::uint32_t[d_numInts];
++    for(unsigned int i=0;i<d_numInts;++i) td[i]=EndianSwapBytes<HOST_ENDIAN_ORDER,LITTLE_ENDIAN_ORDER>(d_data.get()[i]);
++    ss.write((const char *)td,d_numInts*sizeof(tInt));
++    delete [] td;
++#else    
+     ss.write((const char *)d_data.get(),d_numInts*sizeof(tInt));
+-    
++#endif    
+     std::string res(ss.str());
+     return res;
+   };
+@@ -175,7 +182,15 @@ namespace RDKit {
+     d_numInts=tInt;
+     boost::uint32_t *data = new boost::uint32_t[d_numInts];
+     ss.read((char *)data,d_numInts*sizeof(boost::uint32_t));
++
++#if defined(BOOST_BIG_ENDIAN)
++    boost::uint32_t *td = new boost::uint32_t[d_numInts];
++    for(unsigned int i=0;i<d_numInts;++i) td[i]=EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(data[i]);
++    d_data.reset(td);
++    delete [] data;
++#else    
+     d_data.reset(data);
++#endif    
+ 
+   };
+ 
+--- rdkit-201203.orig/Code/DataStructs/testDatastructs.cpp
++++ rdkit-201203/Code/DataStructs/testDatastructs.cpp
+@@ -125,9 +125,13 @@ template<typename T> void Test(T arg){
+   delete t5;
+ 
+   std::string pkl=t1.toString();
++  BOOST_LOG(rdInfoLog) << " a" << std::endl;
+   const char *pkl64=Base64Encode(pkl.c_str(),pkl.size());
++  BOOST_LOG(rdInfoLog) << " b" << std::endl;
+   T t6(t1.getNumBits());
++  BOOST_LOG(rdInfoLog) << " c" << std::endl;
+   t6.initFromText(pkl64,strlen(pkl64),true);
++  BOOST_LOG(rdInfoLog) << " d" << std::endl;
+   delete [] pkl64;
+   TEST_ASSERT(t6==t1);
+ }
+@@ -149,10 +153,14 @@ template<typename T> void TaniTest(T &ar
+   int idx=0;
+   for(int i=0;i<4;i++){
+     T v1(256);
++    BOOST_LOG(rdInfoLog) << " a "<<i << std::endl;
+     FromDaylightString(v1,fps[i]);
++    BOOST_LOG(rdInfoLog) << " b"<<i << std::endl;
+     for(int j=i;j<4;j++){
+       T v2(256);
++      BOOST_LOG(rdInfoLog) << "     c " << j << std::endl;
+       FromDaylightString(v2,fps[j]);
++      BOOST_LOG(rdInfoLog) << "     d " << j << std::endl;
+       double tani=TanimotoSimilarity(v1,v2);
+       TEST_ASSERT(feq(tani,dists[idx]));
+       tani = TverskySimilarity(v1,v2,1.,1.);
+@@ -1174,15 +1182,9 @@ int main(){
+ 
+   ss.write((const char *)&v1,sizeof(v1));
+   ss.write((const char *)&v2,sizeof(v2));
+-#if 0
+-  ss.close();
+-  fstream ss2("blah.bin",ios_base::binary|ios_base::in);
+-  ss2.read((char *)&v3,sizeof(v3));
+-  ss2.read((char *)&v4,sizeof(v4));
+-#endif
+   ss.seekp(0,ios_base::beg);
+-  ss.read((char *)&v3,sizeof(v3));
+-  ss.read((char *)&v4,sizeof(v4));
++  RDKit::streamRead(ss,v3);
++  RDKit::streamRead(ss,v4);
+   
+   TXTMSG("v3",v3);
+   TXTMSG("v4",v4);
+@@ -1190,12 +1192,16 @@ int main(){
+   BOOST_LOG(rdInfoLog) << " SPARSE -----------------------------------" << std::endl;
+   SparseBitVect sparseFoo(10);
+   Test(sparseFoo);
++  BOOST_LOG(rdInfoLog) << " 1" << std::endl;
+   TaniTest(sparseFoo);
++  BOOST_LOG(rdInfoLog) << " 2" << std::endl;
+   ProbeTest(sparseFoo);
+   BOOST_LOG(rdInfoLog) << " Explicit ----------------------------------" << std::endl;
+   ExplicitBitVect explicitFoo(10);
+   Test(explicitFoo);
++  BOOST_LOG(rdInfoLog) << " 1" << std::endl;
+   TaniTest(explicitFoo);
++  BOOST_LOG(rdInfoLog) << " 2" << std::endl;
+   BOOST_LOG(rdInfoLog) << " Done" << std::endl;
+   
+   BOOST_LOG(rdInfoLog) << " Test DiscreteValue Vectors 1 ----------------------------" << endl;
+--- rdkit-201203.orig/Code/DataStructs/SparseBitVect.cpp
++++ rdkit-201203/Code/DataStructs/SparseBitVect.cpp
+@@ -317,10 +317,15 @@ std::string SparseBitVect::toString() co
+ 
+   boost::int32_t tInt = ci_BITVECT_VERSION*-1;
+   RDKit::streamWrite(ss,tInt);
++std::cerr<<"version: "<<tInt<<std::endl;
+   tInt=d_size;
+   RDKit::streamWrite(ss,tInt);
++std::cerr<<"size: "<<tInt<<std::endl;
++
+   tInt=getNumOnBits();
+   RDKit::streamWrite(ss,tInt);
++std::cerr<<"nOn: "<<tInt<<std::endl;
++
+ 
+   int prev = -1;
+   unsigned int zeroes;
+--- rdkit-201203.orig/Code/RDGeneral/StreamOps.h
++++ rdkit-201203/Code/RDGeneral/StreamOps.h
+@@ -16,10 +16,72 @@
+ #include <sstream>
+ #include <iostream>
+ #include <boost/cstdint.hpp>
+-
++#include <boost/detail/endian.hpp>
+ 
+ namespace RDKit{
+-    
++  // this code block for handling endian problems is from :
++  // http://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
++  enum EEndian
++    {
++      LITTLE_ENDIAN_ORDER,
++      BIG_ENDIAN_ORDER,
++#if defined(BOOST_LITTLE_ENDIAN)
++      HOST_ENDIAN_ORDER = LITTLE_ENDIAN_ORDER
++#elif defined(BOOST_BIG_ENDIAN)
++      HOST_ENDIAN_ORDER = BIG_ENDIAN_ORDER
++#else
++#error "Failed to determine the system endian value"
++#endif
++    };
++
++  // this function swap the bytes of values given it's size as a template
++  // parameter (could sizeof be used?).
++  template <class T, unsigned int size>
++  inline T SwapBytes(T value)
++  {
++    union
++    {
++      T value;
++      char bytes[size];
++    } in, out;
++
++    in.value = value;
++
++    for (unsigned int i = 0; i < size / 2; ++i)
++      {
++        out.bytes[i] = in.bytes[size - 1 - i];
++        out.bytes[size - 1 - i] = in.bytes[i];
++      }
++
++    return out.value;
++  }
++
++  // Here is the function you will use. Again there is two compile-time assertion
++  // that use the boost librarie. You could probably comment them out, but if you
++  // do be cautious not to use this function for anything else than integers
++  // types. This function need to be calles like this :
++  //
++  //     int x = someValue;
++  //     int i = EndianSwapBytes<HOST_ENDIAN_ORDER, BIG_ENDIAN_ORDER>(x);
++  //
++  template<EEndian from, EEndian to, class T>
++  inline T EndianSwapBytes(T value)
++  {
++    // A : La donnée à swapper à une taille de 2, 4 ou 8 octets
++    BOOST_STATIC_ASSERT(sizeof(T)==1 || sizeof(T) == 2 || sizeof(T) == 4 || sizeof(T) == 8);
++    if(sizeof(T)==1) return value;
++
++    // A : La donnée à swapper est d'un type arithmetic
++    //BOOST_STATIC_ASSERT(boost::is_arithmetic<T>::value);
++
++    // Si from et to sont du même type on ne swap pas.
++    if (from == to)
++      return value;
++
++    return SwapBytes<T, sizeof(T)>(value);
++  }
++  // --------------------------------------
++  
+   //! Packs an integer and outputs it to a stream
+   inline void appendPackedIntToStream(std::stringstream &ss, boost::uint32_t num) {
+     int nbytes, bix;
+@@ -27,7 +89,7 @@ namespace RDKit{
+     char tc;
+     
+     CHECK_INVARIANT(num >= 0, "");
+-    res = num;
++    res=num;
+     while (1) {
+       if (res < (1<<7)) {
+         val = (res<<1);
+@@ -53,9 +115,10 @@ namespace RDKit{
+         break;
+       }
+       else {
+-        CHECK_INVARIANT(0, "ERROR: Integer to big to pack\n");
++        CHECK_INVARIANT(0, "ERROR: Integer too big to pack\n");
+       }
+     }
++    //val = EndianSwapBytes<HOST_ENDIAN_ORDER,LITTLE_ENDIAN_ORDER>(val);
+     
+     for (bix = 0; bix < nbytes; bix++) {
+       tc = (char) (val & 255);
+@@ -100,6 +163,7 @@ namespace RDKit{
+       offset = (1<<7) + (1<<14) + (1<<21);
+     }
+     num = (val >> shift) + offset;
++    //num = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(num);
+     return num;
+   }
+ 
+@@ -147,18 +211,22 @@ namespace RDKit{
+       offset = (1<<7) + (1<<14) + (1<<21);
+     }
+     num = (val >> shift) + offset;
++    //num = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(num);
+     return num;
+   }
+   
+   //! does a binary write of an object to a stream
+   template <typename T>
+     void streamWrite(std::ostream &ss,const T &val){
+-    ss.write((const char *)&val,sizeof(T));
++    T tval=EndianSwapBytes<HOST_ENDIAN_ORDER,LITTLE_ENDIAN_ORDER>(val);
++    ss.write((const char *)&tval,sizeof(T));
+   }
+   //! does a binary read of an object from a stream
+   template <typename T>
+     void streamRead(std::istream &ss,T &loc){
+-    ss.read((char *)&loc,sizeof(T));
++    T tloc;
++    ss.read((char *)&tloc,sizeof(T));
++    loc = EndianSwapBytes<LITTLE_ENDIAN_ORDER,HOST_ENDIAN_ORDER>(tloc);
+   }
+  
+   //! grabs the next line from an instream and returns it.
+--- rdkit-201203.orig/Code/ML/CMakeLists.txt
++++ rdkit-201203/Code/ML/CMakeLists.txt
+@@ -1,4 +1,8 @@
+-add_subdirectory(Cluster)
+-add_subdirectory(FeatureSelect)
++if(RDK_BIG_ENDIAN)
++  message("Skipping build of clustering and cmim libraries on big endian system")
++else(RDK_BIG_ENDIAN)
++  add_subdirectory(Cluster)
++  add_subdirectory(FeatureSelect)
++endif(RDK_BIG_ENDIAN)
+ add_subdirectory(InfoTheory)
+ add_subdirectory(Data)
+--- rdkit-201203.orig/Code/ML/FeatureSelect/Wrap/testCMIM.py
++++ rdkit-201203/Code/ML/FeatureSelect/Wrap/testCMIM.py
+@@ -31,13 +31,13 @@ class TestCase(unittest.TestCase):
+      examples.append([0,bv,1])
+ 
+      r = FS.selectCMIM(examples,2)
+-     self.failUnless(r==(2,4))
++     self.failUnlessEqual(r,(2,4))
+ 
+      r = FS.selectCMIM(examples,1)
+-     self.failUnless(r==(2,))
++     self.failUnlessEqual(r,(2,))
+ 
+      r = FS.selectCMIM(examples,3)
+-     self.failUnless(r==(2,4,-1))
++     self.failUnlessEqual(r,(2,4,-1))
+ 
+    def test1FromList(self) :
+      examples = []
+@@ -63,13 +63,13 @@ class TestCase(unittest.TestCase):
+      examples.append([0,bv,1])
+ 
+      r = FS.selectCMIM(examples,2)
+-     self.failUnless(r==(2,4))
++     self.failUnlessEqual(r,(2,4))
+ 
+      r = FS.selectCMIM(examples,1)
+-     self.failUnless(r==(2,))
++     self.failUnlessEqual(r,(2,))
+ 
+      r = FS.selectCMIM(examples,3)
+-     self.failUnless(r==(2,4,-1))
++     self.failUnlessEqual(r,(2,4,-1))
+ 
+ 
+ if __name__ == '__main__':
+--- rdkit-201203.orig/rdkit/DataStructs/VectCollection.py
++++ rdkit-201203/rdkit/DataStructs/VectCollection.py
+@@ -230,12 +230,13 @@ class VectCollection(object):
+   # set up our support for pickling:
+   #
+   def __getstate__(self):
+-    pkl = struct.pack('I',len(self.__vects))
++    pkl = struct.pack('<I',len(self.__vects))
+     for k,v in self.__vects.iteritems():
+-      pkl += struct.pack('I',k)
++      pkl += struct.pack('<I',k)
+       p = v.ToBinary()
+       l = len(p)
+-      pkl += struct.pack('I%ds'%(l),l,p)
++      pkl += struct.pack('<I',l)
++      pkl += struct.pack('%ds'%(l),p)
+     return pkl
+ 
+   def __setstate__(self,pkl):
+@@ -245,12 +246,12 @@ class VectCollection(object):
+     self.__needReset=True
+     szI = struct.calcsize('I')
+     offset = 0
+-    nToRead = struct.unpack('I',pkl[offset:offset+szI])[0]
++    nToRead = struct.unpack('<I',pkl[offset:offset+szI])[0]
+     offset += szI
+     for i in range(nToRead):
+-      k = struct.unpack('I',pkl[offset:offset+szI])[0]
++      k = struct.unpack('<I',pkl[offset:offset+szI])[0]
+       offset += szI
+-      l = struct.unpack('I',pkl[offset:offset+szI])[0]
++      l = struct.unpack('<I',pkl[offset:offset+szI])[0]
+       offset += szI
+       sz = struct.calcsize('%ds'%l)
+       bv = DataStructs.ExplicitBitVect(struct.unpack('%ds'%l,pkl[offset:offset+sz])[0])
+--- rdkit-201203.orig/rdkit/SimDivFilters/__init__.py
++++ rdkit-201203/rdkit/SimDivFilters/__init__.py
+@@ -3,4 +3,8 @@
+ #    All Rights Reserved
+ #
+ from rdkit import rdBase
+-from rdSimDivPickers import *
++try:
++  import rdSimDivPickers
++  from rdSimDivPickers import *
++except ImportError:
++  rdSimDivPickers=None
+--- rdkit-201203.orig/rdkit/ML/test_list.py
++++ rdkit-201203/rdkit/ML/test_list.py
+@@ -5,7 +5,7 @@ tests=[
+   ("python","UnitTestAnalyzeComposite.py",{}),
+   ]
+ 
+-for dir in ['Cluster','Composite','Data','DecTree','Descriptors','FeatureSelect','InfoTheory','KNN','ModelPackage','NaiveBayes','Neural','SLT']:
++for dir in ['Cluster','Composite','Data','DecTree','Descriptors','InfoTheory','KNN','ModelPackage','NaiveBayes','Neural','SLT']:
+     tests.append(('python','test_list.py',{'dir':dir}))
+ 
+ longTests=[
+--- rdkit-201203.orig/rdkit/ML/InfoTheory/BitClusterer.py
++++ rdkit-201203/rdkit/ML/InfoTheory/BitClusterer.py
+@@ -3,6 +3,8 @@
+ #
+ 
+ from rdkit.SimDivFilters import rdSimDivPickers as rdsimdiv
++if rdsimdiv is None:
++   raise ImportError,'rdSimDivPickers not built'
+ from rdkit import DataStructs
+ import numpy
+ 
+--- rdkit-201203.orig/rdkit/ML/InfoTheory/testCorrMatGen.py
++++ rdkit-201203/rdkit/ML/InfoTheory/testCorrMatGen.py
+@@ -2,7 +2,11 @@
+ 
+ from rdkit import RDConfig
+ import unittest
+-from rdkit.ML.InfoTheory import rdInfoTheory, BitClusterer
++from rdkit.ML.InfoTheory import rdInfoTheory
++try:
++  from rdkit.ML.InfoTheory import BitClusterer
++except ImportError:
++  BitClusterer=None
+ from rdkit.ML.Data import DataUtils
+ from rdkit import DataStructs
+ import random
+@@ -64,6 +68,8 @@ class TestCase(unittest.TestCase):
+         assert 2*navr/self.nbits == 158.3,2*navr/self.nbits
+ 
+     def test1Cluster(self) :
++        if BitClusterer is None:
++            return
+         cmg = rdInfoTheory.BitCorrMatGenerator()
+         cmg.SetBitList(self.blist)
+         for fp in self.fps:
+--- rdkit-201203.orig/rdkit/ML/Cluster/UnitTestCluster.py
++++ rdkit-201203/rdkit/ML/Cluster/UnitTestCluster.py
+@@ -14,7 +14,11 @@
+ from rdkit import RDConfig
+ import unittest
+ from rdkit.ML.Cluster import Standardize,ClusterUtils
+-from rdkit.ML.Cluster import Clusters,Murtagh
++from rdkit.ML.Cluster import Clusters
++try:
++  from rdkit.ML.Cluster import Murtagh
++except ImportError:
++  Murtagh=None
+ import numpy
+ import cPickle
+ 
+@@ -57,6 +61,7 @@ class TestCase(unittest.TestCase):
+     assert indices==[8,7,5,6],'bad index order'
+ 
+   def testMurtaghUPGMA(self):
++    if Murtagh is None: return
+     nPts = 5
+     sz = 5
+     dataP = numpy.random.random((nPts,sz))
+--- rdkit-201203.orig/rdkit/ML/FeatureSelect/UnitTestCMIM.py
++++ rdkit-201203/rdkit/ML/FeatureSelect/UnitTestCMIM.py
+@@ -1,4 +1,7 @@
+-from rdkit.ML.FeatureSelect import CMIM
++try:
++  from rdkit.ML.FeatureSelect import CMIM
++except ImportError:
++  CMIM = None
+ from rdkit import DataStructs as DS
+ from rdkit import RDConfig
+ import unittest
+@@ -8,6 +11,8 @@ class TestCase(unittest.TestCase):
+       pass
+ 
+    def test0FromList(self) :
++     if CMIM is None:
++       return
+      examples = []
+ 
+      bv = DS.ExplicitBitVect(5)
+--- rdkit-201203.orig/rdkit/ML/DecTree/BuildSigTree.py
++++ rdkit-201203/rdkit/ML/DecTree/BuildSigTree.py
+@@ -12,7 +12,10 @@
+ import numpy
+ from rdkit.ML.DecTree import SigTree
+ from rdkit.ML import InfoTheory
+-from rdkit.ML.FeatureSelect import CMIM
++try:
++  from rdkit.ML.FeatureSelect import CMIM
++except ImportError:
++  CMIM=None
+ from rdkit.DataStructs.VectCollection import VectCollection
+ import copy
+ import random
+@@ -136,7 +139,7 @@ def BuildSigTree(examples,nPossibleRes,e
+     nBits = fp.GetNumBits()
+     ranker = InfoTheory.InfoBitRanker(nBits,nPossibleRes,metric)
+     if biasList: ranker.SetBiasList(biasList)
+-    if useCMIM > 0 and not ensemble:
++    if CMIM is not None and useCMIM > 0 and not ensemble:
+       ensemble = CMIM.SelectFeatures(examples,useCMIM,bvCol=1)
+     if random:
+       if ensemble:
+--- rdkit-201203.orig/rdkit/ML/NaiveBayes/CrossValidate.py
++++ rdkit-201203/rdkit/ML/NaiveBayes/CrossValidate.py
+@@ -9,14 +9,17 @@ and evaluation of individual models
+ """
+ from rdkit.ML.NaiveBayes.ClassificationModel import NaiveBayesClassifier
+ from rdkit.ML.Data import SplitData
+-from rdkit.ML.FeatureSelect import CMIM
++try:
++  from rdkit.ML.FeatureSelect import CMIM
++except ImportError:
++  CMIM=None
+ 
+ def makeNBClassificationModel(trainExamples, attrs, nPossibleValues, nQuantBounds,
+                               mEstimateVal=-1.0,
+                               useSigs=False,
+                               ensemble=None,useCMIM=0,
+                               **kwargs) :
+-  if useCMIM > 0 and useSigs and not ensemble:
++  if CMIM is not None and useCMIM > 0 and useSigs and not ensemble:
+     ensemble = CMIM.SelectFeatures(trainExamples,useCMIM,bvCol=1)
+   if ensemble:
+     attrs = ensemble
