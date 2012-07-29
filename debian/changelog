@@ -1,3 +1,9 @@
+rdkit (201203-4) UNRELEASED; urgency=low
+
+  * 
+
+ -- Michael Banck <mbanck@debian.org>  Sun, 29 Jul 2012 11:33:16 +0200
+
 rdkit (201203-3) unstable; urgency=low
 
   * debian/patches/big-endian_support.patch: New patch, fixes big-endian
