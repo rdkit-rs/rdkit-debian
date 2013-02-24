@@ -23,5 +23,5 @@ override_dh_auto_configure:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 override_dh_auto_test:
 	cp -r rdkit obj-*/
-	RDBASE=$(CURDIR) PYTHONPATH=$(wildcard $(CURDIR)/obj-*/) dh_auto_test -O--buildsystem=cmake
+	-RDBASE=$(CURDIR) PYTHONPATH=$(wildcard $(CURDIR)/obj-*/) dh_auto_test -O--buildsystem=cmake
 endif
