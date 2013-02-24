@@ -2,6 +2,7 @@ rdkit (201212-1) UNRELEASED; urgency=low
 
   * New upstream release.
   * debian/patches/big-endian_support.patch: Removed, applied upstream.
+  * debian/rules (override_dh_auto_test): Honor DEB_BUILD_OPTIONS=nocheck.
 
  -- Michael Banck <mbanck@debian.org>  Sun, 29 Jul 2012 11:33:16 +0200
 
