@@ -4,6 +4,7 @@ rdkit (201212-1) UNRELEASED; urgency=low
   * debian/patches/big-endian_support.patch: Removed, applied upstream.
   * debian/rules (override_dh_auto_test): Honor DEB_BUILD_OPTIONS=nocheck.
   * debian/rules (override_dh_auto_test): Ignore test suite failures for now.
+  * debian/rules (override_dh_install): New target, run dh_numpy.
 
  -- Michael Banck <mbanck@debian.org>  Sun, 29 Jul 2012 11:33:16 +0200
 
