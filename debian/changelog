@@ -1,10 +1,23 @@
 rdkit (201303-1) UNRELEASED; urgency=low
 
   * New upstream release.
+
+  [ Michael Banck ]
   * debian/patches/big-endian_support.patch: Removed, applied upstream.
   * debian/rules (override_dh_auto_test): Honor DEB_BUILD_OPTIONS=nocheck.
   * debian/rules (override_dh_auto_test): Ignore test suite failures for now.
   * debian/rules (override_dh_install): New target, run dh_numpy.
+
+  [ Daniel Leidert ]
+  * debian/control: Dropped DM-Upload-Allowed. Added Provides and
+    XB-Python-Version for python package.
+    (Standards-Version): Bumped to 3.9.4.
+    (Section): Fixed binary-control-field-duplicates-source.
+    (Depends): Added missing depends to library for dev package.
+  * debian/copyright: Updated.
+  * debian/librdkit1.lintian-overrides: Added.
+  * debian/rules: Enabled hardening. Installed upstream changelog.
+    (override_dh_install): List missing files.
 
  -- Michael Banck <mbanck@debian.org>  Sun, 29 Jul 2012 11:33:16 +0200
 

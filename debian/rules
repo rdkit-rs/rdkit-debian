@@ -9,8 +9,13 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+export CPPFLAGS     := $(shell dpkg-buildflags --get CPPFLAGS)
+export CFLAGS       := $(shell dpkg-buildflags --get CFLAGS) $(CPPFLAGS)
+export CXXFLAGS     := $(shell dpkg-buildflags --get CXXFLAGS) $(CPPFLAGS)
+export LDFLAGS      := $(shell dpkg-buildflags --get LDFLAGS)
+
 %:
-	dh $@ --buildsystem=cmake
+	dh $@ --with python2 --buildsystem=cmake --parallel
 
 override_dh_auto_clean:
 	find $(CURDIR) -name "*.pyc" | xargs rm -f
@@ -22,7 +27,11 @@ override_dh_auto_configure:
 
 override_dh_install:
 	dh_numpy
-	dh_install
+	dh_install --list-missing
+
+override_dh_installchangelogs:
+	dh_installchangelogs ReleaseNotes.txt
+
 
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 override_dh_auto_test:

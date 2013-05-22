@@ -3,18 +3,33 @@ Section: science
 Priority: optional
 Maintainer: Debichem Team <debichem-devel@lists.alioth.debian.org>
 Uploaders: Michael Banck <mbanck@debian.org>
-Build-Depends: debhelper (>= 7.0.50~), cmake, flex, bison, python-support, python-dev, python-numpy, libsqlite3-dev, libboost-dev, libboost-regex-dev, libboost-python-dev
-Standards-Version: 3.9.2
+Build-Depends: bison,
+               cmake,
+               debhelper (>= 7.0.50~),
+               flex,
+               libboost-dev,
+               libboost-python-dev,
+               libboost-regex-dev,
+               libsqlite3-dev,
+               python-dev,
+               python-numpy,
+               python-support
+Standards-Version: 3.9.4
 Homepage: http://www.rdkit.org
 Vcs-Browser: http://svn.debian.org/wsvn/debichem/unstable/rdkit/
 Vcs-Svn: svn://svn.debian.org/svn/debichem/unstable/rdkit/
-DM-Upload-Allowed: yes
 
 Package: python-rdkit
 Section: python
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}, python-numpy, rdkit-data
+Depends: python-numpy,
+         rdkit-data,
+         ${misc:Depends},
+         ${python:Depends},
+         ${shlibs:Depends}
 Suggests: rdkit-doc
+Provides: ${python:Provides}
+XB-Python-Version: ${python:Versions}
 Description: Collection of cheminformatics and machine-learning software
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
@@ -42,7 +57,7 @@ Description: Collection of cheminformatics and machine-learning software
 Package: rdkit-doc
 Section: doc
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Collection of cheminformatics and machine-learning software (documentation)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
@@ -70,9 +85,8 @@ Description: Collection of cheminformatics and machine-learning software (docume
  This package contains the documentation.
 
 Package: rdkit-data
-Section: science
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Collection of cheminformatics and machine-learning software (data files)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
@@ -102,7 +116,7 @@ Description: Collection of cheminformatics and machine-learning software (data f
 Package: librdkit1
 Section: libs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Collection of cheminformatics and machine-learning software (shared libraries)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
@@ -132,7 +146,7 @@ Description: Collection of cheminformatics and machine-learning software (shared
 Package: librdkit-dev
 Section: libdevel
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: librdkit1 (= ${binary:Version}), ${misc:Depends}, ${shlibs:Depends}
 Description: Collection of cheminformatics and machine-learning software (development files)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
