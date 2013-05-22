@@ -1,4 +1,4 @@
-rdkit (201212-1) UNRELEASED; urgency=low
+rdkit (201303-1) UNRELEASED; urgency=low
 
   * New upstream release.
   * debian/patches/big-endian_support.patch: Removed, applied upstream.
