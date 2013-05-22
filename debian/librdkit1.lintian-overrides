@@ -1,0 +1,2 @@
+# the library package contains several libraries by intention
+W: librdkit1: package-name-doesnt-match-sonames
