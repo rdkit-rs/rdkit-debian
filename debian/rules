@@ -19,11 +19,11 @@ export LDFLAGS      := $(shell dpkg-buildflags --get LDFLAGS)
 
 override_dh_auto_clean:
 	find $(CURDIR) -name "*.pyc" | xargs rm -f
-	rm -rf $(CURDIR)/Projects/DbCLI/testData/bzr/
+	$(RM) -r Projects/DbCLI/testData/bzr/ Code/RDGeneral/versions.h rdkit/Chem/inchi.py
 	dh_auto_clean
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=OFF
+	dh_auto_configure -- -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=OFF -DRDK_BUILD_THREADSAFE_SSS=ON -DRDK_BUILD_PYTHON_WRAPPERS=ON
 
 override_dh_install:
 	dh_numpy

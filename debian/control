@@ -10,9 +10,12 @@ Build-Depends: bison,
                libboost-dev,
                libboost-python-dev,
                libboost-regex-dev,
+               libboost-system-dev,
+               libboost-thread-dev,
                libsqlite3-dev,
                python-dev,
                python-numpy,
+               python-pandas,
                python-support
 Standards-Version: 3.9.4
 Homepage: http://www.rdkit.org
@@ -22,7 +25,8 @@ Vcs-Svn: svn://svn.debian.org/svn/debichem/unstable/rdkit/
 Package: python-rdkit
 Section: python
 Architecture: any
-Depends: python-numpy,
+Depends: fonts-freefont-ttf,
+         python-numpy,
          rdkit-data,
          ${misc:Depends},
          ${python:Depends},

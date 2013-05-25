@@ -11,13 +11,22 @@ rdkit (201303-1) UNRELEASED; urgency=low
   [ Daniel Leidert ]
   * debian/control: Dropped DM-Upload-Allowed. Added Provides and
     XB-Python-Version for python package.
+    (Build-Depends): Added libboost-system-dev and libboost-thread-dev.
+    Added python-pandas for tests.
     (Standards-Version): Bumped to 3.9.4.
     (Section): Fixed binary-control-field-duplicates-source.
-    (Depends): Added missing depends to library for dev package.
+    (Depends): Added missing depends to library for dev package. Added
+    fonts-freefont-ttf because python-rdkit uses FreeSans.ttf.
   * debian/copyright: Updated.
   * debian/librdkit1.lintian-overrides: Added.
+  * debian/python-rdkit.links: Add link for FreeSans.ttf.
+  * debian/rdkit-doc.doc-base: Added.
   * debian/rules: Enabled hardening. Installed upstream changelog.
+    (override_dh_auto_configure): Added -DRDK_BUILD_THREADSAFE_SSS=ON.
     (override_dh_install): List missing files.
+  * debian/patches/fix_ftbfs_mtsss.patch: Added.
+    - Fix linkage of libRDBoost.so when using -DRDK_BUILD_THREADSAFE_SSS=ON.
+  * debian/patches/series: Adjusted.
 
  -- Michael Banck <mbanck@debian.org>  Sun, 29 Jul 2012 11:33:16 +0200
 

@@ -1,0 +1,9 @@
+Document: rdkit-doc
+Title: RDKit Overview
+Author: Greg Landrum <glandrum@users.sourceforge.net>
+Abstract: RDKit: A software suite for cheminformatics, computational
+ chemistry, and predictive modeling.
+Section: Science/Chemistry
+
+Format: PDF
+Files: /usr/share/doc/rdkit-doc/RDKit_Overview.pdf.gz
