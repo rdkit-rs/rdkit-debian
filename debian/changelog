@@ -1,4 +1,4 @@
-rdkit (201303-1) UNRELEASED; urgency=low
+rdkit (201303-1) unstable; urgency=low
 
   * New upstream release.
 
@@ -22,13 +22,14 @@ rdkit (201303-1) UNRELEASED; urgency=low
   * debian/python-rdkit.links: Add link for FreeSans.ttf.
   * debian/rdkit-doc.doc-base: Added.
   * debian/rules: Enabled hardening. Installed upstream changelog.
-    (override_dh_auto_configure): Added -DRDK_BUILD_THREADSAFE_SSS=ON.
+    (override_dh_auto_configure): Added -DRDK_BUILD_THREADSAFE_SSS=ON,
+    -DCMAKE_SKIP_RPATH and -DCMAKE_BUILD_TYPE=None.
     (override_dh_install): List missing files.
   * debian/patches/fix_ftbfs_mtsss.patch: Added.
     - Fix linkage of libRDBoost.so when using -DRDK_BUILD_THREADSAFE_SSS=ON.
   * debian/patches/series: Adjusted.
 
- -- Michael Banck <mbanck@debian.org>  Sun, 29 Jul 2012 11:33:16 +0200
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 25 May 2013 12:48:23 +0200
 
 rdkit (201203-3) unstable; urgency=low
 
