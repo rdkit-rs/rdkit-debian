@@ -19,8 +19,8 @@ Build-Depends: bison,
                python-support
 Standards-Version: 3.9.4
 Homepage: http://www.rdkit.org
-Vcs-Browser: http://svn.debian.org/wsvn/debichem/unstable/rdkit/
-Vcs-Svn: svn://svn.debian.org/svn/debichem/unstable/rdkit/
+Vcs-Browser: http://anonscm.debian.org/viewvc/debichem/unstable/rdkit/
+Vcs-Svn: svn://anonscm.debian.org/debichem/unstable/rdkit/
 
 Package: python-rdkit
 Section: python
