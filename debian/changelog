@@ -1,6 +1,5 @@
-rdkit (201306-1) UNRELEASED; urgency=low
+rdkit (201306-1) unstable; urgency=low
 
-  * NOT RELEASED YET
   * New upstream release.
 
   [ Daniel Leidert ]
@@ -8,7 +7,7 @@ rdkit (201306-1) UNRELEASED; urgency=low
   * debian/patches/fix_ftbfs_mtsss.patch: Dropped. Fix applied to upstream.
   * debian/patches/series: Removed.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 25 May 2013 13:21:18 +0200
+ -- Daniel Leidert <dleidert@debian.org>  Tue, 30 Jul 2013 01:58:06 +0200
 
 rdkit (201303-1) unstable; urgency=low
 
