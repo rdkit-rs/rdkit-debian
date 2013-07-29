@@ -5,6 +5,8 @@ rdkit (201306-1) UNRELEASED; urgency=low
 
   [ Daniel Leidert ]
   * debian/control (Vcs-Browser, Vcs-Svn): Fixed vcs-field-not-canonical.
+  * debian/patches/fix_ftbfs_mtsss.patch: Dropped. Fix applied to upstream.
+  * debian/patches/series: Removed.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 25 May 2013 13:21:18 +0200
 
