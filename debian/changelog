@@ -3,6 +3,9 @@ rdkit (201306-1) UNRELEASED; urgency=low
   * NOT RELEASED YET
   * New upstream release.
 
+  [ Daniel Leidert ]
+  * debian/control (Vcs-Browser, Vcs-Svn): Fixed vcs-field-not-canonical.
+
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 25 May 2013 13:21:18 +0200
 
 rdkit (201303-1) unstable; urgency=low
