@@ -1,6 +1,7 @@
-rdkit (201303-2) UNRELEASED; urgency=low
+rdkit (201306-1) UNRELEASED; urgency=low
 
   * NOT RELEASED YET
+  * New upstream release.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 25 May 2013 13:21:18 +0200
 
