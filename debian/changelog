@@ -1,3 +1,9 @@
+rdkit (201306-2) UNRELEASED; urgency=low
+
+  * NOT RELEASED YET
+
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 30 Jul 2013 19:35:47 +0200
+
 rdkit (201306-1) unstable; urgency=low
 
   * New upstream release.
