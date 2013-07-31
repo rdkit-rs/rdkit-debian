@@ -39,5 +39,7 @@ override_dh_installchangelogs:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 override_dh_auto_test:
 	cp -r rdkit obj-*/
-	-RDBASE=$(CURDIR) PYTHONPATH=$(wildcard $(CURDIR)/obj-*/) dh_auto_test -O--buildsystem=cmake
+	find $(CURDIR) -name rdchem.so
+	#export RDBASE=$(CURDIR) PYTHONPATH=$(wildcard $(CURDIR)/obj-*/) LD_LIBRARY_PATH="$(wildcard $(CURDIR)/obj-*/)/lib:$(LD_LIBRARY_PATH)"
+	-RDBASE=$(CURDIR) PYTHONPATH=$(wildcard $(CURDIR)/obj-*/):$(wildcard $(CURDIR)/obj-*/)/rdkit/Chem/ LD_LIBRARY_PATH="$(wildcard $(CURDIR)/obj-*/)/lib:$(LD_LIBRARY_PATH)" dh_auto_test
 endif

@@ -14,6 +14,7 @@ Build-Depends: bison,
                libboost-thread-dev,
                libsqlite3-dev,
                python-dev,
+               python-imaging,
                python-numpy,
                python-pandas,
                python-support
