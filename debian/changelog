@@ -1,13 +1,11 @@
-rdkit (201306-2) UNRELEASED; urgency=low
-
-  * NOT RELEASED YET
+rdkit (201306-2) unstable; urgency=low
 
   [ Daniel Leidert ]
   * debian/control (Build-Depends): Added python-imaging for pythonTestDirChem.
   * debian/rules (override_dh_auto_test): Fixed LD_LIBRARY_PATH to reenable
     tests. Added path to rdchem.so to PYTHONPATH to fix pythonTestDirChem.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 30 Jul 2013 19:35:47 +0200
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Thu, 01 Aug 2013 00:31:14 +0200
 
 rdkit (201306-1) unstable; urgency=low
 
