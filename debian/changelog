@@ -1,6 +1,5 @@
-rdkit (201309-1) UNRELEASED; urgency=low
+rdkit (201309-1) unstable; urgency=low
 
-  * NOT RELEASED YET
   * New upstream release.
 
   [ Daniel Leidert ]
@@ -9,7 +8,7 @@ rdkit (201309-1) UNRELEASED; urgency=low
     - Fix syntax for bison 3.x to fix FTBFS (closes: #733359).
   * debian/patches/series: Added.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Thu, 01 Aug 2013 00:41:50 +0200
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 29 Dec 2013 01:53:13 +0100
 
 rdkit (201306-2) unstable; urgency=low
 
