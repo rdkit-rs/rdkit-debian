@@ -61,10 +61,13 @@ Bug-Debian: http://bugs.debian.org/733359
  %{
  
    // $Id$
-@@ -78,13 +76,12 @@
+@@ -77,14 +75,14 @@
+ 
  
  %}
-  
+- 
++
++%define api.pure
 +%lex-param   {yyscan_t *scanner}
  %parse-param {const char *input}
  %parse-param {std::vector<RDKit::RWMol *> *molList}
