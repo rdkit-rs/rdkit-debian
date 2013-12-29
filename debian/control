@@ -18,7 +18,7 @@ Build-Depends: bison,
                python-numpy,
                python-pandas,
                python-support
-Standards-Version: 3.9.4
+Standards-Version: 3.9.5
 Homepage: http://www.rdkit.org
 Vcs-Browser: http://anonscm.debian.org/viewvc/debichem/unstable/rdkit/
 Vcs-Svn: svn://anonscm.debian.org/debichem/unstable/rdkit/
