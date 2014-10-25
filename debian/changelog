@@ -2,6 +2,10 @@ rdkit (201403-1) UNRELEASED; urgency=low
 
   * New upstream release.
 
+  [ Michael Banck ]
+  * debian/patches/733359_bison3_compatibility.patch: Dropped. Fix applied to upstream.
+  * debian/patches/series: Removed.
+
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 29 Dec 2013 02:15:26 +0100
 
 rdkit (201309-1) unstable; urgency=low
