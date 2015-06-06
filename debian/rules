@@ -28,6 +28,10 @@ override_dh_auto_configure:
 	    -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=OFF \
 	    -DRDK_BUILD_THREADSAFE_SSS=ON -DRDK_BUILD_PYTHON_WRAPPERS=ON
 
+override_dh_auto_build:
+	dh_auto_build
+	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) latexpdf)
+
 override_dh_install:
 	dh_numpy
 	dh_install --list-missing

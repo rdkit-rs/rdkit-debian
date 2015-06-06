@@ -17,7 +17,8 @@ Build-Depends: bison,
                python-imaging,
                python-numpy,
                python-pandas,
-               python-support
+               python-support,
+               python-sphinx
 Standards-Version: 3.9.5
 Homepage: http://www.rdkit.org
 Vcs-Browser: http://anonscm.debian.org/viewvc/debichem/unstable/rdkit/
