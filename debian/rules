@@ -40,7 +40,9 @@ override_dh_auto_build:
 override_dh_install:
 	dh_numpy
 	dh_install --list-missing
-
+	cp $(CURDIR)/Docs/Book/_build/latex/RDKit.pdf $(DOCDIR)
+	cp -a $(CURDIR)/Docs/Book/_build/html $(DOCDIR)
+ 
 override_dh_installchangelogs:
 	dh_installchangelogs ReleaseNotes.txt
 
