@@ -35,7 +35,7 @@ override_dh_auto_build:
 	(cd $(CURDIR)/Code; doxygen doxygen/doxygen.config)
 	(cd $(CURDIR)/rdkit; epydoc --config  epydoc.config)
 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) html)
- 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) latexpdf)
+	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) latexpdf)
 
 override_dh_install:
 	dh_numpy
