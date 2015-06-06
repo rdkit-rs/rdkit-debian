@@ -13,6 +13,8 @@ rdkit (201503-1) UNRELEASED; urgency=medium
     documentation with python-epydoc and doxygen, as well as HTML
     documentation.
   * debian/rules (override_dh_install): Install PDF and HTML documentation.
+  * debian/rdkit-doc.doc-base: Reference PDF/HTML documentation and no longer
+    the overview PDF.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 25 Oct 2014 19:58:47 +0200
 
