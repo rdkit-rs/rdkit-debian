@@ -43,21 +43,23 @@ Description: Collection of cheminformatics and machine-learning software
   * Substructure searching with SMARTS
   * Canonical SMILES
   * Molecule-molecule alignment
-  * Large number of descriptors
+  * Large number of molecular descriptors, including topological, 
+    compositional, EState, SlogP/SMR, VSA and Feature-map vectors
   * Fragmentation using RECAP rules
-  * 2D coordinate generation and depiction
+  * 2D coordinate generation and depiction, including constrained depiction
   * 3D coordinate generation using geometry embedding
-  * UFF forcefield
-  * Calculation of (R/S) stereochemistry codes
-  * Pharmacophore searching
+  * UFF and MMFF94 forcefields
+  * Chirality support, including calculation of (R/S) stereochemistry codes
+  * 2D pharmacophore searching
+  * Fingerprinting, including Daylight-like, atom pairs, topological 
+    torsions, Morgan alogrithm and MACCS keys
   * Calculation of shape similarity
-  * Atom pairs and topological torsions fingerprints
-  * Feature maps and feature-maps vectors
-  * Machine-learning algorithms
+  * Multi-molecule maximum common substructure
+  * Machine-learning via clustering and information theory algorithms 
   * Gasteiger-Marsili partial charge calculation
  .
- File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
- format.
+ File formats RDKit supports include MDL Mol, PDB, SDF, TDT, SMILES and RDKit
+ binary format.
 
 Package: rdkit-doc
 Section: doc
@@ -65,27 +67,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Collection of cheminformatics and machine-learning software (documentation)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
- environment.  Features Include:
- .
-  * Chemical reaction handling and transforms
-  * Substructure searching with SMARTS
-  * Canonical SMILES
-  * Molecule-molecule alignment
-  * Large number of descriptors
-  * Fragmentation using RECAP rules
-  * 2D coordinate generation and depiction
-  * 3D coordinate generation using geometry embedding
-  * UFF forcefield
-  * Calculation of (R/S) stereochemistry codes
-  * Pharmacophore searching
-  * Calculation of shape similarity
-  * Atom pairs and topological torsions fingerprints
-  * Feature maps and feature-maps vectors
-  * Machine-learning algorithms
-  * Gasteiger-Marsili partial charge calculation
- .
- File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
- format.
+ environment. 
  .
  This package contains the documentation.
 
@@ -94,27 +76,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Collection of cheminformatics and machine-learning software (data files)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
- environment.  Features Include:
- .
-  * Chemical reaction handling and transforms
-  * Substructure searching with SMARTS
-  * Canonical SMILES
-  * Molecule-molecule alignment
-  * Large number of descriptors
-  * Fragmentation using RECAP rules
-  * 2D coordinate generation and depiction
-  * 3D coordinate generation using geometry embedding
-  * UFF forcefield
-  * Calculation of (R/S) stereochemistry codes
-  * Pharmacophore searching
-  * Calculation of shape similarity
-  * Atom pairs and topological torsions fingerprints
-  * Feature maps and feature-maps vectors
-  * Machine-learning algorithms
-  * Gasteiger-Marsili partial charge calculation
- .
- File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
- format.
+ environment.
  .
  This package contains data files.
 
@@ -130,21 +92,23 @@ Description: Collection of cheminformatics and machine-learning software (shared
   * Substructure searching with SMARTS
   * Canonical SMILES
   * Molecule-molecule alignment
-  * Large number of descriptors
+  * Large number of molecular descriptors, including topological, 
+    compositional, EState, SlogP/SMR, VSA and Feature-map vectors
   * Fragmentation using RECAP rules
-  * 2D coordinate generation and depiction
+  * 2D coordinate generation and depiction, including constrained depiction
   * 3D coordinate generation using geometry embedding
-  * UFF forcefield
-  * Calculation of (R/S) stereochemistry codes
-  * Pharmacophore searching
+  * UFF and MMFF94 forcefields
+  * Chirality support, including calculation of (R/S) stereochemistry codes
+  * 2D pharmacophore searching
+  * Fingerprinting, including Daylight-like, atom pairs, topological 
+    torsions, Morgan alogrithm and MACCS keys
   * Calculation of shape similarity
-  * Atom pairs and topological torsions fingerprints
-  * Feature maps and feature-maps vectors
-  * Machine-learning algorithms
+  * Multi-molecule maximum common substructure
+  * Machine-learning via clustering and information theory algorithms 
   * Gasteiger-Marsili partial charge calculation
  .
- File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
- format.
+ File formats RDKit supports include MDL Mol, PDB, SDF, TDT, SMILES and RDKit
+ binary format.
  .
  This package contains the shared libraries.
 
@@ -160,20 +124,22 @@ Description: Collection of cheminformatics and machine-learning software (develo
   * Substructure searching with SMARTS
   * Canonical SMILES
   * Molecule-molecule alignment
-  * Large number of descriptors
+  * Large number of molecular descriptors, including topological, 
+    compositional, EState, SlogP/SMR, VSA and Feature-map vectors
   * Fragmentation using RECAP rules
-  * 2D coordinate generation and depiction
+  * 2D coordinate generation and depiction, including constrained depiction
   * 3D coordinate generation using geometry embedding
-  * UFF forcefield
-  * Calculation of (R/S) stereochemistry codes
-  * Pharmacophore searching
+  * UFF and MMFF94 forcefields
+  * Chirality support, including calculation of (R/S) stereochemistry codes
+  * 2D pharmacophore searching
+  * Fingerprinting, including Daylight-like, atom pairs, topological 
+    torsions, Morgan alogrithm and MACCS keys
   * Calculation of shape similarity
-  * Atom pairs and topological torsions fingerprints
-  * Feature maps and feature-maps vectors
-  * Machine-learning algorithms
+  * Multi-molecule maximum common substructure
+  * Machine-learning via clustering and information theory algorithms 
   * Gasteiger-Marsili partial charge calculation
  .
- File formats RDKit supports include MDL Mol, SDF, TDT, SMILES and RDKit binary
- format.
+ File formats RDKit supports include MDL Mol, PDB, SDF, TDT, SMILES and RDKit
+ binary format.
  .
  This package contains the header files.
