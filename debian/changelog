@@ -6,6 +6,7 @@ rdkit (201503-1) UNRELEASED; urgency=medium
   * debian/rules (override_dh_auto_build): New rule, build PDF user
     documentation.
   * debian/control (Build-Depends): Added doxygen and python-epydoc.
+  * debian/rdkit-doc.dirs: New file.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 25 Oct 2014 19:58:47 +0200
 
