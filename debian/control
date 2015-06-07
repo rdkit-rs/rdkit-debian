@@ -20,7 +20,8 @@ Build-Depends: bison,
                python-numpy,
                python-pandas,
                python-support,
-               python-sphinx
+               python-sphinx,
+               texlive-latex-base
 Standards-Version: 3.9.5
 Homepage: http://www.rdkit.org
 Vcs-Browser: http://anonscm.debian.org/viewvc/debichem/unstable/rdkit/
