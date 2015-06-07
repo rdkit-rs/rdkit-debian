@@ -1,6 +1,6 @@
 rdkit (201503-1) UNRELEASED; urgency=medium
 
-  * New upstream release.
+  * New upstream release (closes: #785192).
   * debian/control (Description): Updated.
   * debian/control (Build-Depends): Added python-sphinx
   * debian/rules (override_dh_auto_build): New rule, build PDF user
