@@ -1,8 +1,8 @@
-rdkit (201503-2) UNRELEASED; urgency=medium
+rdkit (201503-2) unstable; urgency=medium
 
   * debian/rules (override_dh_install): Create $(DOCDIR).
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 07 Jun 2015 16:20:16 +0200
+ -- Michael Banck <mbanck@debian.org>  Tue, 09 Jun 2015 01:31:58 +0200
 
 rdkit (201503-1) unstable; urgency=medium
 
