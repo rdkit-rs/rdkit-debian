@@ -2,7 +2,5 @@
 
 version=3
 opts=\
-uversionmangle=s#_##g,\
-downloadurlmangle=s|.*[?]name=(.*?)&.*|http://rdkit.googlecode.com/files/$1|,\
-filenamemangle=s|[^/]+[?]name=(.*?)&.*|$1| \
-http://code.google.com/p/rdkit/downloads/detail[?]name=RDKit_([\d_]+)_(?:\d+)\.tgz.*
+uversionmangle=s#_##g \
+https://github.com/rdkit/rdkit/releases .*/archive/Release_([\d_]+)_(?:\d+)\.tar\.gz

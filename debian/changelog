@@ -1,6 +1,10 @@
 rdkit (201503-3) UNRELEASED; urgency=medium
 
+  [ Debichem Team ]
   * 
+
+  [ Daniel Leidert ]
+  * debian/watch: Updated after project moved to Github.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 09 Jun 2015 02:19:27 +0200
 
