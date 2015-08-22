@@ -81,6 +81,9 @@ override_dh_install:
 override_dh_installchangelogs:
 	dh_installchangelogs ReleaseNotes.txt
 
+override_dh_python2:
+	dh_python2 -ppython-rdkit
+	dh_numpy -ppython-rdkit
 
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 override_dh_auto_test:
