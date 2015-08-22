@@ -5,7 +5,8 @@ Maintainer: Debichem Team <debichem-devel@lists.alioth.debian.org>
 Uploaders: Michael Banck <mbanck@debian.org>
 Build-Depends: bison,
                cmake,
-               debhelper (>= 7.0.50~),
+               debhelper (>> 9),
+               dh-python,
                doxygen,
                flex,
                libboost-dev,
@@ -19,13 +20,12 @@ Build-Depends: bison,
                python-imaging,
                python-numpy,
                python-pandas,
-               python-support,
                python-sphinx,
                texlive-fonts-recommended,
                texlive-latex-base,
                texlive-latex-extra,
                texlive-latex-recommended
-Standards-Version: 3.9.5
+Standards-Version: 3.9.6
 Homepage: http://www.rdkit.org
 Vcs-Browser: http://anonscm.debian.org/viewvc/debichem/unstable/rdkit/
 Vcs-Svn: svn://anonscm.debian.org/debichem/unstable/rdkit/
@@ -34,7 +34,6 @@ Package: python-rdkit
 Section: python
 Architecture: any
 Depends: fonts-freefont-ttf,
-         python-numpy,
          rdkit-data,
          ${misc:Depends},
          ${python:Depends},
@@ -50,7 +49,7 @@ Description: Collection of cheminformatics and machine-learning software
   * Substructure searching with SMARTS
   * Canonical SMILES
   * Molecule-molecule alignment
-  * Large number of molecular descriptors, including topological, 
+  * Large number of molecular descriptors, including topological,
     compositional, EState, SlogP/SMR, VSA and Feature-map vectors
   * Fragmentation using RECAP rules
   * 2D coordinate generation and depiction, including constrained depiction
@@ -58,11 +57,11 @@ Description: Collection of cheminformatics and machine-learning software
   * UFF and MMFF94 forcefields
   * Chirality support, including calculation of (R/S) stereochemistry codes
   * 2D pharmacophore searching
-  * Fingerprinting, including Daylight-like, atom pairs, topological 
+  * Fingerprinting, including Daylight-like, atom pairs, topological
     torsions, Morgan alogrithm and MACCS keys
   * Calculation of shape similarity
   * Multi-molecule maximum common substructure
-  * Machine-learning via clustering and information theory algorithms 
+  * Machine-learning via clustering and information theory algorithms
   * Gasteiger-Marsili partial charge calculation
  .
  File formats RDKit supports include MDL Mol, PDB, SDF, TDT, SMILES and RDKit
@@ -74,7 +73,7 @@ Architecture: all
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Description: Collection of cheminformatics and machine-learning software (documentation)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
- environment. 
+ environment.
  .
  This package contains the documentation.
 
@@ -99,7 +98,7 @@ Description: Collection of cheminformatics and machine-learning software (shared
   * Substructure searching with SMARTS
   * Canonical SMILES
   * Molecule-molecule alignment
-  * Large number of molecular descriptors, including topological, 
+  * Large number of molecular descriptors, including topological,
     compositional, EState, SlogP/SMR, VSA and Feature-map vectors
   * Fragmentation using RECAP rules
   * 2D coordinate generation and depiction, including constrained depiction
@@ -107,11 +106,11 @@ Description: Collection of cheminformatics and machine-learning software (shared
   * UFF and MMFF94 forcefields
   * Chirality support, including calculation of (R/S) stereochemistry codes
   * 2D pharmacophore searching
-  * Fingerprinting, including Daylight-like, atom pairs, topological 
+  * Fingerprinting, including Daylight-like, atom pairs, topological
     torsions, Morgan alogrithm and MACCS keys
   * Calculation of shape similarity
   * Multi-molecule maximum common substructure
-  * Machine-learning via clustering and information theory algorithms 
+  * Machine-learning via clustering and information theory algorithms
   * Gasteiger-Marsili partial charge calculation
  .
  File formats RDKit supports include MDL Mol, PDB, SDF, TDT, SMILES and RDKit
@@ -131,7 +130,7 @@ Description: Collection of cheminformatics and machine-learning software (develo
   * Substructure searching with SMARTS
   * Canonical SMILES
   * Molecule-molecule alignment
-  * Large number of molecular descriptors, including topological, 
+  * Large number of molecular descriptors, including topological,
     compositional, EState, SlogP/SMR, VSA and Feature-map vectors
   * Fragmentation using RECAP rules
   * 2D coordinate generation and depiction, including constrained depiction
@@ -139,11 +138,11 @@ Description: Collection of cheminformatics and machine-learning software (develo
   * UFF and MMFF94 forcefields
   * Chirality support, including calculation of (R/S) stereochemistry codes
   * 2D pharmacophore searching
-  * Fingerprinting, including Daylight-like, atom pairs, topological 
+  * Fingerprinting, including Daylight-like, atom pairs, topological
     torsions, Morgan alogrithm and MACCS keys
   * Calculation of shape similarity
   * Multi-molecule maximum common substructure
-  * Machine-learning via clustering and information theory algorithms 
+  * Machine-learning via clustering and information theory algorithms
   * Gasteiger-Marsili partial charge calculation
  .
  File formats RDKit supports include MDL Mol, PDB, SDF, TDT, SMILES and RDKit

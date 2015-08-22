@@ -4,6 +4,11 @@ rdkit (201503-3) UNRELEASED; urgency=medium
   * 
 
   [ Daniel Leidert ]
+  * debian/compat: Raised to level 9.
+  * debian/control (Build-Depends): Switched to dh-python (closes: #786180).
+    (Standards-Version): Bumped to 3.9.6.
+    (Depends): Dropped python-numpy and let dh_numpy handle this.
+  * debian/rules: Added override for dh_python2 and call dh_numpy.
   * debian/watch: Updated after project moved to Github.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 09 Jun 2015 02:19:27 +0200
