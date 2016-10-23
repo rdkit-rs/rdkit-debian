@@ -21,6 +21,7 @@ rdkit (201603.5-1) UNRELEASED; urgency=medium
   [ Michael Banck ]
   * debian/rules (override_dh_auto_clean): No longer remove
     Code/RDGeneral/versions.h, this is shipped upstream now. 
+  * debian/rdkit-doc.install: Removed, no longer needed.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 09 Jun 2015 02:19:27 +0200
 
