@@ -1,4 +1,4 @@
-rdkit (201603.5-1) UNRELEASED; urgency=medium
+rdkit (201603.5-1) unstable; urgency=medium
 
   * New upstream release.  New features include:
    - Addition of parsers/writers for sequence notation, FASTA, and basic HELM
@@ -27,7 +27,7 @@ rdkit (201603.5-1) UNRELEASED; urgency=medium
   * debian/rules (override_dh_auto_clean): Added Code/RDGeneral/versions.cpp
     and auto-generated restructed-text source files.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 09 Jun 2015 02:19:27 +0200
+ -- Michael Banck <mbanck@debian.org>  Sun, 23 Oct 2016 23:07:02 +0200
 
 rdkit (201503-2) unstable; urgency=medium
 
