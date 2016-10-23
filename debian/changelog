@@ -16,8 +16,6 @@ rdkit (201603-1) UNRELEASED; urgency=medium
     (Depends): Dropped python-numpy and let dh_numpy handle this.
   * debian/rules: Added override for dh_python2 and call dh_numpy.
   * debian/watch: Updated after project moved to Github.
-  * debian/patches/641788_fix_syntaxwarning.patch: Added.
-    - Fix a syntax issue in sping/PDF/pdfutils.py.
   * debian/patches/series: Added.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 09 Jun 2015 02:19:27 +0200
