@@ -21,7 +21,7 @@ export DOCDIR       := $(CURDIR)/debian/rdkit-doc/usr/share/doc/rdkit/
 
 override_dh_auto_clean:
 	find $(CURDIR) -name "*.pyc" | xargs rm -f
-	$(RM) -r Projects/DbCLI/testData/bzr/ Code/RDGeneral/versions.h rdkit/Chem/inchi.py
+	$(RM) -r Projects/DbCLI/testData/bzr/ rdkit/Chem/inchi.py
 	$(RM) -r Docs/Book/_build Code/docs rdkit/docs Code/doxygen_sqlite3.db
 	$(RM) \
 	Code/ForceField/MMFF/test_data/MMFF94_dative_min.sdf \
