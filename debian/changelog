@@ -1,4 +1,4 @@
-rdkit (201509-1) UNRELEASED; urgency=medium
+rdkit (201603-1) UNRELEASED; urgency=medium
 
   * New upstream release.  New features include:
    - Addition of parsers/writers for sequence notation, FASTA, and basic HELM
