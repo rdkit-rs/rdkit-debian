@@ -24,6 +24,8 @@ rdkit (201603.5-1) UNRELEASED; urgency=medium
   * debian/rdkit-doc.install: Removed, no longer needed.
   * debian/rules (override_dh_installchangelogs): Update for new ReleaseNotes
     extension.
+  * debian/rules (override_dh_auto_clean): Added Code/RDGeneral/versions.cpp
+    and auto-generated restructed-text source files.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 09 Jun 2015 02:19:27 +0200
 
