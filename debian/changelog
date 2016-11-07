@@ -2,6 +2,8 @@ rdkit (201603.5-2) UNRELEASED; urgency=medium
 
   * debian/control (Build-Depends): Added pandoc and 
     texlive-generic-extra. (Closes: #831264)
+  * debian/rules (override_dh_auto_configure): Added
+    -DRDK_OPTIMIZE_NATIVE=OFF to prevent FTBFS on ppc64el.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 23 Oct 2016 23:48:24 +0200
 
