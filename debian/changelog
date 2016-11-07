@@ -1,6 +1,6 @@
 rdkit (201603.5-2) UNRELEASED; urgency=medium
 
-  * 
+  * debian/control (Build-Depends): Added pandoc.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 23 Oct 2016 23:48:24 +0200
 
