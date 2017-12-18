@@ -2,6 +2,7 @@ rdkit (201603.5-3) UNRELEASED; urgency=medium
 
   * Team upload.
   * Moved packaging from SVN to Git
+  * DEP5
 
  -- Andreas Tille <tille@debian.org>  Mon, 18 Dec 2017 11:10:04 +0100
 
