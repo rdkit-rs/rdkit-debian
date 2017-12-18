@@ -1,6 +1,7 @@
 rdkit (201609.2-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * d/watch: uversionmangle to match choosen Debian version
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Fri, 09 Dec 2016 21:54:53 +0100
 
