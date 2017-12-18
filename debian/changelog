@@ -6,6 +6,7 @@ rdkit (201603.5+dfsg-1) UNRELEASED; urgency=medium
   * Repack tarball to exclude *.chm file
   * Build-Depends: latexmk
     Closes: #872246
+  * Standards-Version: 4.1.2
 
  -- Andreas Tille <tille@debian.org>  Mon, 18 Dec 2017 11:10:04 +0100
 
