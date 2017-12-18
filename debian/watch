@@ -1,6 +1,0 @@
-# See uscan(1) for format
-
-version=3
-opts=\
-uversionmangle=s#_##g \
-https://github.com/rdkit/rdkit/releases .*/archive/Release_([\d_]+)_(?:\d+)\.tar\.gz

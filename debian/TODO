@@ -1,5 +1,0 @@
-There is a python-fmcs package and there is a copy distributed with rdkit.
-The latter has the higher version number!!! We need to check this and
-let rdkit depend on python-fmcs if possible.
-
- -- Daniel Leidert, December 2013
