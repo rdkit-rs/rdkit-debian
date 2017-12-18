@@ -1,4 +1,4 @@
-rdkit (201603.5+dfsg-1) UNRELEASED; urgency=medium
+rdkit (201603.5+dfsg-1) unstable; urgency=medium
 
   * Team upload.
   * Moved packaging from SVN to Git
@@ -8,7 +8,7 @@ rdkit (201603.5+dfsg-1) UNRELEASED; urgency=medium
     Closes: #872246
   * Standards-Version: 4.1.2
 
- -- Andreas Tille <tille@debian.org>  Mon, 18 Dec 2017 11:10:04 +0100
+ -- Andreas Tille <tille@debian.org>  Mon, 18 Dec 2017 12:09:00 +0100
 
 rdkit (201603.5-2) unstable; urgency=medium
 
