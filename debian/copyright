@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: rdkit
 Source: https://github.com/rdkit/rdkit/releases
-Files-Excluded: */Docs/Book
+Files-Excluded: */*.chm
 
 Files: *
 Copyright: 2006-2016 Rational Discovery LLC, Novartis Institutes for
