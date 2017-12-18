@@ -197,7 +197,7 @@ class FilterCatalog : public FCatalog {
 
   //------------------------------------
   //! returns the number of entries in the catalog
-  virtual unsigned int getNumEntries() const { return d_entries.size(); }
+  virtual unsigned int getNumEntries() const { return static_cast<unsigned int>(d_entries.size()); }
 
   //------------------------------------
   //! Reset the current catalog to match the specified FilterCatalogParameters
@@ -221,12 +221,19 @@ class FilterCatalog : public FCatalog {
   */
   CONST_SENTRY getFirstMatch(const ROMol &mol) const;
 
-  //------------------------------------
-  //! Returns all matches to the molecule
+  //-------------------------------------------
+  //! Returns all entry matches to the molecule
   /*
     \param mol  ROMol to match against the catalog
   */
   const std::vector<CONST_SENTRY> getMatches(const ROMol &mol) const;
+
+  //--------------------------------------------
+  //! Returns all FilterMatches for the molecule
+  /*
+    \param mol  ROMol to match against the catalog
+  */
+  const std::vector<FilterMatch> getFilterMatches(const ROMol &mol) const;
 
  private:
   void Clear();

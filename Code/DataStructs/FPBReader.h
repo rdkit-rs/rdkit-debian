@@ -90,6 +90,7 @@ class FPBReader {
   FPBReader(std::istream *inStream, bool takeOwnership = true,
             bool lazyRead = false)
       : dp_istrm(inStream),
+        dp_impl(NULL),
         df_owner(takeOwnership),
         df_init(false),
         df_lazyRead(lazyRead){};
@@ -112,6 +113,15 @@ class FPBReader {
   and delete inStream after calling \c init()
   */
   void init();
+  //! cleanup
+  /*!
+  Cleans up whatever memory was allocated during init()
+  */
+  void cleanup() {
+    if (!df_init) return;
+    destroy();
+    df_init = false;
+  };
   //! returns the requested fingerprint as an \c ExplicitBitVect
   boost::shared_ptr<ExplicitBitVect> getFP(unsigned int idx) const;
   //! returns the requested fingerprint as an array of bytes
@@ -259,6 +269,7 @@ class FPBReader {
       throw BadFileException(errout.str());
     }
     dp_istrm = tmpStream;
+    dp_impl = NULL;
     df_owner = true;
     df_init = false;
     df_lazyRead = lazyRead;
