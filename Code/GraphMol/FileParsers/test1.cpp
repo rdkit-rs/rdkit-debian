@@ -1,6 +1,5 @@
-// $Id$
 //
-//  Copyright (C) 2002-2011 Greg Landrum and Rational Discovery LLC
+//  Copyright (C) 2002-2016 Greg Landrum and Rational Discovery LLC
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
 //  The contents are covered by the terms of the BSD license
@@ -12,8 +11,9 @@
 #include <GraphMol/Canon.h>
 #include <GraphMol/MonomerInfo.h>
 #include "FileParsers.h"
+#include "SequenceParsers.h"
+#include "SequenceWriters.h"
 #include "MolFileStereochem.h"
-#include "ProximityBonds.h"
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <GraphMol/SmilesParse/SmartsWrite.h>
@@ -1951,8 +1951,39 @@ void testMolFileAtomValues() {
     TEST_ASSERT(m->getAtomWithIdx(1)->hasProp(common_properties::molFileValue));
     m->getAtomWithIdx(1)->getProp(common_properties::molFileValue, val);
     TEST_ASSERT(val == "acidchloride");
+    TEST_ASSERT(getAtomValue(m->getAtomWithIdx(1)) == "acidchloride")
+
+    TEST_ASSERT(
+        m->getAtomWithIdx(0)->hasProp(common_properties::molAtomMapNumber));
+    TEST_ASSERT(
+        m->getAtomWithIdx(1)->hasProp(common_properties::molAtomMapNumber));
+    TEST_ASSERT(
+        m->getAtomWithIdx(2)->hasProp(common_properties::molAtomMapNumber));
+    TEST_ASSERT(
+        !m->getAtomWithIdx(3)->hasProp(common_properties::molAtomMapNumber));
+
+    TEST_ASSERT(m->getAtomWithIdx(0)->getAtomMapNum() == 1);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getAtomMapNum() == 2);
+    TEST_ASSERT(m->getAtomWithIdx(2)->getAtomMapNum() == 3);
+    TEST_ASSERT(m->getAtomWithIdx(3)->getAtomMapNum() == 0);
+
+    // round trip
+    m->getAtomWithIdx(0)->setAtomMapNum(4);
+    setAtomRLabel(m->getAtomWithIdx(3), 1);
+    setAtomAlias(m->getAtomWithIdx(0), "acidchloride");
+    setAtomValue(m->getAtomWithIdx(0), "foobar");
+    RWMol *m2 = MolBlockToMol(MolToMolBlock(*m));
+    TEST_ASSERT(m2);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getAtomMapNum() == 4);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getAtomMapNum() == 2);
+    TEST_ASSERT(m->getAtomWithIdx(2)->getAtomMapNum() == 3);
+    TEST_ASSERT(m->getAtomWithIdx(3)->getAtomMapNum() == 0);
+    TEST_ASSERT(getAtomRLabel(m->getAtomWithIdx(3)) == 1);
+    TEST_ASSERT(getAtomAlias(m->getAtomWithIdx(0)) == "acidchloride");
+    TEST_ASSERT(getAtomValue(m->getAtomWithIdx(0)) == "foobar");
 
     delete m;
+    delete m2;
   }
 
   {
@@ -3406,6 +3437,9 @@ void testIssue269() {
 
   std::string rdbase = getenv("RDBASE");
   {
+    // since the new elements were added, the original version of this no longer
+    // fails. The test input file has been updated to still have an atomic
+    // symbol that is not recognized. We'll be ok until Mv is an element. :-)
     std::string fName =
         rdbase + "/Code/GraphMol/FileParsers/test_data/Issue269.mol";
     RWMol *m = 0;
@@ -3803,7 +3837,181 @@ void testPDBFile() {
                     ->getResidueName() == "LIA");
   }
 
+  {  // DNA
+    std::string fName;
+    fName = rdbase + "4BNA.pdb";
+    ROMol *m = PDBFileToMol(fName);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumHeavyAtoms() == 602);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getMonomerInfo());
+    TEST_ASSERT(m->getAtomWithIdx(0)->getMonomerInfo()->getMonomerType() ==
+                AtomMonomerInfo::PDBRESIDUE);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(0)->getMonomerInfo())
+                    ->getSerialNumber() == 1);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(1)->getMonomerInfo())
+                    ->getResidueName() == " DC");
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(57)->getMonomerInfo())
+                    ->getResidueName() == " DG");
+    std::string mb = MolToPDBBlock(*m);
+    delete m;
+    m = PDBBlockToMol(mb);
+    TEST_ASSERT(m->getNumHeavyAtoms() == 602);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getMonomerInfo());
+    TEST_ASSERT(m->getAtomWithIdx(0)->getMonomerInfo()->getMonomerType() ==
+                AtomMonomerInfo::PDBRESIDUE);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(1)->getMonomerInfo())
+                    ->getResidueName() == " DC");
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(57)->getMonomerInfo())
+                    ->getResidueName() == " DG");
+    delete m;
+  }
+  {  // RNA
+    std::string fName;
+    fName = rdbase + "4TNA.pdb";
+    ROMol *m = PDBFileToMol(fName);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumHeavyAtoms() == 1656);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getMonomerInfo());
+    TEST_ASSERT(m->getAtomWithIdx(0)->getMonomerInfo()->getMonomerType() ==
+                AtomMonomerInfo::PDBRESIDUE);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(0)->getMonomerInfo())
+                    ->getSerialNumber() == 1);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(1)->getMonomerInfo())
+                    ->getResidueName() == "  G");
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(90)->getMonomerInfo())
+                    ->getResidueName() == "  A");
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(197)->getMonomerInfo())
+                    ->getResidueName() == "2MG");
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(197)->getMonomerInfo())
+                    ->getIsHeteroAtom());
+
+    std::string mb = MolToPDBBlock(*m);
+    delete m;
+    m = PDBBlockToMol(mb);
+    TEST_ASSERT(m->getNumHeavyAtoms() == 1656);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(0)->getMonomerInfo())
+                    ->getSerialNumber() == 1);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(1)->getMonomerInfo())
+                    ->getResidueName() == "  G");
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(90)->getMonomerInfo())
+                    ->getResidueName() == "  A");
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(197)->getMonomerInfo())
+                    ->getResidueName() == "2MG");
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(197)->getMonomerInfo())
+                    ->getIsHeteroAtom());
+
+    delete m;
+  }
+
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testSequences() {
+  BOOST_LOG(rdInfoLog) << "testing reading sequences" << std::endl;
+  {
+    std::string seq = "CGCGAATTACCGCG";  // made up
+    int flavor = 6;                      // DNA
+    ROMol *m = SequenceToMol(seq, true, flavor);
+    TEST_ASSERT(m);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(0)->getMonomerInfo())
+                    ->getSerialNumber() == 1);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(1)->getMonomerInfo())
+                    ->getResidueName() == " DC");
+    seq = MolToSequence(*m);
+    TEST_ASSERT(seq == "CGCGAATTACCGCG");
+    seq = MolToHELM(*m);
+    // std::cerr << seq << std::endl;
+    TEST_ASSERT(seq ==
+                "RNA1{[dR](C)P.[dR](G)P.[dR](C)P.[dR](G)P.[dR](A)P.[dR](A)P.["
+                "dR](T)P.[dR](T)P.[dR](A)P.[dR](C)P.[dR](C)P.[dR](G)P.[dR](C)P."
+                "[dR](G)}$$$$");
+    {
+      std::string lseq = MolToHELM(*m);
+      TEST_ASSERT(lseq == seq);
+
+      ROMol *m2 = HELMToMol(seq);
+      TEST_ASSERT(m2)
+      lseq = MolToSequence(*m2);
+      TEST_ASSERT(lseq == "CGCGAATTACCGCG");
+      lseq = MolToHELM(*m2);
+      TEST_ASSERT(lseq == seq);
+      delete m2;
+    }
+
+    {
+      ROMol *nm = MolOps::addHs(*m);
+      TEST_ASSERT(nm);
+      std::string pdb = MolToPDBBlock(*nm);
+      delete nm;
+      nm = PDBBlockToMol(pdb);
+      TEST_ASSERT(nm);
+      std::string lseq = MolToSequence(*nm);
+      TEST_ASSERT(lseq == "CGCGAATTACCGCG");
+      delete nm;
+    }
+
+    delete m;
+  }
+  {
+    std::string seq = "CGCGAAUUACCGCG";  // made up
+    int flavor = 2;                      // RNA
+    ROMol *m = SequenceToMol(seq, true, flavor);
+    TEST_ASSERT(m);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(0)->getMonomerInfo())
+                    ->getSerialNumber() == 1);
+    TEST_ASSERT(static_cast<AtomPDBResidueInfo *>(
+                    m->getAtomWithIdx(1)->getMonomerInfo())
+                    ->getResidueName() == "  C");
+    seq = MolToSequence(*m);
+    TEST_ASSERT(seq == "CGCGAAUUACCGCG");
+    seq = MolToHELM(*m);
+    TEST_ASSERT(seq ==
+                "RNA1{R(C)P.R(G)P.R(C)P.R(G)P.R(A)P.R(A)P.R(U)P.R(U)P.R(A)P.R("
+                "C)P.R(C)P.R(G)P.R(C)P.R(G)}$$$$");
+    {
+      std::string lseq = MolToHELM(*m);
+      TEST_ASSERT(lseq == seq);
+
+      ROMol *m2 = HELMToMol(seq);
+      TEST_ASSERT(m2)
+      lseq = MolToSequence(*m2);
+      TEST_ASSERT(lseq == "CGCGAAUUACCGCG");
+      lseq = MolToHELM(*m2);
+      TEST_ASSERT(lseq == seq);
+      delete m2;
+    }
+    {
+      ROMol *nm = MolOps::addHs(*m);
+      TEST_ASSERT(nm);
+      std::string pdb = MolToPDBBlock(*nm);
+      delete nm;
+      nm = PDBBlockToMol(pdb);
+      TEST_ASSERT(nm);
+      std::string lseq = MolToSequence(*nm);
+      TEST_ASSERT(lseq == "CGCGAAUUACCGCG");
+      delete nm;
+    }
+
+    delete m;
+  }
 }
 
 void testGithub1023() {
@@ -4401,6 +4609,273 @@ void testParseCHG() {
   delete m;
 }
 
+void testMDLAtomProps() {
+  std::string smi = "CC";
+  ROMOL_SPTR mol(SmilesToMol(smi, false, false));
+  setAtomAlias(mol->getAtomWithIdx(0), "foo");
+  setAtomValue(mol->getAtomWithIdx(0), "bar");
+  setAtomRLabel(mol->getAtomWithIdx(0), 1);
+  mol.reset(MolBlockToMol(MolToMolBlock(*mol.get())));
+  TEST_ASSERT(getAtomAlias(mol->getAtomWithIdx(0)) == "foo");
+  TEST_ASSERT(getAtomValue(mol->getAtomWithIdx(0)) == "bar");
+  TEST_ASSERT(getAtomRLabel(mol->getAtomWithIdx(0)) == 1);
+  try {
+    setAtomRLabel(mol->getAtomWithIdx(0), 100);
+    TEST_ASSERT(0);
+  } catch (...) {
+  }
+}
+
+void testSupplementalSmilesLabel() {
+  std::string smi = "C";
+  ROMOL_SPTR mol(SmilesToMol(smi, false, false));
+  setSupplementalSmilesLabel(mol->getAtomWithIdx(0), "xxx");
+  smi = MolToSmiles(*mol.get());
+  TEST_ASSERT(smi == "Cxxx");
+  TEST_ASSERT(getSupplementalSmilesLabel(mol->getAtomWithIdx(0)) == "xxx");
+}
+
+void testGithub1034() {
+  BOOST_LOG(rdInfoLog)
+      << "Test github 1034: Squiggle bonds from CTABs lost post-parsing"
+      << std::endl;
+  std::string rdbase = getenv("RDBASE");
+  rdbase += "/Code/GraphMol/FileParsers/test_data/";
+
+  {  // double bond
+    std::string fName;
+    fName = rdbase + "github1034.1.mol";
+    bool sanitize = true;
+    RWMol *m = MolFileToMol(fName, sanitize);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 4);
+    TEST_ASSERT(m->getBondWithIdx(0)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(0)->getStereo() == Bond::STEREOANY);
+    TEST_ASSERT(m->getBondWithIdx(1)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondDir() != Bond::UNKNOWN);
+    TEST_ASSERT(
+        m->getBondWithIdx(2)->hasProp(common_properties::_UnknownStereo));
+  }
+  {  // double bond
+    std::string fName;
+    fName = rdbase + "github1034.1.mol";
+    bool sanitize = false;
+    RWMol *m = MolFileToMol(fName, sanitize);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 4);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondDir() == Bond::UNKNOWN);
+    MolOps::sanitizeMol(*m);
+    TEST_ASSERT(m->getBondWithIdx(0)->getBondType() == Bond::DOUBLE);
+    TEST_ASSERT(m->getBondWithIdx(0)->getStereo() == Bond::STEREONONE);
+    TEST_ASSERT(m->getBondWithIdx(1)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondWithIdx(1)->getBondDir() == Bond::NONE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondWithIdx(2)->getBondDir() == Bond::UNKNOWN);
+    MolOps::assignStereochemistry(*m, true, true);
+    TEST_ASSERT(m->getBondWithIdx(0)->getStereo() == Bond::STEREOANY);
+  }
+  {  // chiral center
+    std::string fName;
+    fName = rdbase + "github1034.2.mol";
+    bool sanitize = true;
+    RWMol *m = MolFileToMol(fName, sanitize);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 5);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getChiralTag() == Atom::CHI_UNSPECIFIED);
+    TEST_ASSERT(m->getBondWithIdx(3)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondWithIdx(3)->getBondDir() == Bond::NONE);
+    TEST_ASSERT(
+        m->getBondWithIdx(3)->hasProp(common_properties::_UnknownStereo));
+  }
+  {  // chiral center
+    std::string fName;
+    fName = rdbase + "github1034.2.mol";
+    bool sanitize = false;
+    RWMol *m = MolFileToMol(fName, sanitize);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 5);
+    TEST_ASSERT(m->getBondWithIdx(3)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondWithIdx(3)->getBondDir() == Bond::UNKNOWN);
+    MolOps::sanitizeMol(*m);
+    TEST_ASSERT(m->getBondWithIdx(3)->getBondType() == Bond::SINGLE);
+    TEST_ASSERT(m->getBondWithIdx(3)->getBondDir() == Bond::UNKNOWN);
+    TEST_ASSERT(m->getAtomWithIdx(0)->getChiralTag() == Atom::CHI_UNSPECIFIED);
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testGithub1049() {
+  BOOST_LOG(rdInfoLog) << "Test github 1049: MolOps::cleanUp() being called by "
+                          "CTAB parser even when sanitization isn't on"
+                       << std::endl;
+  std::string rdbase = getenv("RDBASE");
+  rdbase += "/Code/GraphMol/FileParsers/test_data/";
+
+  {  // no stereo (this one worked before)
+    std::string fName;
+    fName = rdbase + "github1049.1.mol";
+    bool sanitize = false;
+    RWMol *m = MolFileToMol(fName, sanitize);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 7);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getAtomicNum() == 7);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getFormalCharge() == 0);
+    TEST_ASSERT(m->getAtomWithIdx(2)->getAtomicNum() == 8);
+    TEST_ASSERT(m->getAtomWithIdx(2)->getFormalCharge() == 0);
+    TEST_ASSERT(m->getAtomWithIdx(3)->getAtomicNum() == 8);
+    TEST_ASSERT(m->getAtomWithIdx(3)->getFormalCharge() == 0);
+
+    MolOps::sanitizeMol(*m);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getFormalCharge() == 1);
+    TEST_ASSERT((m->getAtomWithIdx(2)->getFormalCharge() == -1 &&
+                 m->getAtomWithIdx(3)->getFormalCharge() == 0) ||
+                (m->getAtomWithIdx(2)->getFormalCharge() == 0 &&
+                 m->getAtomWithIdx(3)->getFormalCharge() == -1));
+
+    delete m;
+  }
+  {  // with stereo (this one did not work)
+    std::string fName;
+    fName = rdbase + "github1049.2.mol";
+    bool sanitize = false;
+    RWMol *m = MolFileToMol(fName, sanitize);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 7);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getAtomicNum() == 7);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getFormalCharge() == 0);
+    TEST_ASSERT(m->getAtomWithIdx(2)->getAtomicNum() == 8);
+    TEST_ASSERT(m->getAtomWithIdx(2)->getFormalCharge() == 0);
+    TEST_ASSERT(m->getAtomWithIdx(3)->getAtomicNum() == 8);
+    TEST_ASSERT(m->getAtomWithIdx(3)->getFormalCharge() == 0);
+
+    MolOps::sanitizeMol(*m);
+    TEST_ASSERT(m->getAtomWithIdx(1)->getFormalCharge() == 1);
+    TEST_ASSERT((m->getAtomWithIdx(2)->getFormalCharge() == -1 &&
+                 m->getAtomWithIdx(3)->getFormalCharge() == 0) ||
+                (m->getAtomWithIdx(2)->getFormalCharge() == 0 &&
+                 m->getAtomWithIdx(3)->getFormalCharge() == -1));
+
+    delete m;
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testMolFileDativeBonds() {
+  BOOST_LOG(rdInfoLog) << "Test MDL molfiles with dative bonds (V3000 only)"
+                       << std::endl;
+  std::string rdbase = getenv("RDBASE");
+  rdbase += "/Code/GraphMol/FileParsers/test_data/";
+
+  // Read molfiles with dative bonds.
+  {
+    std::string fName = rdbase + "dative_bonds_one.mol";
+    RWMol *m = MolFileToMol(fName);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumBonds() == 5);
+    TEST_ASSERT(m->getBondWithIdx(4)->getBondType() == Bond::DATIVE);
+
+    std::string smiles = MolToSmiles(*m);
+    TEST_ASSERT(smiles == "CCC(=O)O->[Cu]");
+
+    delete m;
+  }
+
+  {
+    std::string fName = rdbase + "dative_bonds_two.mol";
+    RWMol *m = MolFileToMol(fName);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumBonds() == 10);
+    TEST_ASSERT(m->getBondWithIdx(8)->getBondType() == Bond::DATIVE);
+    TEST_ASSERT(m->getBondWithIdx(9)->getBondType() == Bond::DATIVE);
+
+    std::string smiles = MolToSmiles(*m);
+    TEST_ASSERT(smiles == "CCC(=O)O->[Cu]<-OC(O)CC");
+
+    delete m;
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testGithub1251() {
+  BOOST_LOG(rdInfoLog)
+      << "Test github 1251: MolFromMolBlock sanitizing when it should not be"
+      << std::endl;
+  std::string rdbase = getenv("RDBASE");
+  rdbase += "/Code/GraphMol/FileParsers/test_data/";
+
+  {
+    std::string fName = rdbase + "github1251.mol";
+    RWMol *m = MolFileToMol(fName, false);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 39);
+    TEST_ASSERT(m->getNumBonds() == 44);
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testGithub1029() {
+  BOOST_LOG(rdInfoLog)
+      << "Test github 1029: PDB reader fails for arginine explicit hydrogens "
+      << std::endl;
+  std::string rdbase = getenv("RDBASE");
+  rdbase += "/Code/GraphMol/FileParsers/test_data/";
+  {  // the original bug report
+    std::string fName = rdbase + "github1029.1.pdb";
+    bool sanitize = true, removeHs = false;
+    ROMol *m = PDBFileToMol(fName, sanitize, removeHs);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 3268);
+    TEST_ASSERT(m->getNumBonds() == 3302);
+    TEST_ASSERT(m->getAtomWithIdx(121)->getExplicitValence() == 4);
+    TEST_ASSERT(m->getAtomWithIdx(121)->getFormalCharge() == 1);
+
+    delete m;
+  }
+  {  // a second report that came in
+    std::string fName = rdbase + "github1029.1jld_chaina.pdb";
+    bool sanitize = false, removeHs = false;
+    ROMol *m = PDBFileToMol(fName, sanitize, removeHs);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 1533);
+    TEST_ASSERT(m->getNumBonds() == 1545);
+    TEST_ASSERT(m->getAtomWithIdx(123)->getExplicitValence() == 4);
+    TEST_ASSERT(m->getAtomWithIdx(123)->getFormalCharge() == 1);
+
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testGithub1340() {
+  BOOST_LOG(rdInfoLog) << "Test github 1340: PDB parser creating H-H bonds "
+                       << std::endl;
+  std::string rdbase = getenv("RDBASE");
+  rdbase += "/Code/GraphMol/FileParsers/test_data/";
+  {  // a second report that came in
+    std::string fName = rdbase + "github1340.1jld_snip.pdb";
+    bool sanitize = true, removeHs = false;
+    ROMol *m = PDBFileToMol(fName, sanitize, removeHs);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 37);
+    TEST_ASSERT(m->getNumBonds() == 35);
+    TEST_ASSERT(m->getAtomWithIdx(10)->getAtomicNum() == 1);
+    TEST_ASSERT(m->getAtomWithIdx(34)->getAtomicNum() == 1);
+    RDGeom::Point3D p10 = m->getConformer().getAtomPos(10);
+    RDGeom::Point3D p34 = m->getConformer().getAtomPos(34);
+    TEST_ASSERT((p34 - p10).length() < 1.0);
+    TEST_ASSERT(!m->getBondBetweenAtoms(10, 34));
+
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 void RunTests() {
 #if 1
   test1();
@@ -4465,7 +4940,6 @@ void RunTests() {
   testZBO();
 
   testGithub164();
-  testPDBFile();
   testGithub194();
   testGithub196();
   testIssue3557675();
@@ -4480,8 +4954,21 @@ void RunTests() {
   testGithub188();
   testRCSBSdf();
   testParseCHG();
-#endif
+  testMDLAtomProps();
+  testSupplementalSmilesLabel();
   testGithub1023();
+  testGithub1034();
+  testGithub1049();
+  testPDBFile();
+  testSequences();
+
+  // testSequenceReaders();
+
+  testMolFileDativeBonds();
+  testGithub1251();
+#endif
+  testGithub1029();
+  testGithub1340();
 }
 
 // must be in German Locale for test...
