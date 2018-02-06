@@ -1,8 +1,23 @@
-rdkit (201609.2-1) UNRELEASED; urgency=medium
+rdkit (201709.2+dfsg-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  
+  [ Andreas Tille]
+  * d/watch: uversionmangle to match choosen Debian version
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Fri, 09 Dec 2016 21:54:53 +0100
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Mon, 18 Dec 2017 13:16:45 +0100
+
+rdkit (201603.5+dfsg-1) unstable; urgency=medium
+
+  * Team upload.
+  * Moved packaging from SVN to Git
+  * DEP5
+  * Repack tarball to exclude *.chm file
+  * Build-Depends: latexmk
+    Closes: #872246
+  * Standards-Version: 4.1.2
+
+ -- Andreas Tille <tille@debian.org>  Mon, 18 Dec 2017 12:09:00 +0100
 
 rdkit (201603.5-2) unstable; urgency=medium
 

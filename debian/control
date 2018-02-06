@@ -15,6 +15,7 @@ Build-Depends: bison,
                libboost-system-dev,
                libboost-thread-dev,
                libsqlite3-dev,
+               latexmk,
                pandoc,
                python-dev,
                python-epydoc,
@@ -27,10 +28,10 @@ Build-Depends: bison,
                texlive-latex-base,
                texlive-latex-extra,
                texlive-latex-recommended
-Standards-Version: 3.9.6
+Standards-Version: 4.1.2
+Vcs-Browser: https://anonscm.debian.org/cgit/debichem/packages/rdkit.git
+Vcs-Git: https://anonscm.debian.org/git/debichem/packages/rdkit.git
 Homepage: http://www.rdkit.org
-Vcs-Browser: http://anonscm.debian.org/viewvc/debichem/unstable/rdkit/
-Vcs-Svn: svn://anonscm.debian.org/debichem/unstable/rdkit/
 
 Package: python-rdkit
 Section: python
