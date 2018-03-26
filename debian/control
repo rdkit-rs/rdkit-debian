@@ -62,7 +62,7 @@ Description: Collection of cheminformatics and machine-learning software
   * Chirality support, including calculation of (R/S) stereochemistry codes
   * 2D pharmacophore searching
   * Fingerprinting, including Daylight-like, atom pairs, topological
-    torsions, Morgan alogrithm and MACCS keys
+    torsions, Morgan algorithm and MACCS keys
   * Calculation of shape similarity
   * Multi-molecule maximum common substructure
   * Machine-learning via clustering and information theory algorithms
