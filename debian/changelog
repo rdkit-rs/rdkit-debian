@@ -1,14 +1,14 @@
-rdkit (201709.3+dfsg-1) UNRELEASED; urgency=medium
+rdkit (201709.3+dfsg-1) unstable; urgency=medium
 
   * Team upload.
   * New upstream release.
     Closes: #893177
-  * d/watch: uversionmangle to match choosen Debian version
+  * d/watch: uversionmangle to match chosen Debian version
   * Build-Depends: s/python-imaging/python-pil/
   * Fix doc generation by using python3-sphinx and python3-recommonmark
     in Build-Depends
 
- -- Andreas Tille <tille@debian.org>  Mon, 26 Mar 2018 12:12:11 +0200
+ -- Andreas Tille <tille@debian.org>  Mon, 26 Mar 2018 13:18:47 +0200
 
 rdkit (201603.5+dfsg-1) unstable; urgency=medium
 
