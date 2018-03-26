@@ -2,6 +2,7 @@ rdkit (201709.3+dfsg-1) UNRELEASED; urgency=medium
 
   * Team upload.
   * New upstream release.
+    Closes: #893177
   * d/watch: uversionmangle to match choosen Debian version
 
  -- Andreas Tille <tille@debian.org>  Mon, 26 Mar 2018 12:12:11 +0200
