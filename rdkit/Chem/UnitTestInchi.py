@@ -46,7 +46,7 @@ from rdkit.Chem import MolFromMolBlock, MolToMolBlock
 from rdkit.Chem import INCHI_AVAILABLE
 if INCHI_AVAILABLE:
   from rdkit.Chem import InchiReadWriteError
-  from rdkit.Chem import MolToInchi, MolFromInchi, InchiToInchiKey
+  from rdkit.Chem import MolToInchi, MolFromInchi, InchiToInchiKey, MolToInchiKey
 
 COLOR_RED = '\033[31m'
 COLOR_GREEN = '\033[32m'
@@ -90,7 +90,8 @@ class RegressionTest(unittest.TestCase):
        ),
       ('CNc1ccc2nc3ccccc3[n+](C)c2c1.[O-]Cl(=O)(=O)=O',
        'InChI=1S/C14H13N3.ClHO4/c1-15-10-7-8-12-14(9-10)17(2)13-6-4-3-5-11(13)16-12;2-1(3,4)5/h3-9H,1-2H3;(H,2,3,4,5)'
-       ), )
+       ),
+    )
     for smiles, expected in examples:
       m = MolFromSmiles(smiles)
       inchi = MolToInchi(m)
@@ -201,10 +202,13 @@ class TestCase(unittest.TestCase):
               continue
           # InChI messed up the radical?
           unsanitizedInchiMol = MolFromInchi(x, sanitize=False)
-          if sum([a.GetNumRadicalElectrons() * a.GetAtomicNum() for a in m.GetAtoms()
-                  if a.GetNumRadicalElectrons() != 0]) != sum(
-                    [a.GetNumRadicalElectrons() * a.GetAtomicNum()
-                     for a in unsanitizedInchiMol.GetAtoms() if a.GetNumRadicalElectrons() != 0]):
+          if sum([
+              a.GetNumRadicalElectrons() * a.GetAtomicNum() for a in m.GetAtoms()
+              if a.GetNumRadicalElectrons() != 0
+          ]) != sum([
+              a.GetNumRadicalElectrons() * a.GetAtomicNum() for a in unsanitizedInchiMol.GetAtoms()
+              if a.GetNumRadicalElectrons() != 0
+          ]):
             reasonable += 1
             continue
 
@@ -248,9 +252,9 @@ class TestCase(unittest.TestCase):
           same += 1
       fmt = "\n{0}InChI read Summary: {1} identical, {2} variance, {3} reasonable variance{4}"
       print(fmt.format(COLOR_GREEN, same, diff, reasonable, COLOR_RESET))
-      self.assertEqual(same, 621)
+      self.assertEqual(same, 627)
       self.assertEqual(diff, 0)
-      self.assertEqual(reasonable, 560)
+      self.assertEqual(reasonable, 554)
 
   def test2InchiOptions(self):
     m = MolFromSmiles("CC=C(N)C")
@@ -261,6 +265,13 @@ class TestCase(unittest.TestCase):
   def test3InchiKey(self):
     inchi = 'InChI=1S/C9H12/c1-2-6-9-7-4-3-5-8-9/h3-5,7-8H,2,6H2,1H3'
     self.assertEqual(InchiToInchiKey(inchi), 'ODLMAHJVESYWTB-UHFFFAOYSA-N')
+
+  def test4MolToInchiKey(self):
+    m = MolFromSmiles("CC=C(N)C")
+    inchi = MolToInchi(m)
+    k1 = InchiToInchiKey(inchi)
+    k2 = MolToInchiKey(m)
+    self.assertEqual(k1, k2)
 
 
 if __name__ == '__main__':  # pragma: nocover

@@ -11,7 +11,7 @@ rdkit_library(GraphMol
               LINK_LIBRARIES RDGeometryLib RDGeneral
                  ${RDKit_THREAD_LIBS})
 
-target_link_libraries(GraphMol ${RDKit_THREAD_LIBS})
+target_link_libraries(GraphMol PUBLIC ${RDKit_THREAD_LIBS})
 
 rdkit_headers(Atom.h
               atomic_data.h
@@ -81,26 +81,37 @@ add_subdirectory(Trajectory)
 add_subdirectory(SubstructLibrary)
 add_subdirectory(RGroupDecomposition)
 
+if(RDK_BUILD_MOLINTERCHANGE_SUPPORT)
+add_subdirectory(MolInterchange)
+endif(RDK_BUILD_MOLINTERCHANGE_SUPPORT)
+
 if(RDK_BUILD_SLN_SUPPORT AND NOT CMAKE_COMPILER_IS_CLANG)
-add_subdirectory(SLNParse)
+  if(CMAKE_COMPILER_IS_GNUCC AND NOT CMAKE_CXX_COMPILER_VERSION GREATER 4.8)
+    message("Skipping SLN build with gcc version <= 4.8")
+  else()
+    add_subdirectory(SLNParse)
+  endif()
 endif()
 
 add_subdirectory(Wrap)
 
-rdkit_test(graphmolTest1 test1.cpp LINK_LIBRARIES FileParsers SmilesParse GraphMol RDGeometryLib RDGeneral SubstructMatch ForceFieldHelpers ForceField)
+rdkit_test(graphmolTest1 test1.cpp LINK_LIBRARIES FileParsers SmilesParse GraphMol
+RDGeometryLib RDGeneral SubstructMatch ForceFieldHelpers ForceField)
 
 rdkit_test(graphmolcpTest cptest.cpp LINK_LIBRARIES  SmilesParse GraphMol RDGeometryLib RDGeneral)
 
 rdkit_test(graphmolqueryTest querytest.cpp LINK_LIBRARIES SubstructMatch SmilesParse GraphMol RDGeometryLib RDGeneral)
 
 rdkit_test(graphmolMolOpsTest molopstest.cpp
-           LINK_LIBRARIES SubstructMatch FileParsers SmilesParse GraphMol RDGeometryLib RDGeneral)
+           LINK_LIBRARIES SubstructMatch FileParsers
+	   SmilesParse GraphMol RDGeometryLib RDGeneral)
 
 rdkit_test(graphmoltestCanon testCanon.cpp
            LINK_LIBRARIES SubstructMatch SmilesParse GraphMol RDGeometryLib RDGeneral)
 
 rdkit_test(graphmoltestChirality testChirality.cpp
-           LINK_LIBRARIES SmilesParse FileParsers GraphMol RDGeometryLib RDGeneral)
+           LINK_LIBRARIES SmilesParse FileParsers
+	   GraphMol RDGeometryLib RDGeneral)
 
 rdkit_test(graphmoltestPickler testPickler.cpp
            LINK_LIBRARIES SmilesParse SubstructMatch FileParsers GraphMol RDGeometryLib RDGeneral)
@@ -110,9 +121,8 @@ rdkit_test(graphmoltestPicklerGlobalSetting testPicklerGlobalSettings.cpp
 
 rdkit_test(graphmolIterTest itertest.cpp LINK_LIBRARIES SmilesParse GraphMol RDGeometryLib RDGeneral)
 
-#rdkit_test(hanoiTest hanoitest.cpp LINK_LIBRARIES SmilesParse_static FileParsers_static GraphMol_static
-#    RDGeometryLib_static RDGeneral_static ${RDKit_THREAD_LIBS} )
-rdkit_test(hanoiTest hanoitest.cpp LINK_LIBRARIES SmilesParse FileParsers GraphMol
+rdkit_test(hanoiTest hanoitest.cpp LINK_LIBRARIES
+     SubstructMatch SmilesParse FileParsers GraphMol
      RDGeometryLib RDGeneral ${RDKit_THREAD_LIBS} )
 
 rdkit_test(graphmolMemTest1 memtest1.cpp LINK_LIBRARIES SmilesParse GraphMol RDGeometryLib RDGeneral)
@@ -122,3 +132,5 @@ rdkit_test(resMolSupplierTest resMolSupplierTest.cpp
 
 rdkit_test(molBundleTest testMolBundle.cpp
           LINK_LIBRARIES SmilesParse GraphMol RDGeometryLib RDGeneral SubstructMatch FileParsers)
+
+rdkit_test(test-valgrind test-valgrind.cpp LINK_LIBRARIES SmilesParse GraphMol RDGeneral)

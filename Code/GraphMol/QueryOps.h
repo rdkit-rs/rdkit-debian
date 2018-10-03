@@ -20,9 +20,7 @@
 #include <Query/Query.h>
 
 #ifdef RDK_THREADSAFE_SSS
-#include <RDGeneral/BoostStartInclude.h>
-#include <boost/thread/mutex.hpp>
-#include <RDGeneral/BoostEndInclude.h>
+#include <mutex>
 #endif
 
 namespace RDKit {
@@ -79,8 +77,22 @@ static inline int queryAtomExplicitDegree(Atom const *at) {
 static inline int queryAtomTotalDegree(Atom const *at) {
   return at->getTotalDegree();
 };
-static inline int queryAtomHeavyAtomDegree(Atom const *at) {
+static inline int queryAtomNonHydrogenDegree(Atom const *at) {
   return at->getTotalDegree() - at->getTotalNumHs(true);
+}
+static inline int queryAtomHeavyAtomDegree(Atom const *at) {
+  int heavyDegree = 0;
+  ROMol::ADJ_ITER nbrIdx, endNbrs;
+  boost::tie(nbrIdx, endNbrs) = at->getOwningMol().getAtomNeighbors(at);
+  while (nbrIdx != endNbrs) {
+    const Atom *nbr = at->getOwningMol()[*nbrIdx];
+    if (nbr->getAtomicNum() > 1) {
+      heavyDegree++;
+    }
+    ++nbrIdx;
+  }
+
+  return heavyDegree;
 };
 static inline int queryAtomHCount(Atom const *at) {
   return at->getTotalNumHs(true);
@@ -126,6 +138,62 @@ static inline int queryAtomHasChiralTag(Atom const *at) {
 static inline int queryAtomMissingChiralTag(Atom const *at) {
   return at->getChiralTag() == Atom::CHI_UNSPECIFIED &&
          at->hasProp(common_properties::_ChiralityPossible);
+};
+
+static inline int queryAtomHasHeteroatomNbrs(Atom const *at) {
+  ROMol::ADJ_ITER nbrIdx, endNbrs;
+  boost::tie(nbrIdx, endNbrs) = at->getOwningMol().getAtomNeighbors(at);
+  while (nbrIdx != endNbrs) {
+    const Atom *nbr = at->getOwningMol()[*nbrIdx];
+    if (nbr->getAtomicNum() != 6 && nbr->getAtomicNum() != 1) {
+      return 1;
+    }
+    ++nbrIdx;
+  }
+  return 0;
+};
+
+static inline int queryAtomNumHeteroatomNbrs(Atom const *at) {
+  int res = 0;
+  ROMol::ADJ_ITER nbrIdx, endNbrs;
+  boost::tie(nbrIdx, endNbrs) = at->getOwningMol().getAtomNeighbors(at);
+  while (nbrIdx != endNbrs) {
+    const Atom *nbr = at->getOwningMol()[*nbrIdx];
+    if (nbr->getAtomicNum() != 6 && nbr->getAtomicNum() != 1) {
+      ++res;
+    }
+    ++nbrIdx;
+  }
+  return res;
+};
+
+static inline int queryAtomHasAliphaticHeteroatomNbrs(Atom const *at) {
+  ROMol::ADJ_ITER nbrIdx, endNbrs;
+  boost::tie(nbrIdx, endNbrs) = at->getOwningMol().getAtomNeighbors(at);
+  while (nbrIdx != endNbrs) {
+    const Atom *nbr = at->getOwningMol()[*nbrIdx];
+    if ((!nbr->getIsAromatic()) && nbr->getAtomicNum() != 6 &&
+        nbr->getAtomicNum() != 1) {
+      return 1;
+    }
+    ++nbrIdx;
+  }
+  return 0;
+};
+
+static inline int queryAtomNumAliphaticHeteroatomNbrs(Atom const *at) {
+  int res = 0;
+  ROMol::ADJ_ITER nbrIdx, endNbrs;
+  boost::tie(nbrIdx, endNbrs) = at->getOwningMol().getAtomNeighbors(at);
+  while (nbrIdx != endNbrs) {
+    const Atom *nbr = at->getOwningMol()[*nbrIdx];
+    if ((!nbr->getIsAromatic()) && nbr->getAtomicNum() != 6 &&
+        nbr->getAtomicNum() != 1) {
+      ++res;
+    }
+    ++nbrIdx;
+  }
+  return res;
 };
 
 unsigned int queryAtomBondProduct(Atom const *at);
@@ -218,6 +286,16 @@ T *makeAtomSimpleQuery(int what, int func(Atom const *),
   res->setVal(what);
   res->setDataFunc(func);
   res->setDescription(description);
+  return res;
+}
+
+static inline ATOM_RANGE_QUERY *makeAtomRangeQuery(
+    int lower, int upper, bool lowerOpen, bool upperOpen,
+    int func(Atom const *), const std::string &description = "Atom Range") {
+  ATOM_RANGE_QUERY *res = new ATOM_RANGE_QUERY(lower, upper);
+  res->setDataFunc(func);
+  res->setDescription(description);
+  res->setEndsOpen(lowerOpen, upperOpen);
   return res;
 }
 
@@ -389,8 +467,8 @@ template <class T>
 T *makeAtomInRingQuery(const std::string &descr) {
   return makeAtomSimpleQuery<T>(true, queryIsAtomInRing, descr);
 }
-//! \overload
 ATOM_EQUALS_QUERY *makeAtomInRingQuery();
+//! \overload
 
 //! returns a Query for matching atoms in a particular number of rings
 template <class T>
@@ -443,6 +521,39 @@ T *makeAtomHasRingBondQuery(const std::string &descr) {
 }
 //! \overload
 ATOM_EQUALS_QUERY *makeAtomHasRingBondQuery();
+
+//! returns a Query for matching the number of heteroatom neighbors
+template <class T>
+T *makeAtomNumHeteroatomNbrsQuery(int what, const std::string &descr) {
+  return makeAtomSimpleQuery<T>(what, queryAtomNumHeteroatomNbrs, descr);
+}
+//! \overload
+ATOM_EQUALS_QUERY *makeAtomNumHeteroatomNbrsQuery(int what);
+
+//! returns a Query for matching atoms that have heteroatom neighbors
+template <class T>
+T *makeAtomHasHeteroatomNbrsQuery(const std::string &descr) {
+  return makeAtomSimpleQuery<T>(1, queryAtomHasHeteroatomNbrs, descr);
+}
+//! \overload
+ATOM_EQUALS_QUERY *makeAtomHasHeteroatomNbrsQuery();
+
+//! returns a Query for matching the number of aliphatic heteroatom neighbors
+template <class T>
+T *makeAtomNumAliphaticHeteroatomNbrsQuery(int what, const std::string &descr) {
+  return makeAtomSimpleQuery<T>(what, queryAtomNumAliphaticHeteroatomNbrs,
+                                descr);
+}
+//! \overload
+ATOM_EQUALS_QUERY *makeAtomNumAliphaticHeteroatomNbrsQuery(int what);
+
+//! returns a Query for matching atoms that have heteroatom neighbors
+template <class T>
+T *makeAtomHasAliphaticHeteroatomNbrsQuery(const std::string &descr) {
+  return makeAtomSimpleQuery<T>(1, queryAtomHasAliphaticHeteroatomNbrs, descr);
+}
+//! \overload
+ATOM_EQUALS_QUERY *makeAtomHasAliphaticHeteroatomNbrsQuery();
 
 //! returns a Query for matching bond orders
 BOND_EQUALS_QUERY *makeBondOrderEqualsQuery(Bond::BondType what);
@@ -567,7 +678,7 @@ class RecursiveStructureQuery
   unsigned int getSerialNumber() const { return d_serialNumber; };
 
 #ifdef RDK_THREADSAFE_SSS
-  boost::mutex d_mutex;
+  std::mutex d_mutex;
 #endif
  private:
   boost::shared_ptr<const ROMol> dp_queryMol;

@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2001-2012 Greg Landrum and Rational Discovery LLC
+//  Copyright (C) 2001-2017 Greg Landrum and Rational Discovery LLC
 //  Copyright (c) 2014, Novartis Institutes for BioMedical Research Inc.
 //
 //   @@ All Rights Reserved @@
@@ -26,6 +26,7 @@ class ROMol;
 class RWMol;
 class Atom;
 class Bond;
+class Conformer;
 typedef std::vector<double> INVAR_VECT;
 typedef INVAR_VECT::iterator INVAR_VECT_I;
 typedef INVAR_VECT::const_iterator INVAR_VECT_CI;
@@ -77,7 +78,7 @@ unsigned int getMolFrags(const ROMol &mol, std::vector<int> &mapping);
 
 */
 unsigned int getMolFrags(const ROMol &mol,
-                         std::vector<std::vector<int> > &frags);
+                         std::vector<std::vector<int>> &frags);
 
 //! splits a molecule into its component fragments
 //  (disconnected components of the molecular graph)
@@ -97,9 +98,9 @@ unsigned int getMolFrags(const ROMol &mol,
   \return a vector of the fragments as smart pointers to ROMols
 
 */
-std::vector<boost::shared_ptr<ROMol> > getMolFrags(
+std::vector<boost::shared_ptr<ROMol>> getMolFrags(
     const ROMol &mol, bool sanitizeFrags = true, std::vector<int> *frags = 0,
-    std::vector<std::vector<int> > *fragsMolAtomMapping = 0,
+    std::vector<std::vector<int>> *fragsMolAtomMapping = 0,
     bool copyConformers = true);
 
 //! splits a molecule into pieces based on labels assigned using a query
@@ -117,7 +118,7 @@ std::vector<boost::shared_ptr<ROMol> > getMolFrags(
 
 */
 template <typename T>
-std::map<T, boost::shared_ptr<ROMol> > getMolFragsWithQuery(
+std::map<T, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
     const ROMol &mol, T (*query)(const ROMol &, const Atom *),
     bool sanitizeFrags = true, const std::vector<T> *whiteList = 0,
     bool negateList = false);
@@ -163,6 +164,8 @@ double computeBalabanJ(double *distMat, int nb, int nAts);
                 of the added Hs will be used.
     \param onlyOnAtoms   (optional) if provided, this should be a vector of
                 IDs of the atoms that will be considered for H addition.
+    \param addResidueInfo   (optional) if this is true, add residue info to
+                hydrogen atoms (useful for PDB files).
 
     \return the new molecule
 
@@ -174,11 +177,12 @@ double computeBalabanJ(double *distMat, int nb, int nAts);
    returns.
  */
 ROMol *addHs(const ROMol &mol, bool explicitOnly = false,
-             bool addCoords = false, const UINT_VECT *onlyOnAtoms = NULL);
+             bool addCoords = false, const UINT_VECT *onlyOnAtoms = NULL,
+             bool addResidueInfo = false);
 //! \overload
 // modifies the molecule in place
 void addHs(RWMol &mol, bool explicitOnly = false, bool addCoords = false,
-           const UINT_VECT *onlyOnAtoms = NULL);
+           const UINT_VECT *onlyOnAtoms = NULL, bool addResidueInfo = false);
 
 //! returns a copy of a molecule with hydrogens removed
 /*!
@@ -203,6 +207,8 @@ void addHs(RWMol &mol, bool explicitOnly = false, bool addCoords = false,
          will not be removed.
        - two coordinate Hs, like the central H in C[H-]C, will not be removed
        - Hs connected to dummy atoms will not be removed
+       - Hs that are part of the definition of double bond Stereochemistry
+         will not be removed
 
        - the caller is responsible for <tt>delete</tt>ing the pointer this
    returns.
@@ -385,12 +391,14 @@ void sanitizeMol(RWMol &mol);
 Book)
 - \c AROMATICITY_SIMPLE only considers 5- and 6-membered simple rings (it
 does not consider the outer envelope of fused rings)
+- \c AROMATICITY_MDL
 - \c AROMATICITY_CUSTOM uses a caller-provided function
 */
 typedef enum {
   AROMATICITY_DEFAULT = 0x0,  ///< future proofing
   AROMATICITY_RDKIT = 0x1,
   AROMATICITY_SIMPLE = 0x2,
+  AROMATICITY_MDL = 0x4,
   AROMATICITY_CUSTOM = 0xFFFFFFF  ///< use a function
 } AromaticityModel;
 
@@ -549,9 +557,9 @@ void setHybridization(ROMol &mol);
     - Since SSSR may not be unique, a post-SSSR step to symmetrize may be done.
       The extra rings this process adds can be quite useful.
 */
-int findSSSR(const ROMol &mol, std::vector<std::vector<int> > &res);
+int findSSSR(const ROMol &mol, std::vector<std::vector<int>> &res);
 //! \overload
-int findSSSR(const ROMol &mol, std::vector<std::vector<int> > *res = 0);
+int findSSSR(const ROMol &mol, std::vector<std::vector<int>> *res = 0);
 
 //! use a DFS algorithm to identify ring bonds and atoms in a molecule
 /*!
@@ -587,7 +595,7 @@ void fastFindRings(const ROMol &mol);
    - if no SSSR rings are found on the molecule - MolOps::findSSSR() is called
   first
 */
-int symmetrizeSSSR(ROMol &mol, std::vector<std::vector<int> > &res);
+int symmetrizeSSSR(ROMol &mol, std::vector<std::vector<int>> &res);
 //! \overload
 int symmetrizeSSSR(ROMol &mol);
 
@@ -687,9 +695,9 @@ double *getDistanceMat(const ROMol &mol, const std::vector<int> &activeAtoms,
   \return the distance matrix.
 
   <b>Notes</b>
-    - The result of this is cached in the molecule's local property dictionary,
-      which will handle deallocation. Do the caller should <b>not</b> \c delete
-      this pointer.
+    - If propNamePrefix is not empty the result of this is cached in the
+      molecule's local property dictionary, which will handle deallocation.
+      In other cases the caller is responsible for freeing the memory.
 
 */
 double *get3DDistanceMat(const ROMol &mol, int confId = -1,
@@ -817,14 +825,23 @@ void assignStereochemistryFrom3D(ROMol &mol, int confId = -1,
   \param confId               the conformer to use
 */
 void detectBondStereochemistry(ROMol &mol, int confId = -1);
+void setDoubleBondNeighborDirections(ROMol &mol, const Conformer *conf = NULL);
 
 //! Assign stereochemistry tags to atoms (i.e. R/S) and bonds (i.e. Z/E)
 /*!
+  Does the CIP stereochemistry assignment for the molecule's atoms
+  (R/S) and double bond (Z/E). Chiral atoms will have a property
+  '_CIPCode' indicating their chiral code.
 
-  \param mol     the molecule of interest
-  \param cleanIt toggles removal of stereo flags from double bonds that can
-                 not have stereochemistry
-  \param force   forces the calculation to be repeated even if it has
+  \param mol     the molecule to use
+  \param cleanIt if true, atoms with a chiral specifier that aren't
+                 actually chiral (e.g. atoms with duplicate
+                 substituents or only 2 substituents, etc.) will have
+                 their chiral code set to CHI_UNSPECIFIED. Bonds with
+                 STEREOCIS/STEREOTRANS specified that have duplicate
+                 substituents based upon the CIP atom ranks will be
+                 marked STEREONONE.
+  \param force   causes the calculation to be repeated even if it has
                  already been done
   \param flagPossibleStereoCenters   set the _ChiralityPossible property on
                                      atoms that are possible stereocenters

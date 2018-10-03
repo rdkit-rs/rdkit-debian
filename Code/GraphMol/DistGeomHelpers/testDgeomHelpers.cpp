@@ -35,7 +35,7 @@
 #include <RDGeneral/Exceptions.h>
 
 #include <boost/tokenizer.hpp>
-typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
 
 using namespace RDKit;
 
@@ -57,8 +57,8 @@ void test1() {
        ++token) {
     std::string smi = *token;
     RWMol *m = SmilesToMol(smi, 0, 1);
-    int cid = DGeomHelpers::EmbedMolecule(*m, 10, 1, true, false, 2, true, 1, 0,
-                                          1e-2);
+    int cid = DGeomHelpers::EmbedMolecule(*m, 10, 1, true, false, 2, true, 1,
+                                          nullptr, 1e-2);
     CHECK_INVARIANT(cid >= 0, "");
     ROMol *m2 = sdsup.next();
     // BOOST_LOG(rdInfoLog) << ">>> " << smi << std::endl;
@@ -507,7 +507,7 @@ void testTemp() {
 void test15Dists() {
   ROMol *m = SmilesToMol("c1ccccc1C");
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DGeomHelpers::initBoundsMat(mat);
   DistGeom::BoundsMatPtr mmat(mat);
   DGeomHelpers::setTopolBounds(*m, mmat);
@@ -569,9 +569,9 @@ void testMultipleConfs() {
 void testMultipleConfsExpTors() {
   std::string smi = "CC(C)(C)c(cc1)ccc1c(cc23)n[n]3C(=O)/C(=C\\N2)C(=O)OCC";
   ROMol *m = SmilesToMol(smi, 0, 1);
-  INT_VECT cids = DGeomHelpers::EmbedMultipleConfs(
-      *m, 10, 30, 100, true, false, -1, true, 1, -1.0, 0, 1e-3, false, true,
-      true, true, false);
+  INT_VECT cids = DGeomHelpers::EmbedMultipleConfs(*m, 10, 30, 100, true, false,
+                                                   -1, true, 1, -1.0, 0, 1e-3,
+                                                   false, true, true, true);
   INT_VECT_CI ci;
   // SDWriter writer("junk.sdf");
   double energy;
@@ -592,7 +592,7 @@ void testOrdering() {
   std::string smi = "CC(C)(C)C(=O)NC(C1)CC(N2C)CCC12";
   ROMol *m = SmilesToMol(smi, 0, 1);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DGeomHelpers::initBoundsMat(mat);
   DistGeom::BoundsMatPtr mmat(mat);
   DGeomHelpers::setTopolBounds(*m, mmat);
@@ -600,7 +600,7 @@ void testOrdering() {
 
   std::string smi2 = "CN1C2CCC1CC(NC(=O)C(C)(C)C)C2";
   ROMol *m2 = SmilesToMol(smi2, 0, 1);
-  DistGeom::BoundsMatrix *mat2 = new DistGeom::BoundsMatrix(nat);
+  auto *mat2 = new DistGeom::BoundsMatrix(nat);
   DGeomHelpers::initBoundsMat(mat2);
   DistGeom::BoundsMatPtr mmat2(mat2);
   DGeomHelpers::setTopolBounds(*m2, mmat2);
@@ -613,7 +613,7 @@ void testIssue227() {
       "CCOP1(OCC)=CC(c2ccccc2)=C(c2ccc([N+]([O-])=O)cc2)N=C1c1ccccc1";
   ROMol *m = SmilesToMol(smi, 0, 1);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm(mat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -624,7 +624,7 @@ void testIssue227() {
   smi = "OC(=O)c1cc2cc(c1)-c1c(O)c(ccc1)-c1cc(C(O)=O)cc(c1)OCCOCCO2";
   m = SmilesToMol(smi, 0, 1);
   nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *nmat = new DistGeom::BoundsMatrix(nat);
+  auto *nmat = new DistGeom::BoundsMatrix(nat);
   bm.reset(nmat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -639,7 +639,7 @@ void testIssue236() {
       "Cn1c2n(-c3ccccc3)c(=O)c3c(nc4ccc([N+]([O-])=O)cc4c3)c2c(=O)n(C)c1=O";
   ROMol *m = SmilesToMol(smi, 0, 1);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm(mat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -649,7 +649,7 @@ void testIssue236() {
   smi = "Cc1cccc2c1c(C3=CCC3)c(C)cc2";
   m = SmilesToMol(smi, 0, 1);
   nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *nmat = new DistGeom::BoundsMatrix(nat);
+  auto *nmat = new DistGeom::BoundsMatrix(nat);
   bm.reset(nmat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -665,7 +665,7 @@ void testIssue244() {
   std::string smi = "NC1C(=O)N2C1SCC(Cl)=C2C(O)=O";
   ROMol *m = SmilesToMol(smi, 0, 1);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm(mat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -692,7 +692,7 @@ void testIssue251() {
   std::string smi = "COC=O";
   ROMol *m = SmilesToMol(smi, 0, 1);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm(mat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -706,7 +706,7 @@ void testIssue276() {
   std::string smi = "CP1(C)=CC=CN=C1C";
   ROMol *m = SmilesToMol(smi, 0, 1);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm(mat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -734,7 +734,7 @@ void testIssue284() {
   ROMol *m = SmilesToMol(smi, 0, 1);
   TEST_ASSERT(m);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm(mat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -753,7 +753,7 @@ void testIssue284() {
   TEST_ASSERT(m);
   nat = m->getNumAtoms();
 
-  DistGeom::BoundsMatrix *mat2 = new DistGeom::BoundsMatrix(nat);
+  auto *mat2 = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm2(mat2);
   DGeomHelpers::initBoundsMat(bm2);
   DGeomHelpers::setTopolBounds(*m, bm2);
@@ -781,7 +781,7 @@ void testIssue285() {
   ROMol *m = SmilesToMol(smi, 0, 1);
   TEST_ASSERT(m);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm(mat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -799,8 +799,7 @@ void testIssue285() {
   }
   for (std::vector<std::string>::const_iterator mbI = molBlocks.begin();
        mbI != molBlocks.end(); ++mbI) {
-    for (std::vector<std::string>::const_iterator mbJ = mbI + 1;
-         mbJ != molBlocks.end(); ++mbJ) {
+    for (auto mbJ = mbI + 1; mbJ != molBlocks.end(); ++mbJ) {
       TEST_ASSERT((*mbI) != (*mbJ));
     }
     // std::cerr << (*mbI) << "\n$$$$\n";
@@ -814,7 +813,7 @@ void testIssue355() {
   ROMol *m = SmilesToMol(smi, 0, 1);
   TEST_ASSERT(m);
   unsigned int nat = m->getNumAtoms();
-  DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(nat);
+  auto *mat = new DistGeom::BoundsMatrix(nat);
   DistGeom::BoundsMatPtr bm(mat);
   DGeomHelpers::initBoundsMat(bm);
   DGeomHelpers::setTopolBounds(*m, bm);
@@ -890,8 +889,8 @@ void testRandomCoords() {
     RWMol *m2 = (RWMol *)MolOps::addHs(*m);
     delete m;
     m = m2;
-    int cid =
-        DGeomHelpers::EmbedMolecule(*m, 10, 1, true, true, 2, true, 1, 0, 1e-2);
+    int cid = DGeomHelpers::EmbedMolecule(*m, 10, 1, true, true, 2, true, 1,
+                                          nullptr, 1e-2);
     CHECK_INVARIANT(cid >= 0, "");
 // writer.write(*m);
 // writer.flush();
@@ -967,7 +966,7 @@ void testConstrainedEmbedding() {
 
   ROMol *ref = sdsup.next();
   {
-    ROMol *test = new ROMol(*ref);
+    auto *test = new ROMol(*ref);
     std::map<int, RDGeom::Point3D> coords;
     coords[0] = ref->getConformer().getAtomPos(0);
     coords[1] = ref->getConformer().getAtomPos(1);
@@ -1137,7 +1136,7 @@ void testIssue3238580() {
     std::string smi = "C1CCC2=CC12";
     RWMol *m = SmilesToMol(smi);
 
-    DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(m->getNumAtoms());
+    auto *mat = new DistGeom::BoundsMatrix(m->getNumAtoms());
     DistGeom::BoundsMatPtr bm(mat);
     DGeomHelpers::initBoundsMat(bm);
     DGeomHelpers::setTopolBounds(*m, bm);
@@ -1154,7 +1153,7 @@ void testIssue3238580() {
         rdbase + "/Code/GraphMol/DistGeomHelpers/test_data/Issue3238580.1.mol";
     RWMol *m = MolFileToMol(molfile);
 
-    DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(m->getNumAtoms());
+    auto *mat = new DistGeom::BoundsMatrix(m->getNumAtoms());
 
     DistGeom::BoundsMatPtr bm(mat);
     DGeomHelpers::initBoundsMat(bm);
@@ -1172,7 +1171,7 @@ void testIssue3238580() {
         rdbase + "/Code/GraphMol/DistGeomHelpers/test_data/Issue3238580.2.mol";
     RWMol *m = MolFileToMol(molfile);
 
-    DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(m->getNumAtoms());
+    auto *mat = new DistGeom::BoundsMatrix(m->getNumAtoms());
     DistGeom::BoundsMatPtr bm(mat);
     DGeomHelpers::initBoundsMat(bm);
     DGeomHelpers::setTopolBounds(*m, bm);
@@ -1189,7 +1188,7 @@ void testIssue3238580() {
         rdbase + "/Code/GraphMol/DistGeomHelpers/test_data/Issue3238580.3.mol";
     RWMol *m = MolFileToMol(molfile);
 
-    DistGeom::BoundsMatrix *mat = new DistGeom::BoundsMatrix(m->getNumAtoms());
+    auto *mat = new DistGeom::BoundsMatrix(m->getNumAtoms());
     DistGeom::BoundsMatPtr bm(mat);
     DGeomHelpers::initBoundsMat(bm);
     DGeomHelpers::setTopolBounds(*m, bm);
@@ -1211,10 +1210,10 @@ void testIssue3483968() {
     TEST_ASSERT(m);
 
     int cid = DGeomHelpers::EmbedMolecule(*m, 0, -1, true, false, 2.0, true, 1,
-                                          0, 1e-3, true);
+                                          nullptr, 1e-3, true);
     TEST_ASSERT(cid >= 0);
     std::vector<int> cids = DGeomHelpers::EmbedMultipleConfs(
-        *m, 10, 30, 1, true, false, 2.0, true, 1, -1.0, 0, 1e-3, true);
+        *m, 10, 30, 1, true, false, 2.0, true, 1, -1.0, nullptr, 1e-3, true);
     TEST_ASSERT(cids.size() == 10);
     TEST_ASSERT(std::find(cids.begin(), cids.end(), -1) == cids.end());
     delete m;
@@ -1233,11 +1232,11 @@ void runblock(const std::vector<ROMol *> &mols,
       std::vector<int> cids =
           DGeomHelpers::EmbedMultipleConfs(mol, 10, 30, 0xFEED);
       TEST_ASSERT(cids.size() == 10);
-      ForceFields::ForceField *field = 0;
+      ForceFields::ForceField *field = nullptr;
       try {
         field = UFF::constructForceField(mol, 100.0, cids[0]);
       } catch (...) {
-        field = 0;
+        field = nullptr;
       }
       TEST_ASSERT(field);
       field->initialize();
@@ -1252,11 +1251,10 @@ void runblock(const std::vector<ROMol *> &mols,
     }
   }
 };
-}
+}  // namespace
 
-#include <RDGeneral/BoostStartInclude.h>
-#include <boost/thread.hpp>
-#include <RDGeneral/BoostEndInclude.h>
+#include <thread>
+#include <future>
 void testMultiThread() {
   std::cerr << "building molecules" << std::endl;
   // std::string smi="C/12=C(\\CSC2)Nc3cc(n[n]3C1=O)c4ccccc4";
@@ -1274,11 +1272,11 @@ void testMultiThread() {
     std::vector<int> cids =
         DGeomHelpers::EmbedMultipleConfs(mol, 10, 30, 0xFEED);
     TEST_ASSERT(cids.size() == 10);
-    ForceFields::ForceField *field = 0;
+    ForceFields::ForceField *field = nullptr;
     try {
       field = UFF::constructForceField(mol, 100.0, cids[0]);
     } catch (...) {
-      field = 0;
+      field = nullptr;
     }
     TEST_ASSERT(field);
     field->initialize();
@@ -1294,11 +1292,11 @@ void testMultiThread() {
     std::vector<int> cids =
         DGeomHelpers::EmbedMultipleConfs(mol, 10, 30, 0xFEED);
     TEST_ASSERT(cids.size() == 10);
-    ForceFields::ForceField *field = 0;
+    ForceFields::ForceField *field = nullptr;
     try {
       field = UFF::constructForceField(mol, 100.0, cids[0]);
     } catch (...) {
-      field = 0;
+      field = nullptr;
     }
     TEST_ASSERT(field);
     field->initialize();
@@ -1307,18 +1305,20 @@ void testMultiThread() {
     delete field;
   }
 
-  boost::thread_group tg;
-
+  std::vector<std::future<void>> tg;
   std::cerr << "processing" << std::endl;
   unsigned int count = 4;
   for (unsigned int i = 0; i < count; ++i) {
     std::cerr << " launch :" << i << std::endl;
     std::cerr.flush();
-    tg.add_thread(new boost::thread(runblock, mols, energies, count, i));
+    tg.emplace_back(
+        std::async(std::launch::async, runblock, mols, energies, count, i));
   }
-  tg.join_all();
+  for (auto &fut : tg) {
+    fut.get();
+  }
 
-  for (unsigned int i = 0; i < mols.size(); ++i) delete mols[i];
+  for (auto &mol : mols) delete mol;
 
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }
@@ -1381,7 +1381,7 @@ void testGithub55() {
 
 void testGithub256() {
   {
-    RWMol *mol = new RWMol();
+    auto *mol = new RWMol();
     TEST_ASSERT(mol);
 
     bool ok = false;
@@ -1494,7 +1494,8 @@ void testGithub568() {
         "Nc1ncnc2c1ncn2[C@H]3C[C@H](O)[C@@H](CO)C3",
         "C[C@@H](N1CC[C@@]23CCCC[C@@H]2[C@@H]1Cc4ccc(OCc5cccc(F)c5)cc34)C(=O)N",
         "CN1C(=O)CC[C@@]2(C)C1=CCc3cc(Cl)ccc23",
-        "Cc1nc(COc2ccc3OC[C@H](Cc4cccnc4)[C@H](O)c3c2)ccc1[N+](=O)[O-]", "EOS"};
+        "Cc1nc(COc2ccc3OC[C@H](Cc4cccnc4)[C@H](O)c3c2)ccc1[N+](=O)[O-]",
+        "EOS"};
     for (unsigned int idx = 0; smis[idx] != "EOS"; ++idx) {
       ROMol *m = SmilesToMol(smis[idx]);
       std::string csmi = MolToSmiles(*m, true);
@@ -1552,8 +1553,11 @@ void testGithub697() {
   {  // a group of chembl molecules (and things derived from them), all of which
     // contain a c1cscn1 heterocycle
     std::string smis[] = {
-        "C1SC2=NC1CCCCCC2", "C1CCCc2nc(CC1)cs2", "C1Cc2coc(n2)-c2coc(C1)n2",
-        "C1Cc2coc(n2)-c2csc(C1)n2", "C1CCc2nc(cs2)-c2nc(C1)co2",
+        "C1SC2=NC1CCCCCC2",
+        "C1CCCc2nc(CC1)cs2",
+        "C1Cc2coc(n2)-c2coc(C1)n2",
+        "C1Cc2coc(n2)-c2csc(C1)n2",
+        "C1CCc2nc(cs2)-c2nc(C1)co2",
         "C1Cc2nc(co2)-c2nc(cs2)-c2nc1co2",
         "C1Cc2nc(co2)-c2nc(co2)-c2nc(cs2)-c2nc(co2)-c2nc1co2",
         "C1CNCc2coc(n2)-c2coc(n2)-c2csc(n2)-c2coc(n2)-c2coc(CNCCN1)n2",
@@ -1618,7 +1622,7 @@ void compareConfs(const ROMol *m, const ROMol *expected, int molConfId = -1,
     TEST_ASSERT((pt1i - pt2i).length() < 10e-4);
   }
 }
-}
+}  // namespace
 
 void testGithub971() {
   {
@@ -1720,6 +1724,27 @@ void testEmbedParameters() {
     params.randomSeed = 42;
     params.useExpTorsionAnglePrefs = true;
     params.useBasicKnowledge = true;
+    DGeomHelpers::EmbedMolecule(*mol, params);
+    compareConfs(ref, mol);
+
+    delete ref;
+    delete mol;
+  }
+  {
+    std::string fname =
+        rdbase +
+        "/Code/GraphMol/DistGeomHelpers/test_data/torsion.etkdg.v2.mol";
+    RWMol *ref = MolFileToMol(fname, true, false);
+    TEST_ASSERT(ref);
+    RWMol *mol = SmilesToMol("n1cccc(C)c1ON");
+    TEST_ASSERT(mol);
+    MolOps::addHs(*mol);
+    TEST_ASSERT(ref->getNumAtoms() == mol->getNumAtoms());
+    DGeomHelpers::EmbedParameters params;
+    params.randomSeed = 42;
+    params.useExpTorsionAnglePrefs = true;
+    params.useBasicKnowledge = true;
+    params.ETversion = 2;
     DGeomHelpers::EmbedMolecule(*mol, params);
     compareConfs(ref, mol);
 
@@ -1965,28 +1990,52 @@ void testGithubPullRequest1635() {
     delete m;
 
     DGeomHelpers::EmbedParameters params(DGeomHelpers::ETKDG);
-    params.randomSeed = MAX_INT; // the largest possible random seed
+    params.randomSeed = MAX_INT;  // the largest possible random seed
 
     INT_VECT firstCids = DGeomHelpers::EmbedMultipleConfs(firstMol, 10, params);
-    INT_VECT secondCids = DGeomHelpers::EmbedMultipleConfs(secondMol, 10, params);
+    INT_VECT secondCids =
+        DGeomHelpers::EmbedMultipleConfs(secondMol, 10, params);
     TEST_ASSERT(firstCids.size() == 10);
     TEST_ASSERT(secondCids.size() == 10);
 
     for (size_t i = 0; i < 10; i++) {
-        TEST_ASSERT(firstCids[i] == secondCids[i]);
+      TEST_ASSERT(firstCids[i] == secondCids[i]);
 
-        int confIdx = firstCids[i];
-        const Conformer &firstConf = firstMol.getConformer(confIdx);
-        const Conformer &secondConf = secondMol.getConformer(confIdx);
+      int confIdx = firstCids[i];
+      const Conformer &firstConf = firstMol.getConformer(confIdx);
+      const Conformer &secondConf = secondMol.getConformer(confIdx);
 
-        for (int atomIdx = 0; atomIdx < expected_num_atoms; ++atomIdx) {
-            const RDGeom::Point3D &firstPoint = firstConf.getAtomPos(atomIdx);
-            const RDGeom::Point3D &secondPoint = secondConf.getAtomPos(atomIdx);
-            TEST_ASSERT(firstPoint.x == secondPoint.x);
-            TEST_ASSERT(firstPoint.y == secondPoint.y);
-            TEST_ASSERT(firstPoint.z == secondPoint.z);
-        }
+      for (int atomIdx = 0; atomIdx < expected_num_atoms; ++atomIdx) {
+        const RDGeom::Point3D &firstPoint = firstConf.getAtomPos(atomIdx);
+        const RDGeom::Point3D &secondPoint = secondConf.getAtomPos(atomIdx);
+        TEST_ASSERT(firstPoint.x == secondPoint.x);
+        TEST_ASSERT(firstPoint.y == secondPoint.y);
+        TEST_ASSERT(firstPoint.z == secondPoint.z);
+      }
     }
+  }
+}
+
+void testGithub1990() {
+  {  // we saw the problem here (though it came from something in MolOps)
+    std::unique_ptr<RWMol> mol(SmilesToMol("F/C=C/F"));
+    TEST_ASSERT(mol);
+    MolOps::addHs(*mol);
+    MolOps::removeHs(*mol);
+    TEST_ASSERT(mol->getNumAtoms() == 4);
+    int cid = DGeomHelpers::EmbedMolecule(*mol);
+    TEST_ASSERT(cid >= 0);
+  }
+  {  // The original problem report
+    std::unique_ptr<RWMol> mol(SmilesToMol(
+        "CCCCCCCCCCCCCCCC(=O)O[C@@H]1CC(C)=C(/C=C/C(C)=C/C=C/C(C)=C/"
+        "C=C\\C=C(C)\\C=C\\C=C(C)\\C=C\\C2=C(C)C[C@@H](OC(=O)CCCCCCCCCCCCCCC)"
+        "CC2(C)C)C(C)(C)C1"));
+    TEST_ASSERT(mol);
+    MolOps::addHs(*mol);
+    MolOps::removeHs(*mol);
+    int cid = DGeomHelpers::EmbedMolecule(*mol);
+    TEST_ASSERT(cid >= 0);
   }
 }
 
@@ -2153,7 +2202,6 @@ int main() {
   BOOST_LOG(rdInfoLog) << "\t---------------------------------\n";
   BOOST_LOG(rdInfoLog) << "\t test embed parameters structure.\n";
   testEmbedParameters();
-#endif
 
   BOOST_LOG(rdInfoLog) << "\t---------------------------------\n";
   BOOST_LOG(rdInfoLog)
@@ -2167,6 +2215,11 @@ int main() {
   BOOST_LOG(rdInfoLog) << "\t---------------------------------\n";
   BOOST_LOG(rdInfoLog) << "\t Deterministic with large random seeds\n";
   testGithubPullRequest1635();
+#endif
+
+  BOOST_LOG(rdInfoLog) << "\t---------------------------------\n";
+  BOOST_LOG(rdInfoLog) << "\t Github #1990: seg fault after RemoveHs\n";
+  testGithub1990();
 
   BOOST_LOG(rdInfoLog)
       << "*******************************************************\n";

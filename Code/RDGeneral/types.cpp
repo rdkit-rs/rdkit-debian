@@ -1,5 +1,5 @@
 //
-//  Copyright 2001-2016 Greg Landrum and Rational Discovery LLC
+//  Copyright 2001-2018 Greg Landrum and Rational Discovery LLC
 //
 //  @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -12,9 +12,9 @@
 #include "types.h"
 
 namespace RDKit {
-  namespace detail {
-  const std::string computedPropName = "__computedProps";
-  }
+namespace detail {
+const std::string computedPropName = "__computedProps";
+}
 
 namespace common_properties {
 const std::string TWOD = "2D";
@@ -36,7 +36,10 @@ const std::string _CrippenLogP = "_CrippenLogP";
 const std::string _CrippenMR = "_CrippenMR";
 const std::string _MMFFSanitized = "_MMFFSanitized";
 const std::string _MolFileChiralFlag = "_MolFileChiralFlag";
+const std::string MRV_SMA = "MRV SMA";
 const std::string _MolFileRLabel = "_MolFileRLabel";
+const std::string _MolFileAtomQuery = "_MolFileAtomQuery";
+const std::string _MolFileBondQuery = "_MolFileBondQuery";
 const std::string _Name = "_Name";
 const std::string _NeedsQueryScan = "_NeedsQueryScan";
 const std::string _QueryFormalCharge = "_QueryFormalCharge";
@@ -60,6 +63,8 @@ const std::string _crippenLogP = "_crippenLogP";
 const std::string _crippenLogPContribs = "_crippenLogPContribs";
 const std::string _crippenMR = "_crippenMR";
 const std::string _crippenMRContribs = "_crippenMRContribs";
+const std::string _GasteigerCharge = "_GasteigerCharge";
+const std::string _GasteigerHCharge = "_GasteigerHCharge";
 const std::string _doIsoSmiles = "_doIsoSmiles";
 const std::string _fragSMARTS = "_fragSMARTS";
 const std::string _hasMassQuery = "_hasMassQuery";
@@ -98,7 +103,8 @@ const std::string ringMembership = "ringMembership";
 const std::string smilesSymbol = "smilesSymbol";
 const std::string atomLabel = "atomLabel";
 const std::string internalRgroupSmiles = "internalRgroupSmiles";
-}  // end common_properties
+
+}  // namespace common_properties
 
 const double MAX_DOUBLE = std::numeric_limits<double>::max();
 const double EPS_DOUBLE = std::numeric_limits<double>::epsilon();
@@ -178,4 +184,4 @@ int nextCombination(INT_VECT &comb, int tot) {
   }
   return celem;
 }
-}
+}  // namespace RDKit

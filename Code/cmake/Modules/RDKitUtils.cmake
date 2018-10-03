@@ -5,13 +5,8 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 ELSE(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(RDKit_VERSION "${RDKit_ABI}.${RDKit_Year}.${RDKit_Month}")
 ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-set(RDKit_RELEASENAME "${RDKit_Year}.${RDKit_Month}")
-if (RDKit_Revision)
-  set(RDKit_RELEASENAME "${RDKit_RELEASENAME}.${RDKit_Revision}")
-  set(RDKit_VERSION "${RDKit_VERSION}.${RDKit_Revision}")
-else(RDKit_Revision)
-  set(RDKit_VERSION "${RDKit_VERSION}.0")
-endif(RDKit_Revision)
+set(RDKit_VERSION "${RDKit_VERSION}.${RDKit_Revision}${RDKit_RevisionModifier}")
+set(RDKit_RELEASENAME "${RDKit_Year}.${RDKit_Month}.${RDKit_Revision}${RDKit_RevisionModifier}")
 
 set(compilerID "${CMAKE_CXX_COMPILER_ID}")
 set(systemAttribute "")
@@ -38,42 +33,54 @@ macro(rdkit_library)
   CDR(RDKLIB_SOURCES ${RDKLIB_DEFAULT_ARGS})
   if(MSVC)
     add_library(${RDKLIB_NAME} ${RDKLIB_SOURCES})
-    target_link_libraries(${RDKLIB_NAME} ${Boost_SYSTEM_LIBRARY} )
-    INSTALL(TARGETS ${RDKLIB_NAME} EXPORT ${RDKit_EXPORTED_TARGETS}
-            DESTINATION ${RDKit_LibDir}/${RDKLIB_DEST}
-            COMPONENT dev )
+    target_link_libraries(${RDKLIB_NAME} PUBLIC rdkit_base)
+    if(RDK_INSTALL_DEV_COMPONENT)
+      INSTALL(TARGETS ${RDKLIB_NAME} EXPORT ${RDKit_EXPORTED_TARGETS}
+              DESTINATION ${RDKit_LibDir}/${RDKLIB_DEST}
+              COMPONENT dev )
+    endif(RDK_INSTALL_DEV_COMPONENT)
   else(MSVC)
     # we're going to always build in shared mode since we
     # need exceptions to be (correctly) catchable across
     # boundaries. As of now (June 2010), this doesn't work
     # with g++ unless libraries are shared.
       add_library(${RDKLIB_NAME} SHARED ${RDKLIB_SOURCES})
+      target_link_libraries(${RDKLIB_NAME} PUBLIC rdkit_base)
       INSTALL(TARGETS ${RDKLIB_NAME} EXPORT ${RDKit_EXPORTED_TARGETS}
               DESTINATION ${RDKit_LibDir}/${RDKLIB_DEST}
               COMPONENT runtime )
       if(RDK_INSTALL_STATIC_LIBS)
         add_library(${RDKLIB_NAME}_static ${RDKLIB_SOURCES})
-        INSTALL(TARGETS ${RDKLIB_NAME}_static EXPORT ${RDKit_EXPORTED_TARGETS}
-                DESTINATION ${RDKit_LibDir}/${RDKLIB_DEST}
-                COMPONENT dev )
+
+        foreach(linkLib ${RDKLIB_LINK_LIBRARIES})
+          if(${linkLib} MATCHES "^(Boost)|(Thread)|(boost)")
+            set(rdk_static_link_libraries "${rdk_static_link_libraries}${linkLib};")
+          else()
+            set(rdk_static_link_libraries "${rdk_static_link_libraries}${linkLib}_static;")
+          endif()
+        endforeach()
+        target_link_libraries(${RDKLIB_NAME}_static PUBLIC ${rdk_static_link_libraries})
+        target_link_libraries(${RDKLIB_NAME}_static PUBLIC rdkit_base)
+        if(RDK_INSTALL_DEV_COMPONENT)
+          INSTALL(TARGETS ${RDKLIB_NAME}_static EXPORT ${RDKit_EXPORTED_TARGETS}
+                  DESTINATION ${RDKit_LibDir}/${RDKLIB_DEST}
+                  COMPONENT dev )
+        endif(RDK_INSTALL_DEV_COMPONENT)
         set_target_properties(${RDKLIB_NAME}_static PROPERTIES
                               OUTPUT_NAME "RDKit${RDKLIB_NAME}_static")
 
       endif(RDK_INSTALL_STATIC_LIBS)
-    IF(RDKLIB_LINK_LIBRARIES)
-      target_link_libraries(${RDKLIB_NAME} ${RDKLIB_LINK_LIBRARIES})
-    ENDIF(RDKLIB_LINK_LIBRARIES)
   endif(MSVC)
-  if(WIN32)
+  IF(RDKLIB_LINK_LIBRARIES)
+    target_link_libraries(${RDKLIB_NAME} PUBLIC ${RDKLIB_LINK_LIBRARIES})
+  ENDIF(RDKLIB_LINK_LIBRARIES)
+  if((NOT MSVC) OR RDK_INSTALL_DLLS_MSVC)
     set_target_properties(${RDKLIB_NAME} PROPERTIES
                           OUTPUT_NAME "RDKit${RDKLIB_NAME}"
-                          VERSION "${RDKit_ABI}.${RDKit_Year}.${RDKit_Month}")
-  else(WIN32)
-    set_target_properties(${RDKLIB_NAME} PROPERTIES
-                          OUTPUT_NAME "RDKit${RDKLIB_NAME}"
+                          VERSION "${RDKit_ABI}.${RDKit_Year}.${RDKit_Month}.${RDKit_Revision}"
                           VERSION ${RDKit_VERSION}
                           SOVERSION ${RDKit_ABI} )
-  endif(WIN32)
+  endif()
   set_target_properties(${RDKLIB_NAME} PROPERTIES
                         ARCHIVE_OUTPUT_DIRECTORY ${RDK_ARCHIVE_OUTPUT_DIRECTORY}
                         RUNTIME_OUTPUT_DIRECTORY ${RDK_RUNTIME_OUTPUT_DIRECTORY}
@@ -87,9 +94,11 @@ macro(rdkit_headers)
       ""
       ${ARGN})
     # RDKHDR_DEFAULT_ARGS -> RDKHDR_DEST
-    install(FILES ${RDKHDR_DEFAULT_ARGS}
-            DESTINATION ${RDKit_HdrDir}/${RDKHDR_DEST}
-            COMPONENT dev )
+    if(RDK_INSTALL_DEV_COMPONENT)
+      install(FILES ${RDKHDR_DEFAULT_ARGS}
+              DESTINATION ${RDKit_HdrDir}/${RDKHDR_DEST}
+              COMPONENT dev )
+    endif(RDK_INSTALL_DEV_COMPONENT)
   endif(NOT RDK_INSTALL_INTREE)
 endmacro(rdkit_headers)
 
@@ -103,20 +112,31 @@ macro(rdkit_python_extension)
   if(RDK_BUILD_PYTHON_WRAPPERS)
     PYTHON_ADD_MODULE(${RDKPY_NAME} ${RDKPY_SOURCES})
     set_target_properties(${RDKPY_NAME} PROPERTIES PREFIX "")
-if(WIN32)
-    set_target_properties(${RDKPY_NAME} PROPERTIES SUFFIX ".pyd"
-                          LIBRARY_OUTPUT_DIRECTORY
-                          ${RDK_PYTHON_OUTPUT_DIRECTORY}/${RDKPY_DEST})
-else(WIN32)
-    set_target_properties(${RDKPY_NAME} PROPERTIES
-                          LIBRARY_OUTPUT_DIRECTORY
-                          ${RDK_PYTHON_OUTPUT_DIRECTORY}/${RDKPY_DEST})
-endif(WIN32)
-    target_link_libraries(${RDKPY_NAME} ${RDKPY_LINK_LIBRARIES}
-                          ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} )
+
+    if(WIN32)
+      set_target_properties(${RDKPY_NAME} PROPERTIES SUFFIX ".pyd"
+                           LIBRARY_OUTPUT_DIRECTORY
+                           ${RDK_PYTHON_OUTPUT_DIRECTORY}/${RDKPY_DEST})
+    else(WIN32)
+        set_target_properties(${RDKPY_NAME} PROPERTIES
+                              LIBRARY_OUTPUT_DIRECTORY
+                              ${RDK_PYTHON_OUTPUT_DIRECTORY}/${RDKPY_DEST})
+    endif(WIN32)
+
+    if(WIN32 OR "${Py_ENABLE_SHARED}" STREQUAL "1")
+      target_link_libraries(${RDKPY_NAME} ${RDKPY_LINK_LIBRARIES}
+                            ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} )
+    else()
+      target_link_libraries(${RDKPY_NAME} ${RDKPY_LINK_LIBRARIES}
+                            ${Boost_LIBRARIES} )
+      if("${PYTHON_LDSHARED}" STREQUAL "")
+      else()
+        set_target_properties(${RDKPY_NAME} PROPERTIES LINK_FLAGS ${PYTHON_LDSHARED})
+      endif()
+    endif()
 
     INSTALL(TARGETS ${RDKPY_NAME}
-            LIBRARY DESTINATION ${RDKit_PythonDir}/${RDKPY_DEST})
+            LIBRARY DESTINATION ${RDKit_PythonDir}/${RDKPY_DEST} COMPONENT python)
   endif(RDK_BUILD_PYTHON_WRAPPERS)
 endmacro(rdkit_python_extension)
 
@@ -160,7 +180,7 @@ function(downloadAndCheckMD5 url target md5chksum)
       if(WIN32)
         execute_process(COMMAND powershell -Command "(New-Object Net.WebClient).DownloadFile('${url}', '${target}')")
       else(WIN32)
-        execute_process(COMMAND curl -L -O "${url}" WORKING_DIRECTORY ${targetDir})
+        execute_process(COMMAND curl -L "${url}" -o ${target} WORKING_DIRECTORY ${targetDir})
       endif(WIN32)
     endif()
     if (NOT EXISTS ${target})
@@ -168,9 +188,9 @@ function(downloadAndCheckMD5 url target md5chksum)
     endif()
     if (NOT ${md5chksum} EQUAL "")
       execute_process(COMMAND ${CMAKE_COMMAND} -E md5sum ${target} OUTPUT_VARIABLE md5list)
-      string(REGEX REPLACE ":" ";" md5list "${md5list}")
+      string(REGEX REPLACE "([a-z0-9]+)" "\\1;" md5list "${md5list}")
       list(GET md5list 0 md5)
-      if (NOT md5 EQUAL ${md5chksum})
+      if (NOT md5 STREQUAL ${md5chksum})
         MESSAGE(FATAL_ERROR "The md5 checksum for ${target} is incorrect; expected: ${md5chksum}, found: ${md5}")
       endif()
     endif()

@@ -139,6 +139,7 @@ void test2() {
     drawer.finishDrawing();
 
     std::string drawing = drawer.getDrawingText();
+    TEST_ASSERT(drawing.size() > 0);
     std::ofstream ofs("test2_2.png");
     ofs.write(drawing.c_str(), drawing.size());
     delete m;
@@ -495,7 +496,7 @@ void test5() {
     std::string nameBase = "test5_2";
     ROMol *m = SmilesToMol(smiles);
     TEST_ASSERT(m);
-    RDDepict::compute2DCoords(*m, 0, true);
+    RDDepict::compute2DCoords(*m, nullptr, true);
     WedgeMolBonds(*m, &(m->getConformer()));
     MolDrawOptions options;
     options.dummiesAreAttachments = true;
@@ -524,7 +525,7 @@ void test5() {
     ROMol *m = SmilesToMol(smiles);
     TEST_ASSERT(m);
     m->getBondBetweenAtoms(1, 2)->setBondDir(Bond::UNKNOWN);
-    RDDepict::compute2DCoords(*m, 0, true);
+    RDDepict::compute2DCoords(*m, nullptr, true);
     WedgeMolBonds(*m, &(m->getConformer()));
     MolDrawOptions options;
     options.dummiesAreAttachments = true;
@@ -551,9 +552,8 @@ void test5() {
 }
 
 #ifdef RDK_TEST_MULTITHREADED
-#include <RDGeneral/BoostStartInclude.h>
-#include <boost/thread.hpp>
-#include <RDGeneral/BoostEndInclude.h>
+#include <thread>
+#include <future>
 namespace {
 void runblock(const std::vector<ROMol *> &mols,
               const std::vector<std::string> &refData, unsigned int count,
@@ -580,7 +580,7 @@ void testMultiThreaded() {
   std::cerr << "reading molecules" << std::endl;
   std::vector<ROMol *> mols;
   while (!suppl.atEnd() && mols.size() < 100) {
-    ROMol *mol = 0;
+    ROMol *mol = nullptr;
     try {
       mol = suppl.next();
     } catch (...) {
@@ -601,15 +601,18 @@ void testMultiThreaded() {
     TEST_ASSERT(refData[i].find("</svg:svg>") != std::string::npos);
   }
 
-  boost::thread_group tg;
+  std::vector<std::future<void>> tg;
   unsigned int count = 4;
   std::cerr << "processing" << std::endl;
   for (unsigned int i = 0; i < count; ++i) {
     std::cerr << " launch :" << i << std::endl;
     std::cerr.flush();
-    tg.add_thread(new boost::thread(runblock, mols, refData, count, i));
+    tg.emplace_back(
+        std::async(std::launch::async, runblock, mols, refData, count, i));
   }
-  tg.join_all();
+  for (auto &fut : tg) {
+    fut.get();
+  }
   std::cerr << " Done" << std::endl;
 }
 #else
@@ -877,7 +880,7 @@ void testGithub781() {
     delete m;
   }
   {  // empty molecule
-    ROMol *m = new ROMol();
+    auto *m = new ROMol();
     TEST_ASSERT(m);
     RDDepict::compute2DCoords(*m);
     MolDraw2DSVG drawer(300, 300);
@@ -1232,8 +1235,8 @@ M  END";
     std::ofstream outs("test983_1.svg");
     outs << text;
     outs.flush();
-    TEST_ASSERT(text.find("<svg:path d='M 130.309,117.496 73.5169,75.8928 "
-                          "65.8827,89.1161 130.309,117.496' "
+    TEST_ASSERT(text.find("<svg:path d='M 130.309,117.496 194.727,89.1159 "
+                          "187.092,75.893 130.309,117.496' "
                           "style='fill:#000000") != std::string::npos);
     delete m;
   }
@@ -1684,8 +1687,8 @@ void test12DrawMols() {
     outs.flush();
   }
   {
-    mols[2] = NULL;
-    mols[4] = NULL;
+    mols[2] = nullptr;
+    mols[4] = nullptr;
     MolDraw2DSVG drawer(750, 400, 250, 200);
     drawer.drawMolecules(mols);
     drawer.finishDrawing();
@@ -2067,7 +2070,7 @@ void test15ContinuousHighlightingWithGrid() {
     std::vector<ROMol *> mols;
     mols.push_back(m1);
     mols.push_back(m2);
-    std::vector<std::vector<int> > atHighlights(2);
+    std::vector<std::vector<int>> atHighlights(2);
     atHighlights[0].push_back(0);
     atHighlights[0].push_back(1);
     atHighlights[0].push_back(2);
@@ -2081,7 +2084,7 @@ void test15ContinuousHighlightingWithGrid() {
     {
       MolDraw2DSVG drawer(500, 200, 250, 200);
       drawer.drawOptions().continuousHighlight = false;
-      drawer.drawMolecules(mols, NULL, &atHighlights);
+      drawer.drawMolecules(mols, nullptr, &atHighlights);
       drawer.finishDrawing();
       std::string text = drawer.getDrawingText();
       std::ofstream outs("test15_1.svg");
@@ -2094,9 +2097,9 @@ void test15ContinuousHighlightingWithGrid() {
     {
       MolDraw2DSVG drawer(500, 200, 250, 200);
       drawer.drawOptions().continuousHighlight = true;
-      drawer.drawMolecules(mols, NULL, &atHighlights);
+      drawer.drawMolecules(mols, nullptr, &atHighlights);
       drawer.finishDrawing();
-      std::string text = drawer.getDrawingText();
+      std::string text= drawer.getDrawingText();
       std::ofstream outs("test15_2.svg");
       outs << text;
       outs.flush();
@@ -2108,7 +2111,26 @@ void test15ContinuousHighlightingWithGrid() {
   std::cerr << " Done" << std::endl;
 }
 
+void testGithub1829() {
+  std::cerr << " ----------------- Testing github 1829: crash when drawMolecules() is called with an empty list"
+            << std::endl;
+  {
+    std::vector<ROMol *> mols;
+    MolDraw2DSVG drawer(750, 400, 250, 200);
+    // this should run quietly wihtout complaining
+    drawer.drawMolecules(mols);
+    drawer.finishDrawing();
+    std::string text = drawer.getDrawingText();
+  }
+  std::cerr << " Done" << std::endl;
+}
+
+
 int main() {
+#ifdef BUILD_COORDGEN_SUPPORT
+  RDDepict::preferCoordGen = false;
+#endif
+
   RDLog::InitLogs();
 #if 1
   test1();
@@ -2143,4 +2165,5 @@ int main() {
   testGithub565();
   test14BWPalette();
   test15ContinuousHighlightingWithGrid();
+  testGithub1829();
 }

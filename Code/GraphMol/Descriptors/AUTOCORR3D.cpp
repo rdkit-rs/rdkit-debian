@@ -60,7 +60,7 @@ VectorXd getEigenVect(std::vector<double> v) {
 
 double* GetGeodesicMatrix(double* dist, int lag, int numAtoms) {
   int sizeArray = numAtoms * numAtoms;
-  double* Geodesic = new double[sizeArray];
+  auto* Geodesic = new double[sizeArray];
   for (int i = 0; i < sizeArray; i++) {
     if (dist[i] == lag)
       Geodesic[i] = 1.0;
@@ -178,8 +178,6 @@ void Get3Dauto(double* dist3D, double* topologicaldistance, int numAtoms,
 void AUTOCORR3D(const ROMol& mol, std::vector<double>& res, int confId) {
   PRECONDITION(mol.getNumConformers() >= 1, "molecule has no conformers")
   int numAtoms = mol.getNumAtoms();
-
-  const Conformer& conf = mol.getConformer(confId);
 
   double* topologicaldistance =
       MolOps::getDistanceMat(mol, false);  // topological matrix

@@ -457,6 +457,16 @@ class TestCase(unittest.TestCase):
     self.assertEqual(rdDistGeom.EmbedMolecule(mol, params), 0)
     self._compareConfs(mol, ref, 0, 0)
 
+  def test10ETKDGv2(self):
+    mol = Chem.AddHs(Chem.MolFromSmiles('n1cccc(C)c1ON'))
+    fn = os.path.join(RDConfig.RDBaseDir, 'Code', 'GraphMol', 'DistGeomHelpers', 'test_data',
+                      'torsion.etkdg.v2.mol')
+    ref = Chem.MolFromMolFile(fn, removeHs=False)
+    params = rdDistGeom.ETKDGv2()
+    params.randomSeed = 42
+    self.assertEqual(rdDistGeom.EmbedMolecule(mol, params), 0)
+    self._compareConfs(mol, ref, 0, 0)
+
   def assertDeterministicWithSeed(self, seed):
     input_mol = Chem.MolFromSmiles('CN(Cc1cnc2nc(N)nc(N)c2n1)c1ccc(C(=O)NC(CCC(=O)O)C(=O)O)cc1')
 
@@ -499,6 +509,14 @@ class TestCase(unittest.TestCase):
     self.assertDeterministicWithSeed(195225786) # as large as we can go without overflowing since 11 * 195225786 should not overflow the int
     self.assertDeterministicWithSeed(195225787) # one higher seed will overflow though
     self.assertDeterministicWithSeed(0x1CEB00DA) # another large seeds that shouldn't overflow internals and make them non-deterministic
+
+  def testGithub1763(self):
+    mol = Chem.MolFromSmiles('CCCCC')
+    bm1 = rdDistGeom.GetMoleculeBoundsMatrix(mol)
+    bm2 = rdDistGeom.GetMoleculeBoundsMatrix(mol,doTriangleSmoothing=False)
+    print(bm1)
+    print(bm2)
+    self.assertTrue(bm1[0, 4] < bm2[0,4])
 
 if __name__ == '__main__':
   unittest.main()

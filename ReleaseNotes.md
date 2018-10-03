@@ -1,34 +1,243 @@
-# Release_2017.09.3
-(Changes relative to Release_2017.09.2)
+# Release_2018.03.4
+(Changes relative to Release_2018.03.3)
 
 ## Acknowledgements:
-Jason Biggs, Brian Kelley, Noel O'Boyle, Paolo Tosco
+Brian Kelley, Noel O'Boyle, Rim Shayakhmetov, Jon Sorenson
 
 ## Bug Fixes:
-  - Missed symmetrization in R-Group decomposition
- (github issue #1659 from bp-kelley)
-  - Acetylenic hydrogens not given appropriate 2D coordinates
- (github issue #1691 from jasondbiggs)
-  - Warning on import of rgroup decomposition package
- (github issue #1695 from greglandrum)
-  - AUTOCORR2D.h not installed unless RDK_BUILD_DESCRIPTORS3D but is required
- (github issue #1702 from baoilleach)
-  - Dative bonds interfere with kekulization and the perception of aromaticity
- (github issue #1703 from greglandrum)
-  - bonds that are STEREOCIS or STEREOTRANS cannot be depickled
- (github issue #1710 from greglandrum)
-  - Added dependency from Boost headers to PgSQL CMakeLists.txt
- (github pull #1717 from ptosco)
+ - Possibly incorrect aromatic SMILES generated for structure
+ (github issue #1928 from baoilleach)
+ - Update KNIME URLs in overview.md
+ (github pull #1966 from greglandrum)
+ - CXN extended SMILES labels are not applied to the correct atom in SMILES
+   with explicit H
+ (github issue #1928 from baoilleach)
+ - MolFromSmarts MolToSmarts fails to roundtrip on patterns with chirality
+ (github issue #1985 from bp-kelley)
+ - RemoveHs not properly updating double bond stereoatoms
+ (github issue #1990 from shayakhmetov)
+ - Error while parsing empty atom list in Mol files.
+ (github issue #2000 from drkeoni)
 
 
-# Release_2017.09.2
+# Release_2018.03.3
+(Changes relative to Release_2018.03.2)
+
+## Acknowledgements:
+Thomas Blaschke, Brian Kelley, Josh Meyers, Dan Nealschneider, Noel O'Boyle,
+Jon Sorenson, Paulo Tosco, 'jaechanglim'
+
+## Bug Fixes:
+  - R-group Decomposition: allow H replacements when matchOnlyAtRgroups is set
+ (github pull #1871 from bp-kelley)
+  - Fixes locale handling on Windows
+ (github pull #1892 from ptosco)
+  - get the pandas tests working with pandas 0.23
+ (github pull #1896 from greglandrum)
+  - Fix curl fallback for downloading files
+ (github pull #1904 from d-b-w)
+  - Bond stereo information not output to SMARTS
+ (github issue #1906 from greglandrum)
+  - Library .so names missing RDKit?
+ (github issue #1913 from baoilleach)
+  - Negated atom number queries in SMARTS should not set atomic number of query atom
+ (github issue #1920 from greglandrum)
+  - memory leak in Get3DDistanceMatrix
+ (github issue #1924 from jaechanglim)
+  - Atom with bond to itself is accepted by the SMILES parser.
+ (github issue #1925 from tblaschke)
+  - Using the coordgen library seems to cause a seg fault
+ (github issue #1929 from JoshuaMeyers)
+  - Aromaticity failure in 7-ring with charged radical carbon
+ (github issue #1936 from bp-kelley)
+  - Fix embarassing bug, check the counter each iteration
+ (github pull #1939 from bp-kelley)
+  - RuntimeError when importing rdkit.Chem.Descriptors with Python 3.7
+ (github issue #1948 from drkeoni)
+  - Query features in products of rxn files not properly handled
+ (github issue #1950 from greglandrum)
+  - ReactionToSmarts broken for multi-component templates
+ (github issue #1955 from bp-kelley)
+
+
+# Release_2018.03.2
+(Changes relative to Release_2018.03.1)
+
+## Acknowledgements:
+Brian Kelley, Dan Nealschneider, Noel O'Boyle, Stephen Roughley, Roger Sayle,
+Paulo Tosco
+
+## Bug Fixes:
+  - Feature request: #defines to test RDKit version
+ (github issue #1454 from baoilleach)
+  - SMARTS parse failure for some queries involving Hs
+ (github issue #1719 from greglandrum)
+  - allow libs to not be installed
+ (github pull #1832 from greglandrum)
+  - RWMol::addAtom(Atom,bool) missing from Java wrappers
+ (github issue #1837 from greglandrum)
+  - RWMol::clear now calls ROMol::initMol
+ (github pull #1844 from bp-kelley)
+  - Allow types.h to be included in applications that use /D_USE_MATH_DEFINES
+ (github pull #1846 from d-b-w)
+  - Fixes failing Python tests on Windows
+ (github pull #1855 from ptosco)
+  - Allow building on cygwin using -std=c++11
+ (github pull #1856 from greglandrum)
+  - Stop using the cmake Boost:: targets
+ (github pull #1858 from greglandrum)
+
+
+# Release_2018.03.1
 (Changes relative to Release_2017.09.1)
 
+## C++11 notes
+
+Starting with this release, the RDKit core C++ code is written in modern C++;
+for this release that means C++11. This means that the compilers used to build
+it cannot be completely ancient. Here are the minimum tested versions:
+- g++ v4.8: though note that the SLN parser code cannot be built with v4.8. It
+  will automatically be disabled when this older compiler is used.
+- clang v3.9: it may be that older versions of the compiler also work, but we
+  haven't tested them.
+- Visual Studio 2015: it may be that older versions of the compiler also work,
+  but we haven't tested them.
+
+## Backwards incompatible changes
+
+This release includes a set of changes to make the default arguments to common
+functions less error prone (github #1679).
+- MolToSmiles() now generates isomeric SMILES by default.
+- The embedding code now uses the ETKDG method by default.
+- MolToMolBlock() will now by default generate a set of 2D coordinates for
+  molecules when the includeStereo option is set to True. The changes are made
+  to a copy of the molecule; the molecule itself will not be modified.
+- The Mol file (and SDF) parser now determines atomic stereochemisty based on
+  the 3D coordinates provided (if 3D coordinates are provided).
+- The SMILES parser now supports CXSMILES by default (assuming that additional
+  text that looks like CXSMILES extensions is there).
+
+In every case the old behavior can be obtained by providing an optional argument
+to the function(s) mentioned.
+
 ## Acknowledgements:
-Brian Cole, Brian Kelley, Noel O'Boyle, Pavel Polishchuk, Matt Swain,
-Paolo Tosco, Hsiao Yi
+Boran Adas, José Emilio Sánchez Aparicio, Patrick Avery, Jason Biggs, Brian
+Cole, Andrew Dalke, JW Feng, Peter Gedeck, Guillaume Godin, Richard Hall, Thomas
+Heavy, Gareth Jones, Brian Kelley, Karl Leswing, Susan Leung, Chris Morris, Dan
+Nealschneider, Noel O'Boyle, Axel Pahl, Pavel Polishchuk, Sereina Riniker, Jeff
+van Santen, Roger Sayle, Martin Šícho, Matt Swain, Paolo Tosco, Sam Webb, Maciej
+Wójcikowski, Nicola Zonta, 'clinntt', 'hjuinj', 'iwatobipen',
+
+## Highlights:
+  - An initial version of an integration with Schrodinger's coordgen library is
+    included. This produces much better 2D coordinates for complex molecules.
+  - Thanks to the move to modern C++ the RDKit is now faster and uses less
+    memory
+  - A number of improvements were made to the PDB reader
+  - v2 of the ETKDG torsions and potentials is now available
+
+## Contrib updates:
+  - Implementation of Peter Ertl's IFG method for identifying functional groups
+    from Guillaume Godin and Richard Hall
+  (github pull #1813 from thegodone)
+
+## New Features and Enhancements:
+  - Support InChi 1.05
+ (github issue #1533 from greglandrum)
+  - Update CPack to create .deb files correctly
+ (github pull #1580 from psavery)
+  - Initial commit of EnumerateHeterocycles
+ (github pull #1588 from coleb)
+  - Version 2 of ETKDG
+ (github pull #1597 from sriniker)
+  - GetMolFrags now optionally returns atom indices along with mols
+ (github pull #1602 from ptosco)
+  - NP Likeness with confidence value
+ (github pull #1608 from apahl)
+  - Adding an option to EnumerateStereoisomers to only return unique isomers
+ (github pull #1612 from coleb)
+  - Add function wedgeBond()
+  (github issue #1615 from greglandrum)  
+  - Dev/substructlibrary docs
+ (github pull #1620 from bp-kelley)
+  - Turns off exception throwing for certain classes Rlabel sanitization.
+ (github pull #1621 from bp-kelley)
+  - Add an "MDL" aromaticity model
+ (github issue #1622 from hjuinj)
+  - Add support for %(NNN) notation for ring closures
+ (github pull #1624 from baoilleach)
+  - Enable windows build that uses cairo
+ (github pull #1628 from greglandrum)
+  - [MRG] Fix PDB reader + add argument to toggle proximity bonding
+ (github pull #1629 from mwojcikowski)
+  - Improve AddHs for molecules read from PDB
+ (github pull #1647 from mwojcikowski)
+  - Improved regression test for ETKDG version 2
+ (github pull #1640 from sriniker)
+  - RDKit interpretation of atom stereo SMILES is different from 4 other toolkits
+ (github issue #1652 from coleb)
+  - Treat bonds in PDB CONECT records explicitly, but make blacklisted ones zero-order.
+ (github pull #1658 from mwojcikowski)
+  - There is no need to enforce that (i, j) and (k, l) be bonded when setting a i, j, k, l dihedral
+ (github pull #1673 from ptosco)
+  - Make default arguments to common functions less error prone
+ (github issue #1679 from greglandrum)
+  - Add Fast cluster script
+ (github pull #1683 from iwatobipen)
+  - Update embedded InChI to v1.05
+ (github pull #1684 from mcs07)
+  - Add `AllChem.MMFFGetMoleculeForceField().CalcGradient()` to Python wrappers
+ (github issue #1688 from theavey)
+  - Play nice with naughty MOL blocks
+ (github issue #1689 from jw-feng)
+  - Make the defaults for some functions less error prone.
+ (github pull #1690 from greglandrum)
+  - implemented Python wrappers for computing PMI axes and moments
+ (github pull #1700 from ptosco)
+  - Enable range-based for loops for molecules
+ (github pull #1701 from bp-kelley)
+  - Support some cactvs extensions to SMARTS
+ (github pull #1704 from greglandrum)
+  - Integrate Coordgen
+ (github pull #1708 from greglandrum)
+  - Removes ATOM/BOND_SPTR in boost::graph in favor of raw pointers
+ (github pull #1713 from greglandrum)
+  - Set atomic properties from SMARTS
+ (github pull #1716 from greglandrum)
+  - Allow installation of Python tests to facilitate testing installations
+ (github pull #1724 from greglandrum)
+  - setAromaticity() should work even if there are aromatic atoms present
+ (github issue #1730 from greglandrum)
+  - Use uint32 atom and bond indices
+ (github pull #1742 from greglandrum)
+  - Switch from boost::thread to std::thread
+ (github pull #1745 from greglandrum)
+  - switch to using std::regex in the SLN parser
+ (github pull #1746 from greglandrum)
+  - replace the usage of rdk_auto_ptr with std::unique_ptr
+ (github pull #1752 from greglandrum)
+  - getMolBoundsMatrix() should do triangle bound smoothing by default
+ (github issue #1763 from greglandrum)
+  - Added Morgan feature fingerprints to Java API
+ (github pull #1764 from jones-gareth)
+  - Reaction fingerprints not exposed in Java wrapper
+ (github issue #1776 from webbres)
+  - add Tversky index calculation for shapes
+ (github pull #1777 from susanhleung)
+  - Add MolToInchiKey function()
+ (github pull #1784 from greglandrum)
+  - speedup the NumBitsInCommon operation
+ (github pull #1785 from greglandrum)
+  - Stop putting brackets around * atoms in SMILES
+ (github pull #1788 from greglandrum)
+  - Support for a JSON-based molecule interchange format
+ (github pull #1798 from greglandrum)
 
 ## Bug Fixes:
+  - Fixes Java wrapper build error with Boost 1.64
+ (github pull #1613 from ptosco)
+  - AssignStereochemistry cleanIt=True incorrectly removing new CIS/TRANS bond stereo
+ (github issue #1614 from coleb)
   - switch to using a specific freesasa version
  (github pull #1619 from greglandrum)
   - Add support for %(NNN) notation for ring closures
@@ -39,8 +248,12 @@ Paolo Tosco, Hsiao Yi
  (github issue #1627 from greglandrum)
   - Enable windows build that uses cairo
  (github pull #1628 from greglandrum)
+  - don't always download the FreeSASA source
+ (github issue #1630 from greglandrum)
   - Make sure EmbedMultipleConfs is deterministic for very large seeds and a seed of 0
  (github pull #1635 from coleb)
+  - from rdkit.Chem import AllChem has grown a six dependency
+ (github issue #1637 from bp-kelley)
   - Fixing bug in IPythonConsole SVG rendering introduced in 1027d4469545653180fff9a38dc8224bd50e8b0d
  (github pull #1641 from coleb)
   - changes required to allow replacing the obsolete __conda_version__ in conda-rdkit
@@ -49,12 +262,64 @@ Paolo Tosco, Hsiao Yi
  (github issue #1650 from DrrDom)
   - EnumerateLibrary with initFromString called twice doesn't clear the reaction
  (github issue #1657 from bp-kelley)
-  - Add 2017 UGM into README.md
- (github pull #1660 from hsiaoyi0504)
+  - Missed symmetrization in R-Group decomposition
+ (github issue #1659 from greglandrum)
   - Use numpy not numeric for boost 1.65+ - fixes #1581
  (github pull #1664 from mcs07)
   - Support valence 7 for As, Sb, and Bi
  (github issue #1668 from greglandrum)
+  - Fix: GetDonor2FeatVects heavy atoms confusion
+ (github pull #1676 from josan82)
+  - Acetylenic hydrogens not given appropriate 2D coordinates
+ (github issue #1691 from jasondbiggs)
+  - Warning on import of rgroup decomposition package
+ (github issue #1695 from greglandrum)
+  - AUTOCORR2D.h not installed unless RDK_BUILD_DESCRIPTORS3D but is required
+ (github issue #1702 from baoilleach)
+  - Dative bonds interfere with kekulization and the perception of aromaticity
+ (github issue #1703 from greglandrum)
+  - Fix/rgroup prefer matching nonhs over hs
+ (github pull #1707 from bp-kelley)
+  - bonds that are STEREOCIS or STEREOTRANS cannot be depickled
+ (github issue #1710 from greglandrum)
+  - Get queries from the new cactvs SMARTS extensions to pickle correctly
+ (github pull #1712 from greglandrum)
+  - fix an irritating cmake problem
+ (github pull #1715 from greglandrum)
+  - Added dependency from Boost headers to PgSQL CMakeLists.txt
+ (github pull #1717 from ptosco)
+  - Updates python test runner to always use sys.executable
+ (github pull #1721 from bp-kelley)
+  - - make bond stereo detection in rings consistent
+ (github pull #1727 from ptosco)
+  - xlocale.h not needed to compile with clang
+ (github issue #1728 from adalke)
+ - BreakBRICSBonds() not preserving stereochemistry
+ (github issue #1734 from greglandrum)
+  - rdmolfiles.CanonicalRankAtoms segfaults on 0 atom molecules
+ (github issue #1735 from lilleswing)
+  - deprecated apply() function causes GetRDKFingerprint to fail in Python 3
+ (github issue #1747 from clinntt)
+  - Stop dereferencing end() iterators
+ (github pull #1748 from greglandrum)
+  - out of range fromAtom causes GetMorganFingerprintAsBitVect to segfault
+ (github issue #1749 from adalke)
+  - Generated SMARTS does not contain atomic chiral tags
+ (github issue #1756 from greglandrum)
+  - make the build work even if boost::serialization is disabled
+ (github pull #1767 from greglandrum)
+  - Fix typo in GetBoolProp documentation
+ (github pull #1770 from jvansan)
+  - Fingerprint segfaults with branchedPaths=False and useHs=False
+ (github issue #1793 from chrishmorris)
+  - Fix python linkage (primarily for conda builds)
+ (github pull #1808 from greglandrum)
+  - removeHs() should not remove H atoms that are contributing to the definition of a stereo bond
+ (github pull #1810 from d-b-w)
+  - global EmbedParameters objects should not be writeable in SWIG wrappers
+ (github issue #1826 from greglandrum)
+  - RDKit crashes when MolsToGridImage function is called with an empty iterable.
+ (github issue #1829 from martin-sicho)
 
 
 # Release_2017.09.1

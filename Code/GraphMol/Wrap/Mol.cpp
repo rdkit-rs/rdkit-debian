@@ -73,7 +73,7 @@ bool HasSubstructMatchStr(std::string pkl, const ROMol &query,
   try {
     mol = new ROMol(pkl);
   } catch (...) {
-    mol = NULL;
+    mol = nullptr;
   }
   if (!mol) {
     throw ValueErrorException("Null Molecule");
@@ -87,7 +87,7 @@ bool HasSubstructMatchStr(std::string pkl, const ROMol &query,
 
 unsigned int AddMolConformer(ROMol &mol, Conformer *conf,
                              bool assignId = false) {
-  Conformer *nconf = new Conformer(*conf);
+  auto *nconf = new Conformer(*conf);
   return mol.addConformer(nconf, assignId);
 }
 
@@ -132,7 +132,7 @@ void MolDebug(const ROMol &mol, bool useStdout) {
     mol.debugMol(std::cout);
   } else {
     std::ostream *dest = &std::cerr;
-    if (rdInfoLog != NULL) {
+    if (rdInfoLog != nullptr) {
       if (rdInfoLog->teestream) {
         dest = rdInfoLog->teestream;
       } else if (rdInfoLog->dp_dest) {
@@ -150,7 +150,7 @@ AtomIterSeq *MolGetAtoms(ROMol *mol) {
   return res;
 }
 QueryAtomIterSeq *MolGetAromaticAtoms(ROMol *mol) {
-  QueryAtom *qa = new QueryAtom();
+  auto *qa = new QueryAtom();
   qa->setQuery(makeAtomAromaticQuery());
   QueryAtomIterSeq *res = new QueryAtomIterSeq(
       mol->beginQueryAtoms(qa), mol->endQueryAtoms(), AtomCountFunctor(*mol));
@@ -213,7 +213,7 @@ class ReadWriteMol : public RWMol {
     replaceBond(idx, bond, preserveProps);
   };
   ROMol *GetMol() const {
-    ROMol *res = new ROMol(*this);
+    auto *res = new ROMol(*this);
     return res;
   }
 };
@@ -291,7 +291,7 @@ struct mol_wrapper {
         .def("GetAtomWithIdx",
              (Atom * (ROMol::*)(unsigned int)) & ROMol::getAtomWithIdx,
              python::return_internal_reference<
-                 1, python::with_custodian_and_ward_postcall<0, 1> >(),
+                 1, python::with_custodian_and_ward_postcall<0, 1>>(),
              "Returns a particular Atom.\n\n"
              "  ARGUMENTS:\n"
              "    - idx: which Atom to return\n\n"
@@ -308,7 +308,7 @@ struct mol_wrapper {
         .def("GetBondWithIdx",
              (Bond * (ROMol::*)(unsigned int)) & ROMol::getBondWithIdx,
              python::return_internal_reference<
-                 1, python::with_custodian_and_ward_postcall<0, 1> >(),
+                 1, python::with_custodian_and_ward_postcall<0, 1>>(),
              "Returns a particular Bond.\n\n"
              "  ARGUMENTS:\n"
              "    - idx: which Bond to return\n\n"
@@ -334,7 +334,7 @@ struct mol_wrapper {
              (python::arg("self"), python::arg("id") = -1),
              "Get the conformer with a specified ID",
              python::return_internal_reference<
-                 1, python::with_custodian_and_ward_postcall<0, 1> >())
+                 1, python::with_custodian_and_ward_postcall<0, 1>>())
 
         .def("GetConformers", GetMolConformers,
              "Get all the conformers as a tuple")
@@ -348,7 +348,7 @@ struct mol_wrapper {
              (Bond * (ROMol::*)(unsigned int, unsigned int)) &
                  ROMol::getBondBetweenAtoms,
              python::return_internal_reference<
-                 1, python::with_custodian_and_ward_postcall<0, 1> >(),
+                 1, python::with_custodian_and_ward_postcall<0, 1>>(),
              "Returns the bond between two atoms, if there is one.\n\n"
              "  ARGUMENTS:\n"
              "    - idx1,idx2: the Atom indices\n\n"
@@ -548,7 +548,7 @@ struct mol_wrapper {
              "    - If the property has not been set, a KeyError exception "
              "will be raised.\n")
         .def("GetBoolProp", GetProp<ROMol, bool>,
-             "Returns the double value of the property if possible.\n\n"
+             "Returns the Bool value of the property if possible.\n\n"
              "  ARGUMENTS:\n"
              "    - key: the name of the property to return (a string).\n\n"
              "  RETURNS: a bool\n\n"
@@ -605,26 +605,26 @@ struct mol_wrapper {
         .def("GetAtoms", MolGetAtoms,
              python::return_value_policy<
                  python::manage_new_object,
-                 python::with_custodian_and_ward_postcall<0, 1> >(),
+                 python::with_custodian_and_ward_postcall<0, 1>>(),
              "Returns a read-only sequence containing all of the molecule's "
              "Atoms.\n")
         .def("GetAromaticAtoms", MolGetAromaticAtoms,
              python::return_value_policy<
                  python::manage_new_object,
-                 python::with_custodian_and_ward_postcall<0, 1> >(),
+                 python::with_custodian_and_ward_postcall<0, 1>>(),
              "Returns a read-only sequence containing all of the molecule's "
              "aromatic Atoms.\n")
         .def("GetAtomsMatchingQuery", MolGetQueryAtoms,
              python::return_value_policy<
                  python::manage_new_object,
-                 python::with_custodian_and_ward_postcall<0, 1> >(),
+                 python::with_custodian_and_ward_postcall<0, 1>>(),
              "Returns a read-only sequence containing all of the atoms in a "
              "molecule that match the query atom.\n")
 
         .def("GetBonds", MolGetBonds,
              python::return_value_policy<
                  python::manage_new_object,
-                 python::with_custodian_and_ward_postcall<0, 1> >(),
+                 python::with_custodian_and_ward_postcall<0, 1>>(),
              "Returns a read-only sequence containing all of the molecule's "
              "Bonds.\n")
 
@@ -665,7 +665,7 @@ struct mol_wrapper {
                 "    - useQueryQueryMatches: use query-query matching logic\n\n"
                 "  RETURNS: True or False\n");
 
-    python::class_<ReadWriteMol, python::bases<ROMol> >(
+    python::class_<ReadWriteMol, python::bases<ROMol>>(
         "RWMol", rwmolClassDoc.c_str(),
         python::init<const ROMol &>("Construct from a Mol"))
         .def(python::init<>())
