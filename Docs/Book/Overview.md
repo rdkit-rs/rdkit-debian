@@ -10,7 +10,7 @@
 -   2D and 3D molecular operations
 -   Descriptor generation for machine learning
 -   Molecular database cartridge for PostgreSQL
--   Cheminformatics nodes for KNIME (distributed from the KNIME community site: http://tech.knime.org/community/rdkit)
+-   Cheminformatics nodes for KNIME (distributed from the KNIME community site: https://www.knime.com/rdkit)
 
 ### Operational:
 - http://www.rdkit.org
@@ -93,12 +93,19 @@
 - Torsion Fingerprint Differences for comparing conformations [8](#footnote8)
 
 ### Integration with other open-source projects
-- [KNIME](https://tech.knime.org/community/rdkit): Workflow and analytics tool
+- [KNIME](https://www.knime.com/rdkit): Workflow and analytics tool
 - [Django](http://django-rdkit.readthedocs.org/en/latest/): "The web framework for perfectionists with deadlines"
 - [PostgreSQL](https://github.com/rdkit/rdkit/blob/master/Docs/Book/Cartridge.rst): Extensible relational database
 - [Lucene](https://github.com/rdkit/org.rdkit.lucene): Text-search engine [1](#footnote1)
 
 ### Usage by other open-source projects
+- [Samson Connect](https://www.samson-connect.net) - Software for adaptive modeling and simulation of nanosystems
+- [mol_frame](https://github.com/apahl/mol_frame) - Chemical Structure Handling for Dask and Pandas DataFrames
+- [RDKitjs](https://github.com/cheminfo/RDKitjs) - port of RDKit functionality to JavaScript
+- [DeepChem](https://deepchem.io) - python library for deep learning for chemistry
+- [mmpdb](https://github.com/rdkit/mmpdb) - Matched molecular pair database generation and analysis
+- [CheTo](https://github.com/rdkit/CheTo) ([paper](http://pubs.acs.org/doi/10.1021/acs.jcim.7b00249))- Chemical topic modeling
+- [OCEAN](https://github.com/rdkit/OCEAN) ([paper](http://pubs.acs.org/doi/abs/10.1021/acs.jcim.6b00067))- Optimized cross reactivity estimation
 - [ChEMBL Beaker](https://github.com/mnowotka/chembl_beaker) - standalone web server wrapper for RDKit and OSRA
 - [myChEMBL](https://github.com/chembl/mychembl) ([blog post](http://chembl.blogspot.de/2013/10/chembl-virtual-machine-aka-mychembl.html), [paper](http://bioinformatics.oxfordjournals.org/content/early/2013/11/20/bioinformatics.btt666)) - A virtual machine implementation of open data and cheminformatics tools
 - [ZINC](http://zinc15.docking.org) - Free database of commercially-available compounds for virtual screening
@@ -113,8 +120,8 @@
 - [chemfp](http://chemfp.com) - very fast fingerprint searching
 - [rdkit_ipynb_tools](https://github.com/apahl/rdkit_ipynb_tools) - RDKit Tools for the IPython Notebook
 - [chemicalite](https://github.com/rvianello/chemicalite) - SQLite integration for the RDKit
-- [Vernalis KNIME nodes](https://tech.knime.org/book/vernalis-nodes-for-knime-trusted-extension)
-- [Erlwood KNIME nodes](https://tech.knime.org/community/erlwood)
+- [Vernalis KNIME nodes](https://www.knime.com/book/vernalis-nodes-for-knime-trusted-extension)
+- [Erlwood KNIME nodes](https://www.knime.com/community/erlwood)
 - [AZOrange](https://github.com/AZcompTox/AZOrange)
 
 

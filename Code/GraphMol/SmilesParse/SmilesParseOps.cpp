@@ -15,18 +15,37 @@
 #include <algorithm>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/foreach.hpp>
+#include <boost/format.hpp>
 #include <RDGeneral/RDLog.h>
 
 namespace SmilesParseOps {
 using namespace RDKit;
 
+void ClearAtomChemicalProps(RDKit::Atom *atom) {
+  TEST_ASSERT(atom);
+  atom->setIsotope(0);
+  atom->setFormalCharge(0);
+  atom->setNumExplicitHs(0);
+}
+
 void CheckRingClosureBranchStatus(RDKit::Atom *atom, RDKit::RWMol *mp) {
-  // github #786: if the ring closure comes after a branch,
+  // github #786 and #1652: if the ring closure comes after a branch,
   // the stereochem is wrong.
-  // detect the branch (= atom isn't the last one)
-  // and reverse the stereochem if the atom has chiral stereochemistry
-  // and is currently degree two (protects against C1CN[C@](O)(N)1)
-  if (atom->getIdx() != mp->getNumAtoms(true) - 1 && atom->getDegree() == 2 &&
+  // This function is called while closing a branch during construction of
+  // the molecule from SMILES and corrects for what happens when parsing odd
+  // (and arguably wrong) SMILES constructs like:
+  //   1) [C@@](F)1(C)CCO1
+  //   2) C1CN[C@](O)(N)1
+  //   3) [C@](Cl)(F)1CC[C@H](F)CC1
+  // In the first two cases the stereochemistry at the chiral atom
+  // needs to be reversed. In the third case the stereochemistry should be
+  // reversed when the Cl is added, but left alone when the F is added.
+  // We recognize these situations using the index of the chiral atom
+  // and the degree of that chiral atom at the time the ring closure
+  // digit is encountered during parsing.
+  if (atom->getIdx() != mp->getNumAtoms(true) - 1 &&
+      (atom->getDegree() == 1 ||
+       (atom->getDegree() == 2 && atom->getIdx() != 0)) &&
       (atom->getChiralTag() == Atom::CHI_TETRAHEDRAL_CW ||
        atom->getChiralTag() == Atom::CHI_TETRAHEDRAL_CCW)) {
     atom->invertChirality();
@@ -34,22 +53,22 @@ void CheckRingClosureBranchStatus(RDKit::Atom *atom, RDKit::RWMol *mp) {
 }
 
 void ReportParseError(const char *message, bool throwIt) {
-  if (!throwIt)
+  if (!throwIt) {
     BOOST_LOG(rdErrorLog) << "SMILES Parse Error: " << message << std::endl;
-  else
+  } else {
     throw SmilesParseException(message);
+  }
 }
 
 void CleanupAfterParseError(RWMol *mol) {
   PRECONDITION(mol, "no molecule");
   // blow out any partial bonds:
   RWMol::BOND_BOOKMARK_MAP *marks = mol->getBondBookmarks();
-  RWMol::BOND_BOOKMARK_MAP::iterator markI = marks->begin();
+  auto markI = marks->begin();
   while (markI != marks->end()) {
     RWMol::BOND_PTR_LIST &bonds = markI->second;
-    for (RWMol::BOND_PTR_LIST::iterator bondIt = bonds.begin();
-         bondIt != bonds.end(); ++bondIt) {
-      delete *bondIt;
+    for (auto &bond : bonds) {
+      delete bond;
     }
     ++markI;
   }
@@ -147,7 +166,7 @@ void AddFragToMol(RWMol *mol, RWMol *frag, Bond::BondType bondOrder,
         // semantics are different in SMARTS, unspecified bonds can be single or
         // aromatic:
         if (bondOrder == Bond::UNSPECIFIED) {
-          QueryBond *newB = new QueryBond(Bond::SINGLE);
+          auto *newB = new QueryBond(Bond::SINGLE);
           newB->expandQuery(makeBondOrderEqualsQuery(Bond::AROMATIC),
                             Queries::COMPOSITE_OR, true);
           newB->setOwningMol(mol);
@@ -227,7 +246,7 @@ bool isUnsaturated(const Atom *atom, const RWMol *mol) {
   ROMol::OEDGE_ITER beg, end;
   boost::tie(beg, end) = mol->getAtomBonds(atom);
   while (beg != end) {
-    const BOND_SPTR bond = (*mol)[*beg];
+    const Bond *bond = (*mol)[*beg];
     ++beg;
     if (bond->getBondType() != Bond::SINGLE) return true;
   }
@@ -240,8 +259,7 @@ bool hasSingleHQuery(const Atom::QUERYATOM_QUERY *q) {
   bool res = false;
   std::string descr = q->getDescription();
   if (descr == "AtomAnd") {
-    for (Atom::QUERYATOM_QUERY::CHILD_VECT_CI cIt = q->beginChildren();
-         cIt != q->endChildren(); ++cIt) {
+    for (auto cIt = q->beginChildren(); cIt != q->endChildren(); ++cIt) {
       std::string descr = (*cIt)->getDescription();
       if (descr == "AtomHCount") {
         if (!(*cIt)->getNegation() &&
@@ -316,17 +334,17 @@ void AdjustAtomChiralityFlags(RWMol *mol) {
       // find the location of this atom.  it pretty much has to be
       // first in the list, e.g for smiles like [C@](F)(Cl)(Br)I, or
       // second (everything else).
-      std::list<SIZET_PAIR>::iterator selfPos = neighbors.begin();
-      if (selfPos->first != static_cast<int>((*atomIt)->getIdx())) {
+      auto selfPos = neighbors.begin();
+      if (selfPos->first != (*atomIt)->getIdx()) {
         ++selfPos;
       }
-      CHECK_INVARIANT(selfPos->first == static_cast<int>((*atomIt)->getIdx()),
+      CHECK_INVARIANT(selfPos->first == (*atomIt)->getIdx(),
                       "weird atom ordering");
 
       // copy over the bond ids:
       INT_LIST bondOrdering;
-      for (std::list<SIZET_PAIR>::iterator neighborIt = neighbors.begin();
-           neighborIt != neighbors.end(); ++neighborIt) {
+      for (auto neighborIt = neighbors.begin(); neighborIt != neighbors.end();
+           ++neighborIt) {
         if (neighborIt != selfPos) {
           bondOrdering.push_back(rdcast<int>(neighborIt->second));
         } else {
@@ -425,9 +443,14 @@ void CloseMolRings(RWMol *mol, bool toleratePartials) {
         if (!toleratePartials && atomIt == atomsEnd) {
           ReportParseError("unclosed ring");
         } else if (atomIt != atomsEnd && *atomIt == atom1) {
-          // make sure we don't try to connect an atom to itself,
-          // this was bug 3145697:
-          ++atomIt;
+          // make sure we don't try to connect an atom to itself
+          // this was github #1925
+          auto fmt =
+              boost::format{
+                  "duplicated ring closure %1% bonds atom %2% to itself"} %
+              bookmarkIt->first % atom1->getIdx();
+          std::string msg = fmt.str();
+          ReportParseError(msg.c_str(), true);
         } else if (atomIt != atomsEnd) {
           // we actually found an atom, so connect it to the first
           Atom *atom2 = *atomIt;
@@ -446,7 +469,7 @@ void CloseMolRings(RWMol *mol, bool toleratePartials) {
           // atom set already:
           RWMol::BOND_PTR_LIST bonds =
               mol->getAllBondsWithBookmark(bookmarkIt->first);
-          RWMol::BOND_PTR_LIST::iterator bondIt = bonds.begin();
+          auto bondIt = bonds.begin();
           CHECK_INVARIANT(bonds.size() >= 2, "Missing bond");
 
           // get pointers to the two bonds:
@@ -529,8 +552,8 @@ void CloseMolRings(RWMol *mol, bool toleratePartials) {
                 "somehow atom doesn't have _RingClosures property.");
             INT_VECT closures;
             atom1->getProp(common_properties::_RingClosures, closures);
-            INT_VECT::iterator closurePos = std::find(
-                closures.begin(), closures.end(), -(bookmarkIt->first + 1));
+            auto closurePos = std::find(closures.begin(), closures.end(),
+                                        -(bookmarkIt->first + 1));
             CHECK_INVARIANT(closurePos != closures.end(),
                             "could not find bookmark in atom _RingClosures");
             *closurePos = bondIdx - 1;

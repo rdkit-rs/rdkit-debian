@@ -33,16 +33,16 @@ namespace RDKit {
 static Atom *PDBAtomFromSymbol(const char *symb) {
   PRECONDITION(symb, "bad char ptr");
   if (symb[0] == 'D' && !symb[1]) {
-    Atom *result = new Atom(1);
+    auto *result = new Atom(1);
     result->setIsotope(2);
     return result;
   } else if (symb[0] == 'T' && !symb[1]) {
-    Atom *result = new Atom(1);
+    auto *result = new Atom(1);
     result->setIsotope(3);
     return result;
   }
   int elemno = PeriodicTable::getTable()->getAtomicNumber(symb);
-  return elemno > 0 ? new Atom(elemno) : (Atom *)0;
+  return elemno > 0 ? new Atom(elemno) : (Atom *)nullptr;
 }
 
 static void PDBAtomLine(RWMol *mol, const char *ptr, unsigned int len,
@@ -74,7 +74,7 @@ static void PDBAtomLine(RWMol *mol, const char *ptr, unsigned int len,
     throw FileParseException(errout.str());
   }
 
-  Atom *atom = (Atom *)0;
+  Atom *atom = (Atom *)nullptr;
   char symb[3];
 
   // Attempt #1:  Atomic Symbol in columns 76 and 77
@@ -296,10 +296,11 @@ static void PDBBondLine(RWMol *mol, const char *ptr, unsigned int len,
       } catch (boost::bad_lexical_cast &) {
         fail = true;
       }
+
       if (!fail) {
         Bond *bond =
             mol->getBondBetweenAtoms(amap[src]->getIdx(), amap[dst]->getIdx());
-        if (bond) {
+        if (bond && bond->getBondType() != Bond::ZERO) {
           // Here we use a single byte bitmap to count duplicates
           // Low nibble counts src < dst, high nibble for src > dst
           int seen = bmap[bond];
@@ -326,14 +327,20 @@ static void PDBBondLine(RWMol *mol, const char *ptr, unsigned int len,
               if ((seen & 0x08) == 0) bond->setBondType(Bond::QUADRUPLE);
             }
           }
-        } else {
-          bond = new Bond(Bond::SINGLE);
+        } else if(!bond) {
+          // Bonds in PDB file are explicit
+          // if they are not sanitize friendly, set their order to zero
+          if(IsBlacklistedPair(amap[src], amap[dst]))
+            bond = new Bond(Bond::ZERO);
+          else
+            bond = new Bond(Bond::SINGLE);
           bond->setOwningMol(mol);
           bond->setBeginAtom(amap[src]);
           bond->setEndAtom(amap[dst]);
           mol->addBond(bond, true);
           bmap[bond] = (src < dst) ? 0x01 : 0x10;
-        }
+        } else
+            break;
       } else
         break;
     }
@@ -453,7 +460,7 @@ void BasicPDBCleanup(RWMol &mol) {
   ROMol::VERTEX_ITER atBegin, atEnd;
   boost::tie(atBegin, atEnd) = mol.getVertices();
   while (atBegin != atEnd) {
-    ATOM_SPTR atom = mol[*atBegin];
+    Atom* atom = mol[*atBegin];
     atom->calcExplicitValence(false);
 
     // correct four-valent neutral N -> N+
@@ -467,15 +474,15 @@ void BasicPDBCleanup(RWMol &mol) {
 }
 
 RWMol *PDBBlockToMol(const char *str, bool sanitize, bool removeHs,
-                     unsigned int flavor) {
+                     unsigned int flavor, bool proximityBonding) {
   PRECONDITION(str, "bad char ptr");
   std::map<int, Atom *> amap;
   std::map<Bond *, int> bmap;
-  RWMol *mol = 0;
+  RWMol *mol = nullptr;
   Utils::LocaleSwitcher ls;
   bool multi_conformer = false;
   int conformer_atmidx = 0;
-  Conformer *conf = 0;
+  Conformer *conf = nullptr;
 
   while (*str) {
     unsigned int len;
@@ -536,15 +543,18 @@ RWMol *PDBBlockToMol(const char *str, bool sanitize, bool removeHs,
       if (!mol) break;
       multi_conformer = true;
       conformer_atmidx = 0;
-      conf = 0;
+      conf = nullptr;
     }
     str = next;
   }
 
-  if (!mol) return (RWMol *)0;
+  if (!mol) return (RWMol *)nullptr;
 
-  ConnectTheDots(mol, ctdIGNORE_H_H_CONTACTS);
-  StandardPDBResidueBondOrders(mol);
+  if (proximityBonding)
+    ConnectTheDots(mol, ctdIGNORE_H_H_CONTACTS);
+  // flavor & 8 doesn't encode double bonds
+  if (proximityBonding || ((flavor & 8) != 0))
+    StandardPDBResidueBondOrders(mol);
 
   BasicPDBCleanup(*mol);
 
@@ -567,12 +577,12 @@ RWMol *PDBBlockToMol(const char *str, bool sanitize, bool removeHs,
 }
 
 RWMol *PDBBlockToMol(const std::string &str, bool sanitize, bool removeHs,
-                     unsigned int flavor) {
-  return PDBBlockToMol(str.c_str(), sanitize, removeHs, flavor);
+                     unsigned int flavor, bool proximityBonding) {
+  return PDBBlockToMol(str.c_str(), sanitize, removeHs, flavor, proximityBonding);
 }
 
 RWMol *PDBDataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
-                          unsigned int flavor) {
+                          unsigned int flavor, bool proximityBonding) {
   PRECONDITION(inStream, "bad stream");
   std::string buffer;
   const char *ptr;
@@ -591,15 +601,15 @@ RWMol *PDBDataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
         ptr[3] == 'M' && ptr[4] == 'D' && ptr[5] == 'L')
       break;
   }
-  return PDBBlockToMol(buffer.c_str(), sanitize, removeHs, flavor);
+  return PDBBlockToMol(buffer.c_str(), sanitize, removeHs, flavor, proximityBonding);
 }
 RWMol *PDBDataStreamToMol(std::istream &inStream, bool sanitize, bool removeHs,
-                          unsigned int flavor) {
-  return PDBDataStreamToMol(&inStream, sanitize, removeHs, flavor);
+                          unsigned int flavor, bool proximityBonding) {
+  return PDBDataStreamToMol(&inStream, sanitize, removeHs, flavor, proximityBonding);
 }
 
 RWMol *PDBFileToMol(const std::string &fileName, bool sanitize, bool removeHs,
-                    unsigned int flavor) {
+                    unsigned int flavor, bool proximityBonding) {
   std::ifstream ifs(fileName.c_str(), std::ios_base::binary);
   if (!ifs || ifs.bad()) {
     std::ostringstream errout;
@@ -607,6 +617,6 @@ RWMol *PDBFileToMol(const std::string &fileName, bool sanitize, bool removeHs,
     throw BadFileException(errout.str());
   }
   return PDBDataStreamToMol(static_cast<std::istream *>(&ifs), sanitize,
-                            removeHs, flavor);
+                            removeHs, flavor, proximityBonding);
 }
 }

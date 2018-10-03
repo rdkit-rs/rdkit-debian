@@ -117,7 +117,7 @@ std::string labelRecursivePatterns(const std::string &sma) {
             // seen this one before, add the label
             label = patterns[recurs];
           } else {
-            label = boost::lexical_cast<std::string>(patterns.size() + 100);
+            label = std::to_string(patterns.size() + 100);
             patterns[recurs] = label;
           }
           res += "_" + label;
@@ -134,14 +134,14 @@ std::string labelRecursivePatterns(const std::string &sma) {
   return sma;
 #endif
 }
-}  // end of local namespace
+}  // namespace
 
 RWMol *toMol(const std::string &inp,
              int func(const std::string &, std::vector<RDKit::RWMol *> &),
              const std::string &origInp) {
   // empty strings produce empty molecules:
   if (inp == "") return new RWMol();
-  RWMol *res = 0;
+  RWMol *res = nullptr;
   std::vector<RDKit::RWMol *> molVect;
   try {
     func(inp, molVect);
@@ -154,8 +154,8 @@ RWMol *toMol(const std::string &inp,
         res->clearAtomBookmark(ci_RIGHTMOST_ATOM);
       }
       SmilesParseOps::CleanupAfterParsing(res);
-      molVect[0] = 0;  // NOTE: to avoid leaks on failures, this should occur
-                       // last in this if.
+      molVect[0] = nullptr;  // NOTE: to avoid leaks on failures, this should
+                             // occur last in this if.
     }
   } catch (SmilesParseException &e) {
     std::string nm = "SMILES";
@@ -164,7 +164,7 @@ RWMol *toMol(const std::string &inp,
     }
     BOOST_LOG(rdErrorLog) << nm << " Parse Error: " << e.message()
                           << " for input: '" << origInp << "'" << std::endl;
-    res = 0;
+    res = nullptr;
   }
   BOOST_FOREACH (RDKit::RWMol *molPtr, molVect) {
     if (molPtr) {
@@ -177,30 +177,31 @@ RWMol *toMol(const std::string &inp,
   return res;
 }
 
-RWMol *SmilesToMol(const std::string &smiles, const SmilesParserParams &params) {
+RWMol *SmilesToMol(const std::string &smiles,
+                   const SmilesParserParams &params) {
   yysmiles_debug = params.debugParse;
 
   std::string lsmiles = "", name = "", cxPart = "";
-  if(params.parseName && !params.allowCXSMILES){
+  if (params.parseName && !params.allowCXSMILES) {
     std::vector<std::string> tokens;
     boost::split(tokens, smiles, boost::is_any_of(" \t"),
                  boost::token_compress_on);
     lsmiles = tokens[0];
-    if(tokens.size()>1) name = tokens[1];
+    if (tokens.size() > 1) name = tokens[1];
   } else if (params.allowCXSMILES) {
     size_t sidx = smiles.find_first_of(" \t");
-    if (sidx != std::string::npos && sidx != 0)  {
+    if (sidx != std::string::npos && sidx != 0) {
       lsmiles = smiles.substr(0, sidx);
       cxPart = boost::trim_copy(smiles.substr(sidx, smiles.size() - sidx));
     }
   }
 
-  if(lsmiles=="") {
+  if (lsmiles == "") {
     lsmiles = smiles;
   }
   // strip any leading/trailing whitespace:
   // boost::trim_if(smi,boost::is_any_of(" \t\r\n"));
-  RWMol *res=NULL;
+  RWMol *res = nullptr;
   if (params.replacements) {
     std::string smi = lsmiles;
     bool loopAgain = true;
@@ -219,13 +220,21 @@ RWMol *SmilesToMol(const std::string &smiles, const SmilesParserParams &params) 
   } else {
     res = toMol(lsmiles, smiles_parse, lsmiles);
   }
-  if ( res && (params.sanitize || params.removeHs)) {
+  if (res && params.allowCXSMILES && cxPart != "") {
+    std::string::const_iterator pos = cxPart.cbegin();
+    SmilesParseOps::parseCXExtensions(*res, cxPart, pos);
+    if (params.parseName && pos != cxPart.cend()) {
+      std::string nmpart(pos, cxPart.cend());
+      name = boost::trim_copy(nmpart);
+    }
+  }
+  if (res && (params.sanitize || params.removeHs)) {
     try {
-      if(params.removeHs) {
-        bool implicitOnly=false,updateExplicitCount=true;
+      if (params.removeHs) {
+        bool implicitOnly = false, updateExplicitCount = true;
         MolOps::removeHs(*res, implicitOnly, updateExplicitCount,
-          params.sanitize);
-      } else if(params.sanitize) {
+                         params.sanitize);
+      } else if (params.sanitize) {
         MolOps::sanitizeMol(*res);
       }
     } catch (...) {
@@ -235,18 +244,6 @@ RWMol *SmilesToMol(const std::string &smiles, const SmilesParserParams &params) 
     // figure out stereochemistry:
     bool cleanIt = true, force = true, flagPossible = true;
     MolOps::assignStereochemistry(*res, cleanIt, force, flagPossible);
-  }
-  if (res && params.allowCXSMILES && cxPart != "") {
-    // it's goofy that we have to do this, but c++0x doesn't seem to have
-    // a way to get a const_iterator from a non-const std::string. In C++11
-    // we could just use .cend()
-    const std::string &cxcopy = cxPart;
-    std::string::const_iterator pos;
-    SmilesParseOps::parseCXExtensions(*res, cxcopy, pos);
-    if (params.parseName && pos != cxcopy.end()) {
-      std::string nmpart(pos, cxcopy.end());
-      name = boost::trim_copy(nmpart);
-    }
   }
   if (res && name != "") res->setProp(common_properties::_Name, name);
   return res;
@@ -288,4 +285,4 @@ RWMol *SmartsToMol(const std::string &smarts, int debugParse, bool mergeHs,
   }
   return res;
 };
-}
+}  // namespace RDKit
