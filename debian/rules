@@ -61,6 +61,7 @@ override_dh_auto_clean:
 	Docs/Book/Overview.rst \
 	rdkit/ML/Data/test_data/testgeneral.dat.pkl \
 	rdkit/ML/Data/test_data/testquant.qdat.pkl
+	$(RM) Code/RDGeneral/versions.h rdkit/sping/tests/testallps.ps
 	dh_auto_clean
 
 override_dh_auto_configure:

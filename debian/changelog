@@ -1,6 +1,8 @@
-rdkit (201803.4+dfsg-1) unstable; urgency=medium
+rdkit (201803.4+dfsg-1) UNRELEASED; urgency=medium
 
   * Team upload.
+    Needs to wait for schroedinger-maeparser and schroedinger-coordgenlibs
+    to arrive in the archive.
 
   * New upstream release.
   * Standards-Version: 4.2.1
