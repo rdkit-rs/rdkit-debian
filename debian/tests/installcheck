@@ -1,0 +1,3 @@
+#!/bin/sh
+export RDBASE=`pwd`
+pg_buildext installcheck `pwd`/Code/PgSQL/rdkit
