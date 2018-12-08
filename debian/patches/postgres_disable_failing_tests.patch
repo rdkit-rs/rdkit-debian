@@ -1,0 +1,104 @@
+--- ./Code/PgSQL/rdkit/sql/reaction.sql	2018-08-14 07:53:15.000000000 +0200
++++ ./Code/PgSQL/rdkit/sql/reaction.sql.new	2018-12-08 18:08:33.596866748 +0100
+@@ -147,10 +147,10 @@
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',1), reaction_structural_bfp('c1ncccc1>>c1ncncc1',1));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',1));
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>>c1ccncc1',3));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ncccc1>>c1ncncc1',3));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3));
+@@ -185,10 +185,10 @@
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',1), reaction_structural_bfp('c1ncccc1>>c1ncncc1',1));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',1));
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>>c1ccncc1',3));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ncccc1>>c1ncncc1',3));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3));
+--- ./Code/PgSQL/rdkit/expected/reaction.out	2018-08-14 07:53:15.000000000 +0200
++++ ./Code/PgSQL/rdkit/expected/reaction.out.new	2018-12-08 18:08:23.076640224 +0100
+@@ -579,30 +579,10 @@
+  0.514285714285714
+ (1 row)
+ 
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
+- tanimoto_sml 
+---------------
+-            1
+-(1 row)
+-
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
+-   tanimoto_sml    
+--------------------
+- 0.461538461538462
+-(1 row)
+-
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
+- tanimoto_sml 
+---------------
+-            1
+-(1 row)
+-
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
+-   tanimoto_sml    
+--------------------
+- 0.461538461538462
+-(1 row)
+-
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>>c1ccncc1',3));
+  tanimoto_sml 
+ --------------
+@@ -774,30 +754,10 @@
+  0.514285714285714
+ (1 row)
+ 
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
+- tanimoto_sml 
+---------------
+-            1
+-(1 row)
+-
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
+-   tanimoto_sml    
+--------------------
+- 0.444444444444444
+-(1 row)
+-
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
+- tanimoto_sml 
+---------------
+-            1
+-(1 row)
+-
+-SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
+-   tanimoto_sml    
+--------------------
+- 0.444444444444444
+-(1 row)
+-
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
+ SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>>c1ccncc1',3));
+  tanimoto_sml 
+ --------------

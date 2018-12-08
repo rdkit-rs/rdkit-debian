@@ -19,6 +19,8 @@ rdkit (201803.4+dfsg-1) UNRELEASED; urgency=medium
   * debian/rules: Add PostgreSQL extension support via pg_buildext.
   * debian/patches/postgres_Makefile_fixes.patch: New patch, adds assorted
     fixes for the PostgreSQL Cartridge Makefile.
+  * debian/patches/postgres_disable_failing_tests.patch: New patch, disables
+    some installcheck tests that fail with Boost assertions.
 
  -- Steffen Moeller <moeller@debian.org>  Wed, 03 Oct 2018 14:41:51 +0200
 
