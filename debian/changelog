@@ -6,6 +6,11 @@ rdkit (201803.4+dfsg-1) UNRELEASED; urgency=medium
   [ Steffen Moeller ]
   * Standards-Version: 4.2.1
 
+  [ Michael Banck ]
+  * debian/rules (override_dh_auto_configure): -DRDK_BUILD_COORDGEN_SUPPORT=OFF
+    and -RDK_BUILD_MOLINTERCHANGE_SUPPORT=OFF added.
+  * debian/patches/series: Disabled NoDownloads.patch.
+
  -- Steffen Moeller <moeller@debian.org>  Wed, 03 Oct 2018 14:41:51 +0200
 
 rdkit (201709.3+dfsg-1) unstable; urgency=medium
