@@ -13,6 +13,7 @@ rdkit (201803.4+dfsg-1) UNRELEASED; urgency=medium
   * debian/control (Build-Depends): Added postgresql-server-dev-all.
   * debian/control.in: New file, add postgresql-PGVERSION-rdkit package.
   * debian/control: Refreshed for unstable.
+  * debian/pgversions: New file.
 
  -- Steffen Moeller <moeller@debian.org>  Wed, 03 Oct 2018 14:41:51 +0200
 
