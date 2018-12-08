@@ -1,4 +1,4 @@
-rdkit (201803.4+dfsg-1) UNRELEASED; urgency=medium
+rdkit (201803.4+dfsg-1) unstable; urgency=medium
 
   * New upstream release.
   * Team upload.
@@ -24,7 +24,7 @@ rdkit (201803.4+dfsg-1) UNRELEASED; urgency=medium
   * debian/tests/control, debian/tests/installcheck: Add autopkgtests for the
     PostgreSQL Cartridge.
 
- -- Steffen Moeller <moeller@debian.org>  Wed, 03 Oct 2018 14:41:51 +0200
+ -- Michael Banck <mbanck@debian.org>  Sat, 08 Dec 2018 18:13:35 +0100
 
 rdkit (201709.3+dfsg-1) unstable; urgency=medium
 
