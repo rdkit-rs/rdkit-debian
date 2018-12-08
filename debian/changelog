@@ -14,6 +14,8 @@ rdkit (201803.4+dfsg-1) UNRELEASED; urgency=medium
   * debian/control.in: New file, add postgresql-PGVERSION-rdkit package.
   * debian/control: Refreshed for unstable.
   * debian/pgversions: New file.
+  * debian/patches/postgres_v11_support.patch: New patch, adds support for
+    PostgreSQL 11.
 
  -- Steffen Moeller <moeller@debian.org>  Wed, 03 Oct 2018 14:41:51 +0200
 
