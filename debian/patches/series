@@ -1,2 +1,3 @@
 #NoDownloads.patch
 postgres_v11_support.patch
+postgres_Makefile_fixes.patch

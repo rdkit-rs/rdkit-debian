@@ -1,0 +1,57 @@
+--- ./Code/PgSQL/rdkit/Makefile.orig	2018-12-08 15:40:13.721894404 +0100
++++ ./Code/PgSQL/rdkit/Makefile	2018-12-08 15:41:08.183832240 +0100
+@@ -10,9 +10,10 @@
+ #STATIC_LINK=1
+ # -------------------------
+ 
++override with_llvm=no
+ 
+ RDKIT=$(RDBASE)
+-
++RDKIT_PGSQL_SRCDIR=$(RDBASE)/Code/PgSQL/rdkit
+ 
+ ifeq ($(USE_INCHI),1)
+   INCHILIBS=-lRDInchiLib -lInchi
+@@ -32,12 +33,13 @@
+   THREADLIBS=-L${BOOSTHOME}/lib -lboost_thread -lboost_system
+ endif
+ 
+-RDKLIBS       = ${AVALONLIBS} ${INCHILIBS} -lMolDraw2D -lMolTransforms -lMolHash -lFMCS -lChemReactions -lChemTransforms -lFileParsers -lSmilesParse -lFingerprints -lSubgraphs -lDescriptors -lPartialCharges -lSubstructMatch  -lGraphMol -lEigenSolvers -lDataStructs -lDepictor -lRDGeometryLib -lRDGeneral
++RDKLIBS       = ${AVALONLIBS} ${INCHILIBS} -lRDKitMolDraw2D -lRDKitMolTransforms -lRDKitMolHash -lRDKitFMCS -lRDKitChemReactions -lRDKitChemTransforms -lRDKitFileParsers -lRDKitSmilesParse -lRDKitFingerprints -lRDKitSubgraphs -lRDKitDescriptors -lRDKitPartialCharges -lRDKitSubstructMatch  -lRDKitGraphMol -lRDKitEigenSolvers -lRDKitDataStructs -lRDKitDepictor -lRDKitRDGeometryLib -lRDKitRDGeneral
++RDKIT_LIBDIR ?= ${RDKIT}/lib
+ 
+ ifeq ($(STATIC_LINK),0)
+-  SHLIB_LINK += -L${RDKIT}/lib -Wl,-rpath,'${RDKIT}/lib' ${RDKLIBS}
++  SHLIB_LINK += -L${RDKIT_LIBDIR} -Wl,-rpath,'${RDKIT}/lib' ${RDKLIBS}
+ else
+-  SHLIB_LINK += -L${RDKIT}/lib $(addsuffix _static,${RDKLIBS})
++  SHLIB_LINK += -L${RDKIT_LIBDIR} $(addsuffix _static,${RDKLIBS})
+ endif
+ 
+ ifndef BOOSTHOME
+@@ -56,7 +58,7 @@
+ CPLUSPLUSFLAGS := $(filter-out -fexcess-precision=standard,$(CPLUSPLUSFLAGS))
+ 
+ EXTENSION  = rdkit
+-EXTVERSION = $(shell grep default_version $(EXTENSION).control | sed -e "s/default_version[[:space:]]*=[[:space:]]*'\([^']*\)'/\1/")
++EXTVERSION = $(shell grep default_version ${RDKIT_PGSQL_SRCDIR}/$(EXTENSION).control | sed -e "s/default_version[[:space:]]*=[[:space:]]*'\([^']*\)'/\1/")
+ PG_CONFIG  = pg_config
+ MODULE_big = rdkit
+ OBJS       = rdkit_io.o mol_op.o bfp_op.o sfp_op.o rxn_op.o rdkit_gist.o bfp_gist.o bfp_gin.o low_gist.o guc.o cache.o adapter.o bitstring.o
+@@ -71,7 +73,6 @@
+ 	sed -e's/@RDKIT_PG_BFP_GIST_FETCH@/FUNCTION    9   gbfp_fetch (internal),/;' \
+ -e's/@RDKIT_GIN_BFP_TRICONSISTENT@/FUNCTION    6   gin_bfp_triconsistent(internal, int2, bfp, int4, internal, internal, internal),/' \
+  $< > $@
+-	cp $< $@
+ else
+ ifeq ($(PG92),no)
+ $(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
+@@ -87,7 +88,7 @@
+ endif
+ 
+ REGRESS    = rdkit-91 props btree molgist bfpgist-91 bfpgin sfpgist slfpgist fps reaction ${INCHIREGRESS} ${AVALONREGRESS}
+-DATA = $(EXTENSION)--$(EXTVERSION).sql
++DATA_built = $(EXTENSION)--$(EXTVERSION).sql
+ EXTRA_CLEAN = $(EXTENSION)--$(EXTVERSION).sql
+ include $(PGXS)
+ 
