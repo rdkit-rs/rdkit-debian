@@ -16,6 +16,10 @@ export LDFLAGS      := $(shell dpkg-buildflags --get LDFLAGS)
 
 export DOCDIR       := $(CURDIR)/debian/rdkit-doc/usr/share/doc/rdkit/
 
+export RDBASE       := $(CURDIR)
+
+include /usr/share/postgresql-common/pgxs_debian_control.mk
+
 %:
 	dh $@ --with python2 --buildsystem=cmake --parallel
 
@@ -63,6 +67,7 @@ override_dh_auto_clean:
 	rdkit/ML/Data/test_data/testquant.qdat.pkl
 	$(RM) Code/RDGeneral/versions.h rdkit/sping/tests/testallps.ps
 	dh_auto_clean
+	+pg_buildext clean $(CURDIR)/Code/PgSQL/rdkit build-%v
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
@@ -74,6 +79,7 @@ override_dh_auto_configure:
 
 override_dh_auto_build:
 	dh_auto_build
+	+STATIC_LINK=0 RDKIT_LIBDIR=$(wildcard $(CURDIR)/obj-*/)/lib pg_buildext build $(CURDIR)/Code/PgSQL/rdkit build-%v
 	(cd $(CURDIR)/Code; doxygen doxygen/doxygen.config)
 	(cd $(CURDIR)/rdkit; epydoc --config  epydoc.config)
 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) html)
@@ -85,6 +91,7 @@ override_dh_install:
 	mkdir -p $(DOCDIR)
 	cp $(CURDIR)/Docs/Book/_build/latex/RDKit.pdf $(DOCDIR)
 	cp -a $(CURDIR)/Docs/Book/_build/html $(DOCDIR)
+	+pg_buildext install $(CURDIR)/Code/PgSQL/rdkit build-%v postgresql-%v-rdkit
  
 override_dh_installchangelogs:
 	dh_installchangelogs ReleaseNotes.md
@@ -98,5 +105,5 @@ override_dh_auto_test:
 	cp -r rdkit obj-*/
 	find $(CURDIR) -name rdchem.so
 	#export RDBASE=$(CURDIR) PYTHONPATH=$(wildcard $(CURDIR)/obj-*/) LD_LIBRARY_PATH="$(wildcard $(CURDIR)/obj-*/)/lib:$(LD_LIBRARY_PATH)"
-	-RDBASE=$(CURDIR) PYTHONPATH=$(wildcard $(CURDIR)/obj-*/):$(wildcard $(CURDIR)/obj-*/)/rdkit/Chem/ LD_LIBRARY_PATH="$(wildcard $(CURDIR)/obj-*/)/lib:$(LD_LIBRARY_PATH)" dh_auto_test
+	-PYTHONPATH=$(wildcard $(CURDIR)/obj-*/):$(wildcard $(CURDIR)/obj-*/)/rdkit/Chem/ LD_LIBRARY_PATH="$(wildcard $(CURDIR)/obj-*/)/lib:$(LD_LIBRARY_PATH)" dh_auto_test
 endif

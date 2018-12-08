@@ -16,6 +16,7 @@ rdkit (201803.4+dfsg-1) UNRELEASED; urgency=medium
   * debian/pgversions: New file.
   * debian/patches/postgres_v11_support.patch: New patch, adds support for
     PostgreSQL 11.
+  * debian/rules: Add PostgreSQL extension support via pg_buildext.
 
  -- Steffen Moeller <moeller@debian.org>  Wed, 03 Oct 2018 14:41:51 +0200
 
