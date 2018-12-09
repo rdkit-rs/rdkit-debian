@@ -1,5 +1,5 @@
---- ./Code/PgSQL/rdkit/Makefile.orig	2018-12-08 15:40:13.721894404 +0100
-+++ ./Code/PgSQL/rdkit/Makefile	2018-12-08 15:41:08.183832240 +0100
+--- ./Code/PgSQL/rdkit/Makefile.orig	2018-12-09 13:38:26.549092930 +0100
++++ ./Code/PgSQL/rdkit/Makefile	2018-12-09 13:38:43.793595402 +0100
 @@ -10,9 +10,10 @@
  #STATIC_LINK=1
  # -------------------------
@@ -22,7 +22,7 @@
  
  ifeq ($(STATIC_LINK),0)
 -  SHLIB_LINK += -L${RDKIT}/lib -Wl,-rpath,'${RDKIT}/lib' ${RDKLIBS}
-+  SHLIB_LINK += -L${RDKIT_LIBDIR} -Wl,-rpath,'${RDKIT}/lib' ${RDKLIBS}
++  SHLIB_LINK += -L${RDKIT_LIBDIR} ${RDKLIBS}
  else
 -  SHLIB_LINK += -L${RDKIT}/lib $(addsuffix _static,${RDKLIBS})
 +  SHLIB_LINK += -L${RDKIT_LIBDIR} $(addsuffix _static,${RDKLIBS})
