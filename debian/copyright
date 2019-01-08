@@ -2,13 +2,6 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: rdkit
 Source: https://github.com/rdkit/rdkit/releases
 Files-Excluded: */*.chm
- External/CoordGen/coordgenlibs
- External/CoordGen/maeparser
- Code/RDGeneral/versions.h
- Code/GraphMol/Fingerprints/test1.cpp.orig
- Code/GraphMol/Fingerprints/test1.cpp.orig
- Code/GraphMol/Fingerprints/test1.cpp.rej
-
 
 Files: *
 Copyright: 2006-2016 Rational Discovery LLC, Novartis Institutes for
