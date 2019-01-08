@@ -35,6 +35,12 @@ void expandQuery(QueryAtom *self, const QueryAtom *other,
   }
 }
 
+void setQuery(QueryAtom *self, const QueryAtom *other) {
+  if (other->hasQuery()) {
+    self->setQuery(other->getQuery()->copy());
+  }
+}
+
 template <class T>
 void AtomSetProp(const Atom *atom, const char *key, const T &val) {
   // std::cerr<<"asp: "<<atom<<" " << key<<" - " << val << std::endl;
@@ -93,12 +99,15 @@ bool AtomIsInRingSize(const Atom *atom, int size) {
                                                                 size);
 }
 
-std::string AtomGetSmarts(const Atom *atom) {
+std::string AtomGetSmarts(const Atom *atom, bool doKekule, bool allHsExplicit,
+                          bool isomericSmiles) {
   std::string res;
   if (atom->hasQuery()) {
     res = SmartsWrite::GetAtomSmarts(static_cast<const QueryAtom *>(atom));
   } else {
-    res = SmilesWrite::GetAtomSmiles(atom);
+    // FIX: this should not be necessary
+    res = SmilesWrite::GetAtomSmiles(atom, doKekule, nullptr, allHsExplicit,
+                                     isomericSmiles);
   }
   return res;
 }
@@ -243,6 +252,9 @@ struct atom_wrapper {
              "debugging purposes.\n\n")
 
         .def("GetSmarts", AtomGetSmarts,
+             (python::arg("self"), python::arg("doKekule") = false,
+              python::arg("allHsExplicit") = false,
+              python::arg("isomericSmiles") = true),
              "returns the SMARTS (or SMILES) string for an Atom\n\n")
 
         // properties
@@ -411,7 +423,10 @@ These cannot currently be constructed directly from Python\n";
              (python::arg("self"), python::arg("other"),
               python::arg("how") = Queries::COMPOSITE_AND,
               python::arg("maintainOrder") = true),
-             "combines the query from other with ours");
+             "combines the query from other with ours")
+        .def("SetQuery", setQuery,
+             (python::arg("self"), python::arg("other")),
+             "Replace our query with a copy of the other query");
 
     python::def(
         "GetAtomRLabel", getAtomRLabel, (python::arg("atom")),
@@ -449,5 +464,5 @@ These cannot currently be constructed directly from Python\n";
         "'C<xxx>'\n");
   }
 };
-}  // end of namespace
+}  // namespace RDKit
 void wrap_atom() { RDKit::atom_wrapper::wrap(); }

@@ -8,11 +8,13 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <memory>
 
 #include "MolSupplier.h"
 #include "MolWriters.h"
@@ -102,6 +104,33 @@ int testMolSup() {
     }
     TEST_ASSERT(i == 16);
   }
+#ifdef RDK_BUILD_COORDGEN_SUPPORT
+  {
+    fname = rdbase + "/Code/GraphMol/FileParsers/test_data/NCI_aids_few.mae";
+    MaeMolSupplier maesup(fname);
+    std::shared_ptr<ROMol> nmol;
+    for (unsigned int i = 0; i < 16; ++i) {
+      nmol.reset(maesup.next());
+      if (nmol) {
+        TEST_ASSERT(nmol->hasProp(common_properties::_Name));
+        TEST_ASSERT(nmol->getNumAtoms() > 0);
+        if (i == 0) {
+          auto smiles = MolToSmiles(*nmol);
+          TEST_ASSERT(smiles ==
+                      "CCC1=[O+][Cu]2([O+]=C(CC)C1)[O+]=C(CC)CC(CC)=[O+]2");
+        }
+      }
+    }
+    TEST_ASSERT(maesup.atEnd());
+    bool ok = false;
+    try {
+      maesup.next();
+    } catch (FileParseException &) {
+      ok = true;
+    }
+    TEST_ASSERT(ok);
+  }
+#endif  // RDK_BUILD_COORDGEN_SUPPORT
   return 1;
 }
 
@@ -508,7 +537,8 @@ void testSmilesSupFromText() {
   }
   TEST_ASSERT(failed);
   BOOST_LOG(rdErrorLog) << ">>> This may result in an infinite loop.  It "
-                           "should finish almost immediately:" << std::endl;
+                           "should finish almost immediately:"
+                        << std::endl;
   TEST_ASSERT(nSup2.length() == 4);
   BOOST_LOG(rdErrorLog) << "<<< done." << std::endl;
 
@@ -2016,7 +2046,8 @@ int testForwardSDSupplier() {
   }
   {
     io::filtering_istream strm;
-    // the stream must be opened in binary mode otherwise it won't work on Windows
+    // the stream must be opened in binary mode otherwise it won't work on
+    // Windows
     std::ifstream is(fname2.c_str(), std::ios_base::binary);
     strm.push(io::gzip_decompressor());
     strm.push(is);
@@ -2033,7 +2064,8 @@ int testForwardSDSupplier() {
   // looks good, now do a supplier:
   {
     io::filtering_istream strm;
-    // the stream must be opened in binary mode otherwise it won't work on Windows
+    // the stream must be opened in binary mode otherwise it won't work on
+    // Windows
     std::ifstream is(fname2.c_str(), std::ios_base::binary);
     strm.push(io::gzip_decompressor());
     strm.push(is);
@@ -2051,6 +2083,64 @@ int testForwardSDSupplier() {
     }
     TEST_ASSERT(i == 16);
   }
+
+#ifdef RDK_BUILD_COORDGEN_SUPPORT
+  // Now test that Maestro parsing of gz files works
+  std::string maefname =
+      rdbase + "/Code/GraphMol/FileParsers/test_data/NCI_aids_few.mae";
+  std::string maefname2 =
+      rdbase + "/Code/GraphMol/FileParsers/test_data/NCI_aids_few.maegz";
+  {
+    io::filtering_istream strm;
+    strm.push(io::file_source(maefname));
+
+    unsigned int i = 0;
+    while (!strm.eof()) {
+      std::string line;
+      std::getline(strm, line);
+      if (!strm.eof()) ++i;
+      if (i > 1700) break;
+    }
+    TEST_ASSERT(i == 1663);
+  }
+  {
+    io::filtering_istream strm;
+    // the stream must be opened in binary mode otherwise it won't work on
+    // Windows
+    std::ifstream is(maefname2.c_str(), std::ios_base::binary);
+    strm.push(io::gzip_decompressor());
+    strm.push(is);
+
+    unsigned int i = 0;
+    while (!strm.eof()) {
+      std::string line;
+      std::getline(strm, line);
+      if (!strm.eof()) ++i;
+      if (i > 1700) break;
+    }
+    TEST_ASSERT(i == 1663);
+  }
+  // looks good, now do a supplier:
+  {
+    io::filtering_istream strm;
+    // the stream must be opened in binary mode otherwise it won't work on
+    // Windows
+    std::ifstream is(maefname2.c_str(), std::ios_base::binary);
+    strm.push(io::gzip_decompressor());
+    strm.push(is);
+    MaeMolSupplier maesup(&strm, false);
+    unsigned int i = 0;
+    std::shared_ptr<ROMol> nmol;
+    while (!maesup.atEnd()) {
+      nmol.reset(maesup.next());
+      if (nmol != nullptr) {
+        i++;
+      }
+    }
+    TEST_ASSERT(i == 16);
+  }
+#endif  // RDK_BUILD_COORDGEN_SUPPORT
+
 #endif
   return 1;
 }

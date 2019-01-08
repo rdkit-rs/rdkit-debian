@@ -29,6 +29,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#include <RDGeneral/test.h>
 #include <RDGeneral/RDLog.h>
 #include <RDGeneral/utils.h>
 #include <GraphMol/RDKitBase.h>
@@ -4232,7 +4233,7 @@ void test45SmilesWriter() {
     smi = ChemicalReactionToRxnSmiles(*rxn, false);
     TEST_ASSERT(smi == res)
     TEST_ASSERT(smi != "C=O.N>>N~C=O");
-    TEST_ASSERT(smi == "O=S.N>>N~S=O");
+    TEST_ASSERT(smi == "*=O.N>>N~*=O");
 
     delete rxn;
     rxn = RxnSmartsToChemicalReaction(smi, nullptr, true);
@@ -6567,6 +6568,42 @@ void testSanitizeException() {
   delete rxn;
 }
 
+void testReactionProperties() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog) << "Tests reaction properties" << std::endl;
+  {
+    const std::string smarts = "[CH3:1]>>[CH2:1]";
+
+    ChemicalReaction *rxn = RxnSmartsToChemicalReaction(smarts);
+    TEST_ASSERT(rxn);
+    TEST_ASSERT(!rxn->hasProp("fooprop"));
+    rxn->setProp("fooprop", 3);
+    TEST_ASSERT(rxn->hasProp("fooprop"));
+    TEST_ASSERT(rxn->getProp<int>("fooprop") == 3);
+
+    {
+      std::string pkl;
+      ReactionPickler::pickleReaction(rxn, pkl);
+      ChemicalReaction *lrxn = new ChemicalReaction();
+      ReactionPickler::reactionFromPickle(pkl, lrxn);
+      TEST_ASSERT(!lrxn->hasProp("fooprop"));
+      delete lrxn;
+    }
+
+    {
+      std::string pkl;
+      ReactionPickler::pickleReaction(rxn, pkl, PicklerOps::AllProps);
+      ChemicalReaction *lrxn = new ChemicalReaction();
+      ReactionPickler::reactionFromPickle(pkl, lrxn);
+      TEST_ASSERT(lrxn->hasProp("fooprop"));
+      TEST_ASSERT(lrxn->getProp<int>("fooprop") == 3);
+      delete lrxn;
+    }
+    delete rxn;
+  }
+  BOOST_LOG(rdInfoLog) << "Done" << std::endl;
+}
+
 void testGithub1950() {
   BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdInfoLog) << "Testing Github #1950: Query features in products of "
@@ -6718,13 +6755,51 @@ void testGithub1869() {
     TEST_ASSERT(nError == 0);
 
     smi = ChemicalReactionToRxnSmarts(*rxn);
-    TEST_ASSERT(smi ==
-                "([C:1].[C:2]).[C:3]-,:[C:4]>>[#6:1]-[#6:2]-[#6:3]-[#6:4]");
+    TEST_ASSERT(smi == "([C:1].[C:2]).[C:3][C:4]>>[#6:1]-[#6:2]-[#6:3]-[#6:4]");
 
     delete rxn;
   }
 
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
+}
+
+void testGithub1269() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog)
+      << "Testing github #1269: preserve reactant atom idx in products"
+      << std::endl;
+  {
+    // nonsense test case
+    std::string sma = "[C:1]>>[O:1]Cl";
+    ChemicalReaction *rxn = RxnSmartsToChemicalReaction(sma);
+    TEST_ASSERT(rxn);
+    TEST_ASSERT(rxn->getNumReactantTemplates() == 1);
+    TEST_ASSERT(rxn->getNumProductTemplates() == 1);
+    rxn->initReactantMatchers();
+
+    MOL_SPTR_VECT reacts;
+    std::string smi = "NC";
+    auto mol = SmilesToMol(smi);
+    TEST_ASSERT(mol);
+    reacts.push_back(ROMOL_SPTR(mol));
+
+    auto prods = rxn->runReactants(reacts);
+    TEST_ASSERT(prods.size() == 1);
+    TEST_ASSERT(prods[0].size() == 1);
+    TEST_ASSERT(prods[0][0]->getAtomWithIdx(0)->getAtomicNum() == 8);
+    TEST_ASSERT(prods[0][0]->getAtomWithIdx(0)->hasProp(
+        common_properties::reactantAtomIdx));
+    TEST_ASSERT(prods[0][0]->getAtomWithIdx(0)->getProp<unsigned int>(
+                    "react_atom_idx") == 1);
+    TEST_ASSERT(!prods[0][0]->getAtomWithIdx(1)->hasProp(
+        common_properties::reactantAtomIdx));
+    TEST_ASSERT(prods[0][0]->getAtomWithIdx(2)->hasProp(
+        common_properties::reactantAtomIdx));
+    TEST_ASSERT(prods[0][0]->getAtomWithIdx(2)->getProp<unsigned int>(
+                    "react_atom_idx") == 0);
+
+    delete rxn;
+  }
 }
 
 int main() {
@@ -6809,9 +6884,11 @@ int main() {
   test69Github1387();
   test70Github1544();
   testSanitizeException();
-#endif
+  testReactionProperties();
   testGithub1950();
   testGithub1869();
+#endif
+  testGithub1269();
 
   BOOST_LOG(rdInfoLog)
       << "*******************************************************\n";

@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/export.h>
 #ifndef _RD_FEATTREE_H_
 #define _RD_FEATTREE_H_
 

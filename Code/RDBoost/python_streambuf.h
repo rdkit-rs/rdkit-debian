@@ -12,6 +12,7 @@
 //  The license is here:
 //    http://cctbx.svn.sourceforge.net/viewvc/cctbx/trunk/boost_adaptbx/LICENSE_2_0.txt?revision=5148
 //
+#include <RDGeneral/export.h>
 #ifndef BOOST_ADAPTBX_PYTHON_STREAMBUF_H
 #define BOOST_ADAPTBX_PYTHON_STREAMBUF_H
 #include <RDGeneral/BoostStartInclude.h>
@@ -133,7 +134,7 @@ class streambuf : public std::basic_streambuf<char> {
 
   /// Construct from a Python file object
   /** if buffer_size is 0 the current default_buffer_size is used.
-  */
+   */
   streambuf(bp::object& python_file_obj, std::size_t buffer_size_ = 0)
       : py_read(getattr(python_file_obj, "read", bp::object())),
         py_write(getattr(python_file_obj, "write", bp::object())),
@@ -458,7 +459,7 @@ struct ostream : private streambuf_capsule, streambuf::ostream {
       : streambuf_capsule(python_file_obj, buffer_size),
         streambuf::ostream(python_streambuf) {}
 
-  ~ostream() {
+  ~ostream() throw() {
     try {
       if (this->good()) this->flush();
     } catch (bp::error_already_set&) {
@@ -471,7 +472,7 @@ struct ostream : private streambuf_capsule, streambuf::ostream {
     }
   }
 };
-}
-}  // boost_adaptbx::python
+}  // namespace python
+}  // namespace boost_adaptbx
 
 #endif  // GUARD

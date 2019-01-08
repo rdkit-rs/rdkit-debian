@@ -408,10 +408,10 @@ M  END
     rxn = rdChemReactions.ReactionFromSmarts('[C:1]1[O:2][N:3]1>>[C:1][O:2].[N:3]')
     r1 = rxn.GetReactantTemplate(0)
     sma = Chem.MolToSmarts(r1)
-    self.assertEqual(sma, '[C:1]1-,:[O:2]-,:[N:3]-,:1')
+    self.assertEqual(sma, '[C:1]1[O:2][N:3]1')
     p1 = rxn.GetProductTemplate(0)
     sma = Chem.MolToSmarts(p1)
-    self.assertEqual(sma, '[C:1]-,:[O:2]')
+    self.assertEqual(sma, '[C:1][O:2]')
 
     p2 = rxn.GetProductTemplate(1)
     sma = Chem.MolToSmarts(p2)
@@ -676,6 +676,39 @@ M  END
     self.assertEquals(res, (0, 0, 2, 1, (((0, 'halogen.bromine.aromatic'), ), (
       (1, 'boronicacid'), ))))
 
+  def testProperties(self):
+    smirks_thiourea = "[N;$(N-[#6]):3]=[C;$(C=S):1].[N;$(N[#6]);!$(N=*);!$([N-]);!$(N#*);!$([ND3]);!$([ND4]);!$(N[O,N]);!$(N[C,S]=[S,O,N]):2]>>[N:3]-[C:1]-[N+0:2]"
+    rxn = rdChemReactions.ReactionFromSmarts(smirks_thiourea)
+    self.assertFalse(rxn.HasProp("fooprop"))
+    rxn.SetProp("fooprop","bar",computed=True)
+    rxn.SetIntProp("intprop",3)
+    self.assertTrue(rxn.HasProp("fooprop"))
+    self.assertTrue(rxn.HasProp("intprop"))
+    self.assertEquals(rxn.GetIntProp("intprop"),3)
+    nrxn = rdChemReactions.ChemicalReaction(rxn.ToBinary())
+    self.assertFalse(nrxn.HasProp("fooprop"))
+    nrxn = rdChemReactions.ChemicalReaction(rxn.ToBinary(Chem.PropertyPickleOptions.AllProps))
+    self.assertTrue(nrxn.HasProp("fooprop"))
+    nrxn.ClearComputedProps()
+    self.assertFalse(nrxn.HasProp("fooprop"))
+    self.assertTrue(nrxn.HasProp("intprop"))
+    self.assertEquals(nrxn.GetIntProp("intprop"),3)
 
+  def testRoundTripException(self):
+    smarts = '[C:1]([C@:3]1([OH:24])[CH2:8][CH2:7][C@H:6]2[C@H:9]3[C@H:19]([C@@H:20]([F:22])[CH2:21][C@:4]12[CH3:5])[C@:17]1([CH3:18])[C:12](=[CH:13][C:14](=[O:23])[CH2:15][CH2:16]1)[CH:11]=[CH:10]3)#[CH:2].C(Cl)CCl.ClC1C=CC=C(C(OO)=[O:37])C=1.C(O)(C)(C)C>C(OCC)(=O)C>[C:1]([C@:3]1([OH:24])[CH2:8][CH2:7][C@H:6]2[C@H:9]3[C@H:19]([C@@H:20]([F:22])[CH2:21][C@:4]12[CH3:5])[C@:17]1([CH3:18])[C:12](=[CH:13][C:14](=[O:23])[CH2:15][CH2:16]1)[C@H:11]1[O:37][C@@H:10]31)#[CH:2]'
+    rxn = rdChemReactions.ReactionFromSmarts(smarts)
+    # this shouldn't throw an exception
+    smarts = rdChemReactions.ReactionToSmarts(rxn)
+
+  def testMaxProducts(self):
+    smarts = "[c:1]1[c:2][c:3][c:4][c:5][c:6]1>>[c:1]1[c:2][c:3][c:4][c:5][c:6]1"
+    rxn = rdChemReactions.ReactionFromSmarts(smarts)
+    m = Chem.MolFromSmiles("c1ccccc1")
+    prods = rxn.RunReactants([m])
+    self.assertEqual(len(prods), 12)
+    
+    prods = rxn.RunReactants([m],1)
+    self.assertEqual(len(prods), 1)
+    
 if __name__ == '__main__':
   unittest.main(verbosity=True)

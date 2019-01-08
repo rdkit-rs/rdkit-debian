@@ -12,6 +12,7 @@
   \brief Defines the Dict class
 
 */
+#include <RDGeneral/export.h>
 #ifndef __RD_DICT_H__
 #define __RD_DICT_H__
 
@@ -32,7 +33,7 @@ typedef std::vector<std::string> STR_VECT;
 //!
 //!  The actual storage is done using \c RDValue objects.
 //!
-class Dict {
+class RDKIT_RDGENERAL_EXPORT Dict {
  public:
   struct Pair {
     std::string key;
@@ -49,7 +50,7 @@ class Dict {
 
   Dict(const Dict &other) : _data(other._data) {
     _hasNonPodData = other._hasNonPodData;
-    if (_hasNonPodData) {
+    if (other._hasNonPodData) { // other has non pod data, need to copy
       std::vector<Pair> data(other._data.size());
       _data.swap(data);
       for (size_t i = 0; i < _data.size(); ++i) {
@@ -91,8 +92,10 @@ class Dict {
   }
 
   Dict &operator=(const Dict &other) {
-    _hasNonPodData = other._hasNonPodData;
-    if (_hasNonPodData) {
+    if (this == &other) return *this;
+    if (_hasNonPodData) reset();
+    
+    if (other._hasNonPodData) {
       std::vector<Pair> data(other._data.size());
       _data.swap(data);
       for (size_t i = 0; i < _data.size(); ++i) {
@@ -102,6 +105,7 @@ class Dict {
     } else {
       _data = other._data;
     }
+    _hasNonPodData = other._hasNonPodData;    
     return *this;
   };
 

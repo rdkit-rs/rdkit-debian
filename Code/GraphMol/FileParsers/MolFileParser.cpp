@@ -20,6 +20,7 @@
 
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/RDKitQueries.h>
+#include <GraphMol/StereoGroup.h>
 #include <RDGeneral/StreamOps.h>
 #include <RDGeneral/RDLog.h>
 
@@ -29,9 +30,21 @@
 #include <RDGeneral/LocaleSwitcher.h>
 #include <typeinfo>
 #include <exception>
+#ifdef RDKIT_USE_BOOST_REGEX
+#include <boost/regex.hpp>
+using boost::regex;
+using boost::regex_match;
+using boost::smatch;
+#else
+#include <regex>
+using std::regex;
+using std::regex_match;
+using std::smatch;
+#endif
 #include <sstream>
 #include <locale>
 #include <stdlib.h>
+#include <cstdio>
 
 namespace RDKit {
 class MolFileUnhandledFeatureException : public std::exception {
@@ -139,7 +152,7 @@ void completeQueryAndChildren(ATOM_EQUALS_QUERY *query, Atom *tgt,
                              magicVal);
   }
 }
-void CompleteMolQueries(RWMol *mol, int magicVal = 0xDEADBEEF) {
+void completeMolQueries(RWMol *mol, int magicVal = 0xDEADBEEF) {
   for (ROMol::AtomIterator ai = mol->beginAtoms(); ai != mol->endAtoms();
        ++ai) {
     if ((*ai)->hasQuery()) {
@@ -148,6 +161,71 @@ void CompleteMolQueries(RWMol *mol, int magicVal = 0xDEADBEEF) {
       completeQueryAndChildren(query, *ai, magicVal);
     }
   }
+}
+
+bool startsWith(const std::string &haystack, const char *needle, size_t size) {
+  return haystack.compare(0u, size, needle, size) == 0;
+}
+
+//! parse a collection block to find enhanced stereo groups
+std::string parseEnhancedStereo(std::istream *inStream, unsigned int &line,
+                                RWMol *mol) {
+  // Lines like (absolute, relative, racemic):
+  // M  V30 MDLV30/STEABS ATOMS=(2 2 3)
+  // M  V30 MDLV30/STEREL1 ATOMS=(1 12)
+  // M  V30 MDLV30/STERAC1 ATOMS=(1 12)
+  const regex stereo_label(
+      R"regex(MDLV30/STE(...)[0-9]* +ATOMS=\(([0-9]+) +(.*)\))regex");
+
+  smatch match;
+  std::vector<StereoGroup> groups;
+
+  // Read the collection until the end
+  auto tempStr = getV3000Line(inStream, line);
+  boost::to_upper(tempStr);
+  while (!startsWith(tempStr, "END", 3)) {
+    // If this line in the collection is part of a stereo group
+    if (regex_match(tempStr, match, stereo_label)) {
+      StereoGroupType grouptype = RDKit::StereoGroupType::STEREO_ABSOLUTE;
+
+      if (match[1] == "ABS") {
+        grouptype = RDKit::StereoGroupType::STEREO_ABSOLUTE;
+      } else if (match[1] == "REL") {
+        grouptype = RDKit::StereoGroupType::STEREO_OR;
+      } else if (match[1] == "RAC") {
+        grouptype = RDKit::StereoGroupType::STEREO_AND;
+      } else {
+        std::ostringstream errout;
+        errout << "Unrecognized stereogroup type : '" << tempStr << "' on line"
+               << line;
+        throw FileParseException(errout.str());
+      }
+
+      const unsigned int count = FileParserUtils::toInt(match[2], true);
+      std::vector<Atom *> atoms;
+      std::stringstream ss(match[3]);
+      unsigned int index;
+      for (size_t i = 0; i < count; ++i) {
+        ss >> index;
+        // atoms are 1 indexed in molfiles
+        atoms.push_back(mol->getAtomWithIdx(index - 1));
+      }
+      groups.emplace_back(grouptype, std::move(atoms));
+    } else {
+      // skip collection types we don't know how to read. Only one documented
+      // is MDLV30/HILITE
+      BOOST_LOG(rdWarningLog) << "Skipping unrecognized collection type at "
+                                 "line "
+                              << line << ": " << tempStr << std::endl;
+    }
+    tempStr = getV3000Line(inStream, line);
+  }
+
+  if (!groups.empty()) {
+    mol->setStereoGroups(std::move(groups));
+  }
+  tempStr = getV3000Line(inStream, line);
+  return tempStr;
 }
 
 //*************************************
@@ -811,8 +889,9 @@ void ParseMarvinSmartsLine(RWMol *mol, const std::string &text,
     QueryAtom::QUERYATOM_QUERY *query = new RecursiveStructureQuery(m);
     if (!at->hasQuery()) {
       QueryAtom qAt(*at);
-      mol->replaceAtom(at->getIdx(), &qAt);
-      at = mol->getAtomWithIdx(at->getIdx());
+      int oidx = at->getIdx();
+      mol->replaceAtom(oidx, &qAt);
+      at = mol->getAtomWithIdx(oidx);
     }
     at->expandQuery(query, Queries::COMPOSITE_AND);
     at->setProp(common_properties::_MolFileAtomQuery, 1);
@@ -1360,7 +1439,10 @@ Bond *ParseMolFileBondLine(const std::string &text, unsigned int line) {
         BOND_NULL_QUERY *q;
         q = makeBondNullQuery();
         res->setQuery(q);
-      } else if (bType == 5 || bType == 6 || bType == 7) {
+      } else if (bType == 6) {
+        res->setQuery(makeSingleOrAromaticBondQuery());
+        res->setProp(common_properties::_MolFileBondQuery, 1);
+      } else if (bType == 5 || bType == 7) {
         BOND_OR_QUERY *q;
         q = new BOND_OR_QUERY;
         if (bType == 5) {
@@ -1370,13 +1452,7 @@ Bond *ParseMolFileBondLine(const std::string &text, unsigned int line) {
           q->addChild(QueryBond::QUERYBOND_QUERY::CHILD_TYPE(
               makeBondOrderEqualsQuery(Bond::DOUBLE)));
           q->setDescription("BondOr");
-        } else if (bType == 6) {
-          // single or aromatic
-          q->addChild(QueryBond::QUERYBOND_QUERY::CHILD_TYPE(
-              makeBondOrderEqualsQuery(Bond::SINGLE)));
-          q->addChild(QueryBond::QUERYBOND_QUERY::CHILD_TYPE(
-              makeBondOrderEqualsQuery(Bond::AROMATIC)));
-          q->setDescription("BondOr");
+          res->setProp(common_properties::_MolFileBondQuery, 1);
         } else if (bType == 7) {
           // double or aromatic
           q->addChild(QueryBond::QUERYBOND_QUERY::CHILD_TYPE(
@@ -1422,7 +1498,7 @@ Bond *ParseMolFileBondLine(const std::string &text, unsigned int line) {
           res->setBondDir(Bond::UNKNOWN);
           break;
       }
-    } catch (boost::bad_lexical_cast) {
+    } catch (boost::bad_lexical_cast &) {
       ;
     }
   }
@@ -1450,7 +1526,7 @@ Bond *ParseMolFileBondLine(const std::string &text, unsigned int line) {
         }
         res->expandQuery(q);
       }
-    } catch (boost::bad_lexical_cast) {
+    } catch (boost::bad_lexical_cast &) {
       ;
     }
   }
@@ -1458,7 +1534,7 @@ Bond *ParseMolFileBondLine(const std::string &text, unsigned int line) {
     try {
       int reactStatus = FileParserUtils::toInt(text.substr(18, 3));
       res->setProp("molReactStatus", reactStatus);
-    } catch (boost::bad_lexical_cast) {
+    } catch (boost::bad_lexical_cast &) {
       ;
     }
   }
@@ -1851,6 +1927,7 @@ void ParseV3000AtomProps(RWMol *mol, Atom *&atom, typename T::iterator &token,
 }
 
 void tokenizeV3000Line(std::string line, std::vector<std::string> &tokens) {
+  tokens.clear();
   bool inQuotes = false, inParens = false;
   unsigned int start = 0;
   unsigned int pos = 0;
@@ -1994,12 +2071,11 @@ void ParseV3000AtomBlock(std::istream *inStream, unsigned int &line,
     throw FileParseException(errout.str());
   }
 
-  if (mol->hasProp(common_properties::_2DConf)) {
-    conf->set3D(false);
-    mol->clearProp(common_properties::_2DConf);
-  } else if (mol->hasProp(common_properties::_3DConf)) {
+  if (mol->hasProp(common_properties::_3DConf)) {
     conf->set3D(true);
     mol->clearProp(common_properties::_3DConf);
+  } else {
+    conf->set3D(hasNonZeroZCoords(*conf));
   }
 }
 void ParseV3000BondBlock(std::istream *inStream, unsigned int &line,
@@ -2009,17 +2085,14 @@ void ParseV3000BondBlock(std::istream *inStream, unsigned int &line,
   PRECONDITION(nBonds > 0, "bad bond count");
   PRECONDITION(mol, "bad molecule");
 
-  std::string tempStr;
-  std::vector<std::string> splitLine;
-
-  tempStr = getV3000Line(inStream, line);
+  auto tempStr = getV3000Line(inStream, line);
   if (tempStr.length() < 10 || tempStr.substr(0, 10) != "BEGIN BOND") {
     throw FileParseException("BEGIN BOND line not found");
   }
   for (unsigned int i = 0; i < nBonds; ++i) {
     tempStr = boost::trim_copy(getV3000Line(inStream, line));
-    boost::split(splitLine, tempStr, boost::is_any_of(" \t"),
-                 boost::token_compress_on);
+    std::vector<std::string> splitLine;
+    tokenizeV3000Line(tempStr, splitLine);
     if (splitLine.size() < 4) {
       std::ostringstream errout;
       errout << "bond line " << line << " is too short";
@@ -2061,7 +2134,10 @@ void ParseV3000BondBlock(std::istream *inStream, unsigned int &line,
           BOND_NULL_QUERY *q;
           q = makeBondNullQuery();
           bond->setQuery(q);
-        } else if (bType == 5 || bType == 6 || bType == 7) {
+        } else if (bType == 6) {
+          bond->setQuery(makeSingleOrAromaticBondQuery());
+          bond->setProp(common_properties::_MolFileBondQuery, 1);
+        } else if (bType == 5 || bType == 7) {
           BOND_OR_QUERY *q;
           q = new BOND_OR_QUERY;
           if (bType == 5) {
@@ -2070,13 +2146,6 @@ void ParseV3000BondBlock(std::istream *inStream, unsigned int &line,
                 makeBondOrderEqualsQuery(Bond::SINGLE)));
             q->addChild(QueryBond::QUERYBOND_QUERY::CHILD_TYPE(
                 makeBondOrderEqualsQuery(Bond::DOUBLE)));
-            q->setDescription("BondOr");
-          } else if (bType == 6) {
-            // single or aromatic
-            q->addChild(QueryBond::QUERYBOND_QUERY::CHILD_TYPE(
-                makeBondOrderEqualsQuery(Bond::SINGLE)));
-            q->addChild(QueryBond::QUERYBOND_QUERY::CHILD_TYPE(
-                makeBondOrderEqualsQuery(Bond::AROMATIC)));
             q->setDescription("BondOr");
           } else if (bType == 7) {
             // double or aromatic
@@ -2156,6 +2225,10 @@ void ParseV3000BondBlock(std::istream *inStream, unsigned int &line,
         int reactStatus = FileParserUtils::toInt(val);
         bond->setProp("molReactStatus", reactStatus);
       } else if (prop == "STBOX") {
+      } else if (prop == "ENDPTS") {
+        bond->setProp(common_properties::_MolFileBondEndPts, val);
+      } else if (prop == "ATTACH") {
+        bond->setProp(common_properties::_MolFileBondAttach, val);
       }
       ++lPos;
     }
@@ -2327,15 +2400,17 @@ bool ParseV3000CTAB(std::istream *inStream, unsigned int &line, RWMol *mol,
   }
 
   while (tempStr.length() > 5 && tempStr.substr(0, 5) == "BEGIN") {
-    // skip blocks we don't know how to read
-    BOOST_LOG(rdWarningLog)
-        << "skipping block at line " << line << ": " << tempStr << std::endl;
-    tempStr = getV3000Line(inStream, line);
-
-    while (tempStr.length() < 3 || tempStr.substr(0, 3) != "END") {
+    if (tempStr.length() > 15 && tempStr.substr(6, 10) == "COLLECTION") {
+      tempStr = parseEnhancedStereo(inStream, line, mol);
+    } else {
+      // skip blocks we don't know how to read
+      BOOST_LOG(rdWarningLog)
+          << "skipping block at line " << line << ": " << tempStr << std::endl;
+      while (tempStr.length() < 3 || tempStr.substr(0, 3) != "END") {
+        tempStr = getV3000Line(inStream, line);
+      }
       tempStr = getV3000Line(inStream, line);
     }
-    tempStr = getV3000Line(inStream, line);
   }
 
   boost::to_upper(tempStr);
@@ -2370,12 +2445,11 @@ bool ParseV2000CTAB(std::istream *inStream, unsigned int &line, RWMol *mol,
   } else {
     ParseMolBlockAtoms(inStream, line, nAtoms, mol, conf);
 
-    if (mol->hasProp(common_properties::_2DConf)) {
-      conf->set3D(false);
-      mol->clearProp(common_properties::_2DConf);
-    } else if (mol->hasProp(common_properties::_3DConf)) {
+    if (mol->hasProp(common_properties::_3DConf)) {
       conf->set3D(true);
       mol->clearProp(common_properties::_3DConf);
+    } else { // default is 2D
+      conf->set3D(hasNonZeroZCoords(*conf));
     }
   }
   mol->addConformer(conf, true);
@@ -2417,9 +2491,8 @@ RWMol *MolDataStreamToMol(std::istream *inStream, unsigned int &line,
   res->setProp("_MolFileInfo", tempStr);
   if (tempStr.length() >= 22) {
     std::string dimLabel = tempStr.substr(20, 2);
-    if (dimLabel == "2d" || dimLabel == common_properties::TWOD) {
-      res->setProp(common_properties::_2DConf, 1);
-    } else if (dimLabel == "3d" || dimLabel == "3D") {
+    // Unless labelled as 3D we assume 2D
+    if (dimLabel == "3d" || dimLabel == "3D") {
       res->setProp(common_properties::_3DConf, 1);
     }
   }
@@ -2664,7 +2737,7 @@ RWMol *MolDataStreamToMol(std::istream *inStream, unsigned int &line,
 
     if (res->hasProp(common_properties::_NeedsQueryScan)) {
       res->clearProp(common_properties::_NeedsQueryScan);
-      CompleteMolQueries(res);
+      completeMolQueries(res);
     }
   }
   return res;

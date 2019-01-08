@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <iostream>
 
 #include <fstream>
@@ -2514,7 +2515,7 @@ void testGithub1756() {
     m->updatePropertyCache(false);
     auto sma = MolToSmarts(*m);
     // std::cerr << sma << std::endl;
-    TEST_ASSERT(sma == "C-[C&*@&H0](-[Cl])-F");
+    TEST_ASSERT(sma == "C-[C@&*&H0](-Cl)-F");  // FIX: this seems odd...
   }
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
@@ -2550,6 +2551,18 @@ void testGithub1920() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testCombinedQueries() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog) << "Testing combined SMARTS queries for atoms and bonds"
+                       << std::endl;
+  std::unique_ptr<ROMol> m(SmartsToMol("Oc1ccccc1"));
+  TEST_ASSERT(m);
+  std::string sma = MolToSmarts(*m);
+  // std::cerr << " SMA: " << sma << std::endl;
+  TEST_ASSERT(sma == "Oc1ccccc1");
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 void testGithub1906() {
   BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdInfoLog)
@@ -2570,6 +2583,22 @@ void testGithub1906() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testGithub1988() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog) << "Testing github #1988: QueryAtoms with atom list "
+                          "queries should not have the atomic number set"
+                       << std::endl;
+  {
+    std::unique_ptr<ROMol> m(SmartsToMol("[Li,Na]"));
+    TEST_ASSERT(m->getAtomWithIdx(0)->getAtomicNum() == 0);
+  }
+  // {
+  //   std::unique_ptr<ROMol> m(SmartsToMol("C-,=C`"));
+  //   TEST_ASSERT(m->getBondWithIdx(0)->getBondType()==Bond::UNSPECIFIED);
+  // }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 void testGithub1985() {
   BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdInfoLog) << "Testing Github #1985: MolFromSmarts/MolToSmarts "
@@ -2585,7 +2614,7 @@ void testGithub1985() {
       std::unique_ptr<ROMol> m1(SmartsToMol(pr));
       TEST_ASSERT(m1);
       auto csma1 = MolToSmarts(*m1);
-      TEST_ASSERT(csma1.find("@") != std::string::npos);
+      TEST_ASSERT(csma1.find("C@") != std::string::npos);
     }
   }
 
@@ -2610,7 +2639,8 @@ int main(int argc, char *argv[]) {
   testProblems();
   testIssue196();
   testIssue254();
-  testIssue255();
+  // testIssue255(); // this is a slow one and doesn't really actually test much
+  // without someone watching memory consumption
   testIssue330();
   testIssue351();
   testAtomMap();
@@ -2638,8 +2668,10 @@ int main(int argc, char *argv[]) {
   testGithub1756();
   testGithub1920();
   testGithub1719();
+  testCombinedQueries();
   testGithub1906();
 #endif
+  testGithub1988();
   testGithub1985();
 
   return 0;

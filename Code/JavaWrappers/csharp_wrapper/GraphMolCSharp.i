@@ -1,6 +1,5 @@
 
 /*
-* $Id: GraphMolJava.i 2141 2012-07-27 06:16:45Z glandrum $
 *
 *  Copyright (c) 2010, Novartis Institutes for BioMedical Research Inc.
 *  All rights reserved.
@@ -70,6 +69,8 @@
 #define BOOST_NO_CXX11_NULLPTR
 %include <boost/smart_ptr/shared_array.hpp>
 
+/* undefine RDKIT_<LIBNAME>_EXPORT macros */
+%include <RDGeneral/export.h>
 /* Include the base types before anything that will utilize them */
 #ifdef SWIGWIN
 %include "../msvc_stdint.i"
@@ -205,6 +206,7 @@ typedef unsigned long long int	uintmax_t;
 %include "../Conformer.i"
 %include "../Dict.i"
 %include "../RDProps.i"
+%include "../StereoGroup.i"
 %include "../ROMol.i"
 %include "../RWMol.i"
 %include "../Bond.i"
@@ -321,10 +323,10 @@ typedef unsigned long long int	uintmax_t;
 
 %include "../Descriptors.i"
 
-#ifdef BUILD_AVALON_SUPPORT
+#ifdef RDK_BUILD_AVALON_SUPPORT
 %include "../AvalonLib.i"
 #endif
-#ifdef BUILD_INCHI_SUPPORT
+#ifdef RDK_BUILD_INCHI_SUPPORT
 %include "../Inchi.i"
 #endif
 

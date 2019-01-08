@@ -11,7 +11,7 @@
 #include "RDDepictor.h"
 #include "EmbeddedFrag.h"
 
-#ifdef BUILD_COORDGEN_SUPPORT
+#ifdef RDK_BUILD_COORDGEN_SUPPORT
 #include <CoordGen/CoordGen.h>
 #endif
 
@@ -31,7 +31,7 @@
 #include <algorithm>
 
 namespace RDDepict {
-#ifdef BUILD_COORDGEN_SUPPORT
+#ifdef RDK_BUILD_COORDGEN_SUPPORT
 bool preferCoordGen = false;
 #endif
 namespace DepictorLocal {
@@ -308,7 +308,7 @@ unsigned int compute2DCoords(RDKit::ROMol &mol,
                              unsigned int nFlipsPerSample,
                              unsigned int nSamples, int sampleSeed,
                              bool permuteDeg4Nodes, bool forceRDKit) {
-#ifdef BUILD_COORDGEN_SUPPORT
+#ifdef RDK_BUILD_COORDGEN_SUPPORT
   // default to use CoordGen if we have it installed
   if (!forceRDKit && preferCoordGen) {
     RDKit::CoordGen::CoordGenParams params;
@@ -419,6 +419,7 @@ unsigned int compute2DCoordsMimicDistMat(
     bool clearConfs, double weightDistMat, unsigned int nFlipsPerSample,
     unsigned int nSamples, int sampleSeed, bool permuteDeg4Nodes,
     bool forceRDKit) {
+  RDUNUSED_PARAM(forceRDKit);
   // storage for pieces of a molecule/s that are embedded in 2D
   std::list<EmbeddedFrag> efrags;
   computeInitialCoords(mol, nullptr, efrags);

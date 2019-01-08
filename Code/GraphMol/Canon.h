@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef _RD_CANON_H_
 #define _RD_CANON_H_
 
@@ -48,7 +49,7 @@ typedef union {
 } MolStackUnion;
 
 //! these are the actual elements in the molecular stack
-class MolStackElem {
+class RDKIT_GRAPHMOL_EXPORT MolStackElem {
  public:
   //! construct an Atom node
   explicit MolStackElem(Atom *at) {
@@ -109,13 +110,14 @@ typedef boost::tuple<int, int, Bond *> PossibleType;
       and the like are changed to fit the canonical traversal order
 
  */
-void canonicalizeFragment(ROMol &mol, int atomIdx,
+RDKIT_GRAPHMOL_EXPORT void canonicalizeFragment(ROMol &mol, int atomIdx,
                           std::vector<AtomColors> &colors,
                           const std::vector<unsigned int> &ranks,
                           MolStack &molStack,
                           const boost::dynamic_bitset<> *bondsInPlay = 0,
                           const std::vector<std::string> *bondSymbols = 0,
-                          bool doIsomericSmiles = false);
+                          bool doIsomericSmiles = false,
+                          bool doRandom = false);
 
 }  // end of namespace Canon
 }  // end of namespace RDKit

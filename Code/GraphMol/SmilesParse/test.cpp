@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <iostream>
 #include <string>
 #include <GraphMol/RDKitBase.h>
@@ -164,7 +165,7 @@ void testFail() {
     boost::logging::disable_logs("rdApp.error");
     try {
       mol = SmilesToMol(smi);
-    } catch (MolSanitizeException) {
+    } catch (MolSanitizeException &) {
       mol = (Mol *)nullptr;
     }
     boost::logging::enable_logs("rdApp.error");
@@ -4065,12 +4066,134 @@ void testGithub1925() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testdoRandomSmileGeneration() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------\n";
+  BOOST_LOG(rdInfoLog) << "Testing the random Generator for SMILES"
+                       << std::endl;
+  {
+    // it's not trivial to test this because we're using std::rand(), which does
+    // not give consistent results across platforms. It's not worth adding the
+    // complexity of a real RNG, so we do some hand waving in the tests
+    std::srand(0xf00d);  // be sure we use it for testcase!
+    const std::vector<std::string> benzenes = {"COc1ccnc(CC)c1C"};
+
+    const std::vector<std::string> rulesmiles = {
+        "COc1ccnc(CC)c1C",     "O(C)c1ccnc(CC)c1C",   "c1(OC)ccnc(CC)c1C",
+        "c1c(OC)c(C)c(CC)nc1", "c1cc(OC)c(C)c(CC)n1", "n1ccc(OC)c(C)c1CC",
+        "c1(CC)nccc(OC)c1C",   "C(c1nccc(OC)c1C)C",   "CCc1nccc(OC)c1C",
+        "c1(C)c(OC)ccnc1CC",   "Cc1c(OC)ccnc1CC"};
+
+    for (auto bz : benzenes) {
+      ROMol *m = SmilesToMol(bz);
+      TEST_ASSERT(m);
+      TEST_ASSERT(m->getNumAtoms() == 11);
+      for (unsigned int j = 0; j < m->getNumAtoms(); ++j) {
+        auto rulebenzene =
+            MolToSmiles(*m, true, false, j, false, false, false, false);
+        // BOOST_LOG(rdInfoLog) << "rule :" << rulebenzene << std::endl;
+        // std::cout << "\"" << rulebenzene << "\", ";
+        TEST_ASSERT(rulebenzene == rulesmiles[j]);
+        std::set<std::string> rsmis;
+        for (unsigned int iter = 0; iter < 10; ++iter) {
+          auto randombenzene =
+              MolToSmiles(*m, true, false, j, false, false, false, true);
+          // BOOST_LOG(rdInfoLog) << "random :" << j << " " << iter << " "
+          //                      << randombenzene << std::endl;
+          rsmis.insert(randombenzene);
+        }
+        // we will get dupes, but there's enough choice available here that we
+        // should have gotten at least 3 unique
+        TEST_ASSERT(rsmis.size() >= 3);
+      }
+      // std::cout << std::endl;
+
+      // confirm that we also use random starting points:
+      std::set<char> starts;
+      for (unsigned int iter = 0; iter < 50; ++iter) {
+        auto randombenzene =
+            MolToSmiles(*m, true, false, -1, false, false, false, true);
+        // BOOST_LOG(rdInfoLog) << "random :" << j << " " << iter << " "
+        //                      << randombenzene << std::endl;
+        starts.insert(randombenzene[0]);
+      }
+      // we will get dupes, but there's enough choice available here that we
+      // should have gotten at least 3 unique
+      TEST_ASSERT(starts.find('C') != starts.end());
+      TEST_ASSERT(starts.find('c') != starts.end());
+      TEST_ASSERT(starts.find('n') != starts.end() ||
+                  starts.find('O') != starts.end());
+
+      delete m;
+    }
+  }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testGithub1972() {
+  BOOST_LOG(rdInfoLog)
+      << "Testing Github #1972: Incorrect tetrahedral stereo when reading "
+         "SMILES with ring closure as last neighbor"
+      << std::endl;
+  {
+    std::vector<std::vector<std::string>> smiles = {
+        {"[C@@]1(Cl)(F)(I).Br1", "[C@@](Br)(Cl)(F)(I)"},
+        {"[C@@](Cl)(F)(I)1.Br1", "[C@@](Cl)(F)(I)Br"},
+        {"[C@@](Cl)1(F)(I).Br1", "[C@@](Cl)(Br)(F)(I)"},
+        {"[C@@](Cl)(F)1(I).Br1", "[C@@](Cl)(F)(Br)(I)"}};
+    for (const auto &pr : smiles) {
+      // std::cerr << "--------------------------" << std::endl;
+      // std::cerr << pr[0] << " " << pr[1] << std::endl;
+      std::unique_ptr<ROMol> m1(SmilesToMol(pr[0]));
+      // std::cerr << "------------" << std::endl;
+      std::unique_ptr<ROMol> m2(SmilesToMol(pr[1]));
+      TEST_ASSERT(m1);
+      TEST_ASSERT(m2);
+      // m1->debugMol(std::cerr);
+      // std::cerr << "------------" << std::endl;
+      // m2->debugMol(std::cerr);
+      auto csmi1 = MolToSmiles(*m1);
+      auto csmi2 = MolToSmiles(*m2);
+      // std::cerr << ">>> " << (csmi1 == csmi2) << " " << csmi1 << " " << csmi2
+      //           << std::endl;
+      TEST_ASSERT(csmi1 == csmi2);
+    }
+  }
+  {  // even stupider examples
+    std::vector<std::vector<std::string>> smiles = {
+        {"[C@@]1(Cl)2(I).Br1.F2", "[C@@](Br)(Cl)(F)(I)"},
+        {"[C@@](Cl)2(I)1.Br1.F2", "[C@@](Cl)(F)(I)Br"},
+        {"[C@@]12(Cl)(I).Br1.F2", "[C@@](Br)(F)(Cl)(I)"},
+        {"[C@@]21(Cl)(I).Br1.F2", "[C@@](F)(Br)(Cl)(I)"},
+        {"[C@@](Cl)12(I).Br1.F2", "[C@@](Cl)(Br)(F)(I)"},
+        {"[C@@](Cl)21(I).Br1.F2", "[C@@](Cl)(F)(Br)(I)"},
+        {"[C@@](Cl)(I)21.Br1.F2", "[C@@](Cl)(I)(F)(Br)"},
+        {"[C@@](Cl)(I)12.Br1.F2", "[C@@](Cl)(I)(Br)(F)"}};
+    for (const auto &pr : smiles) {
+      // std::cerr << "--------------------------" << std::endl;
+      // std::cerr << pr[0] << " " << pr[1] << std::endl;
+      std::unique_ptr<ROMol> m1(SmilesToMol(pr[0]));
+      // std::cerr << "------------" << std::endl;
+      std::unique_ptr<ROMol> m2(SmilesToMol(pr[1]));
+      TEST_ASSERT(m1);
+      TEST_ASSERT(m2);
+      // m1->debugMol(std::cerr);
+      // std::cerr << "------------" << std::endl;
+      // m2->debugMol(std::cerr);
+      auto csmi1 = MolToSmiles(*m1);
+      auto csmi2 = MolToSmiles(*m2);
+      // std::cerr << ">>> " << (csmi1 == csmi2) << " " << csmi1 << " " << csmi2
+      //           << std::endl;
+      TEST_ASSERT(csmi1 == csmi2);
+    }
+  }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
   RDLog::InitLogs();
 // boost::logging::enable_logs("rdApp.debug");
-#if 1
+#if 0
   testPass();
   testFail();
 
@@ -4120,6 +4243,7 @@ int main(int argc, char *argv[]) {
   testGithub389();
   testBug1719046();
   testBug1844617();
+
 #if 1  // POSTPONED during canonicalization rewrite
   // testGithub298();
   testFragmentSmiles();
@@ -4136,6 +4260,8 @@ int main(int argc, char *argv[]) {
   testGithub1652();
   testIsomericSmilesIsDefault();
   testHashAtomExtension();
-#endif
   testGithub1925();
+  testGithub1972();
+#endif
+  testdoRandomSmileGeneration();
 }

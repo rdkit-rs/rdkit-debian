@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2003-2017 Greg Landrum and Rational Discovery LLC
+//  Copyright (C) 2003-2018 Greg Landrum and Rational Discovery LLC
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmilesWrite.h>
@@ -884,7 +885,6 @@ void test1MorganFPs() {
     for (auto iter = fp->getNonzeroElements().begin();
          iter != fp->getNonzeroElements().end(); ++iter) {
       TEST_ASSERT(iter->second == 1);  // check that count == 1
-      ++iter;
     }
     delete fp;
 
@@ -1395,14 +1395,12 @@ void testAtomPairs() {
   c1 = AtomPairs::getAtomCode(mol->getAtomWithIdx(0));
   c2 = AtomPairs::getAtomCode(mol->getAtomWithIdx(1));
   c3 = AtomPairs::getAtomCode(mol->getAtomWithIdx(2));
-  tgt = 1 |
-        (std::min(c1, c2) | std::max(c1, c2) << AtomPairs::codeSize)
-            << AtomPairs::numPathBits;
+  tgt = 1 | (std::min(c1, c2) | std::max(c1, c2) << AtomPairs::codeSize)
+                << AtomPairs::numPathBits;
   TEST_ASSERT(AtomPairs::getAtomPairCode(c1, c2, 1) == tgt);
   TEST_ASSERT(AtomPairs::getAtomPairCode(c2, c1, 1) == tgt);
-  tgt = 2 |
-        (std::min(c1, c3) | std::max(c1, c3) << AtomPairs::codeSize)
-            << AtomPairs::numPathBits;
+  tgt = 2 | (std::min(c1, c3) | std::max(c1, c3) << AtomPairs::codeSize)
+                << AtomPairs::numPathBits;
   TEST_ASSERT(AtomPairs::getAtomPairCode(c1, c3, 2) == tgt);
   TEST_ASSERT(AtomPairs::getAtomPairCode(c3, c1, 2) == tgt);
 
@@ -1521,9 +1519,8 @@ void testTorsions() {
   c2 = AtomPairs::getAtomCode(mol->getAtomWithIdx(1)) - 2;
   c3 = AtomPairs::getAtomCode(mol->getAtomWithIdx(2)) - 2;
   c4 = AtomPairs::getAtomCode(mol->getAtomWithIdx(3)) - 1;
-  tgt = c1 |
-        (c2 | (c3 | c4 << AtomPairs::codeSize) << AtomPairs::codeSize)
-            << AtomPairs::codeSize;
+  tgt = c1 | (c2 | (c3 | c4 << AtomPairs::codeSize) << AtomPairs::codeSize)
+                 << AtomPairs::codeSize;
   codes.clear();
   codes.push_back(static_cast<unsigned int>(c1));
   codes.push_back(static_cast<unsigned int>(c2));
@@ -2902,7 +2899,7 @@ void runblock(const std::vector<ROMol *> &mols, unsigned int count,
     }
   }
 };
-}
+}  // namespace
 #include <thread>
 #include <future>
 void testMultithreadedPatternFP() {
@@ -3506,6 +3503,286 @@ void testGitHubIssue1793() {
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }
 
+void testGitHubIssue1993() {
+  BOOST_LOG(rdErrorLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdErrorLog)
+      << "Github #1993: fingerprinters that use R/S labels should force a call "
+         "to assignStereochemistry() if it hasn't already been called"
+      << std::endl;
+  {
+    std::string smiles = "CC(F)(Cl)CC";
+    std::unique_ptr<ROMol> m1(SmilesToMol(smiles));
+    TEST_ASSERT(m1);
+    TEST_ASSERT(m1->getNumAtoms() == 6);
+    m1->clearProp(common_properties::_StereochemDone);
+    std::unique_ptr<ROMol> m2(new ROMol(*m1));
+    m2->getAtomWithIdx(1)->setChiralTag(Atom::CHI_TETRAHEDRAL_CW);
+    std::unique_ptr<ROMol> m3(new ROMol(*m1));
+    m3->getAtomWithIdx(1)->setChiralTag(Atom::CHI_TETRAHEDRAL_CCW);
+
+    {  // mfp, no chirality
+      bool useChirality = false;
+      std::unique_ptr<SparseIntVect<boost::uint32_t>> fp1(
+          MorganFingerprints::getFingerprint(*m1, 1, nullptr, nullptr,
+                                             useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::uint32_t>> fp2(
+          MorganFingerprints::getFingerprint(*m2, 1, nullptr, nullptr,
+                                             useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::uint32_t>> fp3(
+          MorganFingerprints::getFingerprint(*m3, 1, nullptr, nullptr,
+                                             useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) == (*fp2));
+      TEST_ASSERT((*fp1) == (*fp3));
+      TEST_ASSERT((*fp2) == (*fp3));
+    }
+
+    {  // mfp, with chirality
+      bool useChirality = true;
+      std::unique_ptr<SparseIntVect<boost::uint32_t>> fp1(
+          MorganFingerprints::getFingerprint(*m1, 1, nullptr, nullptr,
+                                             useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::uint32_t>> fp2(
+          MorganFingerprints::getFingerprint(*m2, 1, nullptr, nullptr,
+                                             useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::uint32_t>> fp3(
+          MorganFingerprints::getFingerprint(*m3, 1, nullptr, nullptr,
+                                             useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) != (*fp2));
+      TEST_ASSERT((*fp1) != (*fp3));
+      TEST_ASSERT((*fp2) != (*fp3));
+    }
+
+    {  // ap, no chirality
+      bool useChirality = false;
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp1(
+          AtomPairs::getAtomPairFingerprint(*m1, nullptr, nullptr, nullptr,
+                                            useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp2(
+          AtomPairs::getAtomPairFingerprint(*m2, nullptr, nullptr, nullptr,
+                                            useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp3(
+          AtomPairs::getAtomPairFingerprint(*m3, nullptr, nullptr, nullptr,
+                                            useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) == (*fp2));
+      TEST_ASSERT((*fp1) == (*fp3));
+      TEST_ASSERT((*fp2) == (*fp3));
+    }
+    {  // ap, with chirality
+      bool useChirality = true;
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp1(
+          AtomPairs::getAtomPairFingerprint(*m1, nullptr, nullptr, nullptr,
+                                            useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp2(
+          AtomPairs::getAtomPairFingerprint(*m2, nullptr, nullptr, nullptr,
+                                            useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp3(
+          AtomPairs::getAtomPairFingerprint(*m3, nullptr, nullptr, nullptr,
+                                            useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) != (*fp2));
+      TEST_ASSERT((*fp1) != (*fp3));
+      TEST_ASSERT((*fp2) != (*fp3));
+    }
+    {  // ap, no chirality
+      bool useChirality = false;
+      unsigned int minLength = 1, maxLength = 10;
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp1(
+          AtomPairs::getHashedAtomPairFingerprint(*m1, 2048, minLength,
+                                                  maxLength, nullptr, nullptr,
+                                                  nullptr, useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp2(
+          AtomPairs::getHashedAtomPairFingerprint(*m2, 2048, minLength,
+                                                  maxLength, nullptr, nullptr,
+                                                  nullptr, useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp3(
+          AtomPairs::getHashedAtomPairFingerprint(*m3, 2048, minLength,
+                                                  maxLength, nullptr, nullptr,
+                                                  nullptr, useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) == (*fp2));
+      TEST_ASSERT((*fp1) == (*fp3));
+      TEST_ASSERT((*fp2) == (*fp3));
+    }
+    {  // ap, with chirality
+      bool useChirality = true;
+      unsigned int minLength = 1, maxLength = 10;
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp1(
+          AtomPairs::getHashedAtomPairFingerprint(*m1, 2048, minLength,
+                                                  maxLength, nullptr, nullptr,
+                                                  nullptr, useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp2(
+          AtomPairs::getHashedAtomPairFingerprint(*m2, 2048, minLength,
+                                                  maxLength, nullptr, nullptr,
+                                                  nullptr, useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::int32_t>> fp3(
+          AtomPairs::getHashedAtomPairFingerprint(*m3, 2048, minLength,
+                                                  maxLength, nullptr, nullptr,
+                                                  nullptr, useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) != (*fp2));
+      TEST_ASSERT((*fp1) != (*fp3));
+      TEST_ASSERT((*fp2) != (*fp3));
+    }
+
+    {  // tt, no chirality
+      bool useChirality = false;
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp1(
+          AtomPairs::getTopologicalTorsionFingerprint(*m1, 4, nullptr, nullptr,
+                                                      nullptr, useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp2(
+          AtomPairs::getTopologicalTorsionFingerprint(*m2, 4, nullptr, nullptr,
+                                                      nullptr, useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp3(
+          AtomPairs::getTopologicalTorsionFingerprint(*m3, 4, nullptr, nullptr,
+                                                      nullptr, useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) == (*fp2));
+      TEST_ASSERT((*fp1) == (*fp3));
+      TEST_ASSERT((*fp2) == (*fp3));
+    }
+    {  // tt, with chirality
+      bool useChirality = true;
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp1(
+          AtomPairs::getTopologicalTorsionFingerprint(*m1, 4, nullptr, nullptr,
+                                                      nullptr, useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp2(
+          AtomPairs::getTopologicalTorsionFingerprint(*m2, 4, nullptr, nullptr,
+                                                      nullptr, useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp3(
+          AtomPairs::getTopologicalTorsionFingerprint(*m3, 4, nullptr, nullptr,
+                                                      nullptr, useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) != (*fp2));
+      TEST_ASSERT((*fp1) != (*fp3));
+      TEST_ASSERT((*fp2) != (*fp3));
+    }
+    {  // tt, no chirality
+      bool useChirality = false;
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp1(
+          AtomPairs::getHashedTopologicalTorsionFingerprint(
+              *m1, 2048, 4, nullptr, nullptr, nullptr, useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp2(
+          AtomPairs::getHashedTopologicalTorsionFingerprint(
+              *m2, 2048, 4, nullptr, nullptr, nullptr, useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp3(
+          AtomPairs::getHashedTopologicalTorsionFingerprint(
+              *m3, 2048, 4, nullptr, nullptr, nullptr, useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) == (*fp2));
+      TEST_ASSERT((*fp1) == (*fp3));
+      TEST_ASSERT((*fp2) == (*fp3));
+    }
+    {  // tt, with chirality
+      bool useChirality = true;
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp1(
+          AtomPairs::getHashedTopologicalTorsionFingerprint(
+              *m1, 2048, 4, nullptr, nullptr, nullptr, useChirality));
+      TEST_ASSERT(fp1);
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp2(
+          AtomPairs::getHashedTopologicalTorsionFingerprint(
+              *m2, 2048, 4, nullptr, nullptr, nullptr, useChirality));
+      TEST_ASSERT(fp2);
+      std::unique_ptr<SparseIntVect<boost::int64_t>> fp3(
+          AtomPairs::getHashedTopologicalTorsionFingerprint(
+              *m3, 2048, 4, nullptr, nullptr, nullptr, useChirality));
+      TEST_ASSERT(fp3);
+
+      TEST_ASSERT((*fp1) != (*fp2));
+      TEST_ASSERT((*fp1) != (*fp3));
+      TEST_ASSERT((*fp2) != (*fp3));
+    }
+  }
+  BOOST_LOG(rdErrorLog) << "  done" << std::endl;
+}
+
+void testGitHubIssue2115() {
+  BOOST_LOG(rdErrorLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdErrorLog)
+      << "Github #2115: BitInfo not complete for RDKFingerprint" << std::endl;
+  {
+    auto mol = "c1ccccc1O"_smiles;
+    TEST_ASSERT(mol);
+
+    unsigned int minPath = 1;
+    unsigned int maxPath = 7;
+    unsigned int fpSize = 2048;
+    unsigned int nBitsPerHash = 2;
+    bool useHs = true;
+    double tgtDensity = 0.0;
+    unsigned int minSize = 128;
+    bool branchedPaths = true;
+    bool useBondOrder = true;
+    std::vector<boost::uint32_t> *atomInvariants = nullptr;
+    const std::vector<boost::uint32_t> *fromAtoms = nullptr;
+    std::vector<std::vector<boost::uint32_t>> *atomBits = nullptr;
+    std::map<boost::uint32_t, std::vector<std::vector<int>>> bitInfo;
+
+    std::unique_ptr<ExplicitBitVect> fp1(
+        RDKFingerprintMol(*mol, minPath, maxPath, fpSize, nBitsPerHash, useHs,
+                          tgtDensity, minSize, branchedPaths, useBondOrder,
+                          atomInvariants, fromAtoms, atomBits, &bitInfo));
+    TEST_ASSERT(fp1->getNumOnBits() == bitInfo.size());
+  }
+
+  {  // test that for atomBits too
+    auto m1("CCCO"_smiles);
+    TEST_ASSERT(m1);
+    std::vector<std::vector<boost::uint32_t>> atomBits(m1->getNumAtoms());
+    unsigned int minPath = 1;
+    unsigned int maxPath = 2;
+    unsigned int fpSize = 2048;
+    unsigned int nBitsPerHash = 2;
+    bool useHs = true;
+    double tgtDensity = 0.0;
+    unsigned int minSize = 128;
+    bool branchedPaths = true;
+    bool useBondOrder = true;
+    std::vector<boost::uint32_t> *atomInvariants = nullptr;
+    const std::vector<boost::uint32_t> *fromAtoms = nullptr;
+
+    std::unique_ptr<ExplicitBitVect> fp1(RDKFingerprintMol(
+        *m1, minPath, maxPath, fpSize, nBitsPerHash, useHs, tgtDensity, minSize,
+        branchedPaths, useBondOrder, atomInvariants, fromAtoms, &atomBits));
+    TEST_ASSERT(fp1->getNumOnBits() == 8);
+    TEST_ASSERT(atomBits[0].size() == 4);
+    TEST_ASSERT(atomBits[1].size() == 6);
+    TEST_ASSERT(atomBits[2].size() == 8);
+    TEST_ASSERT(atomBits[3].size() == 4);
+  }
+
+  BOOST_LOG(rdErrorLog) << "  done" << std::endl;
+}
+
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
@@ -3560,8 +3837,10 @@ int main(int argc, char *argv[]) {
   testGitHubIssue874();
   testGitHubIssue879();
   testGitHubIssue1496();
-#endif
   testGitHubIssue1793();
+#endif
+  testGitHubIssue1993();
+  testGitHubIssue2115();
 
   return 0;
 }

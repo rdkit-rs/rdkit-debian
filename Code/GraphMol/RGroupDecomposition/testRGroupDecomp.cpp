@@ -28,6 +28,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#include <RDGeneral/test.h>
 #include <RDGeneral/RDLog.h>
 #include <RDGeneral/utils.h>
 #include <GraphMol/RDKitBase.h>
@@ -424,7 +425,7 @@ void testMatchOnlyAtRgroupHs() {
   const char *smilesData[2] = {"OCC","COCC"};
   for (int i = 0; i < 2; ++i) {
     ROMol *mol = SmilesToMol(smilesData[i]);
-    int res = decomp.add(*mol);
+    decomp.add(*mol);
   }
   decomp.process();
 

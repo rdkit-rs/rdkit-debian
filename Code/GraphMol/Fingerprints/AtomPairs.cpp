@@ -1,4 +1,3 @@
-// $Id$
 //
 //  Copyright (C) 2007-2013 Greg Landrum
 //
@@ -17,78 +16,10 @@
 #include <boost/cstdint.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/foreach.hpp>
+#include <GraphMol/Fingerprints/FingerprintUtil.h>
 
 namespace RDKit {
 namespace AtomPairs {
-unsigned int numPiElectrons(const Atom *atom) {
-  PRECONDITION(atom, "no atom");
-  unsigned int res = 0;
-  if (atom->getIsAromatic()) {
-    res = 1;
-  } else if (atom->getHybridization() != Atom::SP3) {
-    unsigned int val = static_cast<unsigned int>(atom->getExplicitValence());
-    val -= atom->getNumExplicitHs();
-    CHECK_INVARIANT(val >= atom->getDegree(),
-                    "explicit valence exceeds atom degree");
-    res = val - atom->getDegree();
-  }
-  return res;
-}
-
-boost::uint32_t getAtomCode(const Atom *atom, unsigned int branchSubtract,
-                            bool includeChirality) {
-  PRECONDITION(atom, "no atom");
-  boost::uint32_t code;
-
-  unsigned int numBranches = 0;
-  if (atom->getDegree() > branchSubtract) {
-    numBranches = atom->getDegree() - branchSubtract;
-  }
-
-  code = numBranches % maxNumBranches;
-  unsigned int nPi = numPiElectrons(atom) % maxNumPi;
-  code |= nPi << numBranchBits;
-
-  unsigned int typeIdx = 0;
-  unsigned int nTypes = 1 << numTypeBits;
-  while (typeIdx < nTypes) {
-    if (atomNumberTypes[typeIdx] ==
-        static_cast<unsigned int>(atom->getAtomicNum())) {
-      break;
-    } else if (atomNumberTypes[typeIdx] >
-               static_cast<unsigned int>(atom->getAtomicNum())) {
-      typeIdx = nTypes;
-      break;
-    }
-    ++typeIdx;
-  }
-  if (typeIdx == nTypes) --typeIdx;
-  code |= typeIdx << (numBranchBits + numPiBits);
-  if (includeChirality) {
-    std::string cipCode;
-    if (atom->getPropIfPresent(common_properties::_CIPCode, cipCode)) {
-      boost::uint32_t offset = numBranchBits + numPiBits + numTypeBits;
-      if (cipCode == "R") {
-        code |= 1 << offset;
-      } else if (cipCode == "S") {
-        code |= 2 << offset;
-      }
-    }
-  }
-  POSTCONDITION(code < static_cast<boost::uint32_t>(1 << (codeSize + (includeChirality ? 2 : 0))),
-                "code exceeds number of bits");
-  return code;
-};
-
-boost::uint32_t getAtomPairCode(boost::uint32_t codeI, boost::uint32_t codeJ,
-                                unsigned int dist, bool includeChirality) {
-  PRECONDITION(dist < maxPathLen, "dist too long");
-  boost::uint32_t res = dist;
-  res |= std::min(codeI, codeJ) << numPathBits;
-  res |= std::max(codeI, codeJ)
-         << (numPathBits + codeSize + (includeChirality ? numChiralBits : 0));
-  return res;
-}
 
 template <typename T1, typename T2>
 void updateElement(SparseIntVect<T1> &v, T2 elem) {
@@ -133,19 +64,28 @@ SparseIntVect<boost::int32_t> *getAtomPairFingerprint(
   PRECONDITION(minLength <= maxLength, "bad lengths provided");
   PRECONDITION(!atomInvariants || atomInvariants->size() >= mol.getNumAtoms(),
                "bad atomInvariants size");
+
+  const ROMol *lmol = &mol;
+  std::unique_ptr<ROMol> tmol;
+  if (includeChirality && !mol.hasProp(common_properties::_StereochemDone)) {
+    tmol = std::unique_ptr<ROMol>(new ROMol(mol));
+    MolOps::assignStereochemistry(*tmol);
+    lmol = tmol.get();
+  }
+
   auto *res = new SparseIntVect<boost::int32_t>(
       1 << (numAtomPairFingerprintBits + 2 * (includeChirality ? 2 : 0)));
   const double *dm;
   if (use2D) {
-    dm = MolOps::getDistanceMat(mol);
+    dm = MolOps::getDistanceMat(*lmol);
   } else {
-    dm = MolOps::get3DDistanceMat(mol, confId);
+    dm = MolOps::get3DDistanceMat(*lmol, confId);
   }
-  const unsigned int nAtoms = mol.getNumAtoms();
+  const unsigned int nAtoms = lmol->getNumAtoms();
 
   std::vector<boost::uint32_t> atomCodes;
-  for (ROMol::ConstAtomIterator atomItI = mol.beginAtoms();
-       atomItI != mol.endAtoms(); ++atomItI) {
+  for (ROMol::ConstAtomIterator atomItI = lmol->beginAtoms();
+       atomItI != lmol->endAtoms(); ++atomItI) {
     if (!atomInvariants) {
       atomCodes.push_back(getAtomCode(*atomItI, 0, includeChirality));
     } else {
@@ -154,21 +94,19 @@ SparseIntVect<boost::int32_t> *getAtomPairFingerprint(
     }
   }
 
-  for (ROMol::ConstAtomIterator atomItI = mol.beginAtoms();
-       atomItI != mol.endAtoms(); ++atomItI) {
+  for (ROMol::ConstAtomIterator atomItI = lmol->beginAtoms();
+       atomItI != lmol->endAtoms(); ++atomItI) {
     unsigned int i = (*atomItI)->getIdx();
-    if (ignoreAtoms &&
-        std::find(ignoreAtoms->begin(), ignoreAtoms->end(), i) !=
-            ignoreAtoms->end()) {
+    if (ignoreAtoms && std::find(ignoreAtoms->begin(), ignoreAtoms->end(), i) !=
+                           ignoreAtoms->end()) {
       continue;
     }
     if (!fromAtoms) {
       for (ROMol::ConstAtomIterator atomItJ = atomItI + 1;
-           atomItJ != mol.endAtoms(); ++atomItJ) {
+           atomItJ != lmol->endAtoms(); ++atomItJ) {
         unsigned int j = (*atomItJ)->getIdx();
-        if (ignoreAtoms &&
-            std::find(ignoreAtoms->begin(), ignoreAtoms->end(), j) !=
-                ignoreAtoms->end()) {
+        if (ignoreAtoms && std::find(ignoreAtoms->begin(), ignoreAtoms->end(),
+                                     j) != ignoreAtoms->end()) {
           continue;
         }
         setAtomPairBit(i, j, nAtoms, atomCodes, dm, res, minLength, maxLength,
@@ -177,9 +115,8 @@ SparseIntVect<boost::int32_t> *getAtomPairFingerprint(
     } else {
       BOOST_FOREACH (boost::uint32_t j, *fromAtoms) {
         if (j != i) {
-          if (ignoreAtoms &&
-              std::find(ignoreAtoms->begin(), ignoreAtoms->end(), j) !=
-                  ignoreAtoms->end()) {
+          if (ignoreAtoms && std::find(ignoreAtoms->begin(), ignoreAtoms->end(),
+                                       j) != ignoreAtoms->end()) {
             continue;
           }
           setAtomPairBit(i, j, nAtoms, atomCodes, dm, res, minLength, maxLength,
@@ -200,20 +137,27 @@ SparseIntVect<boost::int32_t> *getHashedAtomPairFingerprint(
   PRECONDITION(minLength <= maxLength, "bad lengths provided");
   PRECONDITION(!atomInvariants || atomInvariants->size() >= mol.getNumAtoms(),
                "bad atomInvariants size");
+  const ROMol *lmol = &mol;
+  std::unique_ptr<ROMol> tmol;
+  if (includeChirality && !mol.hasProp(common_properties::_StereochemDone)) {
+    tmol = std::unique_ptr<ROMol>(new ROMol(mol));
+    MolOps::assignStereochemistry(*tmol);
+    lmol = tmol.get();
+  }
   auto *res = new SparseIntVect<boost::int32_t>(nBits);
   const double *dm;
   if (use2D) {
-    dm = MolOps::getDistanceMat(mol);
+    dm = MolOps::getDistanceMat(*lmol);
   } else {
-    dm = MolOps::get3DDistanceMat(mol, confId);
+    dm = MolOps::get3DDistanceMat(*lmol, confId);
   }
 
-  const unsigned int nAtoms = mol.getNumAtoms();
+  const unsigned int nAtoms = lmol->getNumAtoms();
 
   std::vector<boost::uint32_t> atomCodes;
   atomCodes.reserve(nAtoms);
-  for (ROMol::ConstAtomIterator atomItI = mol.beginAtoms();
-       atomItI != mol.endAtoms(); ++atomItI) {
+  for (ROMol::ConstAtomIterator atomItI = lmol->beginAtoms();
+       atomItI != lmol->endAtoms(); ++atomItI) {
     if (!atomInvariants) {
       atomCodes.push_back(getAtomCode(*atomItI, 0, includeChirality));
     } else {
@@ -221,21 +165,19 @@ SparseIntVect<boost::int32_t> *getHashedAtomPairFingerprint(
     }
   }
 
-  for (ROMol::ConstAtomIterator atomItI = mol.beginAtoms();
-       atomItI != mol.endAtoms(); ++atomItI) {
+  for (ROMol::ConstAtomIterator atomItI = lmol->beginAtoms();
+       atomItI != lmol->endAtoms(); ++atomItI) {
     unsigned int i = (*atomItI)->getIdx();
-    if (ignoreAtoms &&
-        std::find(ignoreAtoms->begin(), ignoreAtoms->end(), i) !=
-            ignoreAtoms->end()) {
+    if (ignoreAtoms && std::find(ignoreAtoms->begin(), ignoreAtoms->end(), i) !=
+                           ignoreAtoms->end()) {
       continue;
     }
     if (!fromAtoms) {
       for (ROMol::ConstAtomIterator atomItJ = atomItI + 1;
-           atomItJ != mol.endAtoms(); ++atomItJ) {
+           atomItJ != lmol->endAtoms(); ++atomItJ) {
         unsigned int j = (*atomItJ)->getIdx();
-        if (ignoreAtoms &&
-            std::find(ignoreAtoms->begin(), ignoreAtoms->end(), j) !=
-                ignoreAtoms->end()) {
+        if (ignoreAtoms && std::find(ignoreAtoms->begin(), ignoreAtoms->end(),
+                                     j) != ignoreAtoms->end()) {
           continue;
         }
         unsigned int dist =
@@ -251,9 +193,8 @@ SparseIntVect<boost::int32_t> *getHashedAtomPairFingerprint(
     } else {
       BOOST_FOREACH (boost::uint32_t j, *fromAtoms) {
         if (j != i) {
-          if (ignoreAtoms &&
-              std::find(ignoreAtoms->begin(), ignoreAtoms->end(), j) !=
-                  ignoreAtoms->end()) {
+          if (ignoreAtoms && std::find(ignoreAtoms->begin(), ignoreAtoms->end(),
+                                       j) != ignoreAtoms->end()) {
             continue;
           }
           unsigned int dist =
@@ -310,66 +251,6 @@ ExplicitBitVect *getHashedAtomPairFingerprintAsBitVect(
   return res;
 }
 
-boost::uint64_t getTopologicalTorsionCode(
-    const std::vector<boost::uint32_t> &pathCodes, bool includeChirality) {
-  bool reverseIt = false;
-  unsigned int i = 0;
-  unsigned int j = pathCodes.size() - 1;
-  while (i < j) {
-    if (pathCodes[i] > pathCodes[j]) {
-      reverseIt = true;
-      break;
-    } else if (pathCodes[i] < pathCodes[j]) {
-      break;
-    }
-    ++i;
-    --j;
-  }
-
-  int shiftSize = codeSize + (includeChirality ? numChiralBits : 0);
-  boost::uint64_t res = 0;
-  if (reverseIt) {
-    for (unsigned int i = 0; i < pathCodes.size(); ++i) {
-      res |= static_cast<boost::uint64_t>(pathCodes[pathCodes.size() - i - 1])
-             << (shiftSize * i);
-    }
-  } else {
-    for (unsigned int i = 0; i < pathCodes.size(); ++i) {
-      res |= static_cast<boost::uint64_t>(pathCodes[i]) << (shiftSize * i);
-    }
-  }
-  return res;
-}
-
-size_t getTopologicalTorsionHash(
-    const std::vector<boost::uint32_t> &pathCodes) {
-  bool reverseIt = false;
-  unsigned int i = 0;
-  unsigned int j = pathCodes.size() - 1;
-  while (i < j) {
-    if (pathCodes[i] > pathCodes[j]) {
-      reverseIt = true;
-      break;
-    } else if (pathCodes[i] < pathCodes[j]) {
-      break;
-    }
-    ++i;
-    --j;
-  }
-
-  boost::uint32_t res = 0;
-  if (reverseIt) {
-    for (unsigned int i = 0; i < pathCodes.size(); ++i) {
-      gboost::hash_combine(res, pathCodes[pathCodes.size() - i - 1]);
-    }
-  } else {
-    for (unsigned int pathCode : pathCodes) {
-      gboost::hash_combine(res, pathCode);
-    }
-  }
-  return res;
-}
-
 SparseIntVect<boost::int64_t> *getTopologicalTorsionFingerprint(
     const ROMol &mol, unsigned int targetSize,
     const std::vector<boost::uint32_t> *fromAtoms,
@@ -377,6 +258,13 @@ SparseIntVect<boost::int64_t> *getTopologicalTorsionFingerprint(
     const std::vector<boost::uint32_t> *atomInvariants, bool includeChirality) {
   PRECONDITION(!atomInvariants || atomInvariants->size() >= mol.getNumAtoms(),
                "bad atomInvariants size");
+  const ROMol *lmol = &mol;
+  std::unique_ptr<ROMol> tmol;
+  if (includeChirality && !mol.hasProp(common_properties::_StereochemDone)) {
+    tmol = std::unique_ptr<ROMol>(new ROMol(mol));
+    MolOps::assignStereochemistry(*tmol);
+    lmol = tmol.get();
+  }
   boost::uint64_t sz = 1;
   sz = (sz << (targetSize *
                (codeSize + (includeChirality ? numChiralBits : 0))));
@@ -388,9 +276,9 @@ SparseIntVect<boost::int64_t> *getTopologicalTorsionFingerprint(
   auto *res = new SparseIntVect<boost::int64_t>(sz);
 
   std::vector<boost::uint32_t> atomCodes;
-  atomCodes.reserve(mol.getNumAtoms());
-  for (ROMol::ConstAtomIterator atomItI = mol.beginAtoms();
-       atomItI != mol.endAtoms(); ++atomItI) {
+  atomCodes.reserve(lmol->getNumAtoms());
+  for (ROMol::ConstAtomIterator atomItI = lmol->beginAtoms();
+       atomItI != lmol->endAtoms(); ++atomItI) {
     if (!atomInvariants) {
       atomCodes.push_back(getAtomCode(*atomItI, 0, includeChirality));
     } else {
@@ -403,7 +291,7 @@ SparseIntVect<boost::int64_t> *getTopologicalTorsionFingerprint(
 
   boost::dynamic_bitset<> *fromAtomsBV = nullptr;
   if (fromAtoms) {
-    fromAtomsBV = new boost::dynamic_bitset<>(mol.getNumAtoms());
+    fromAtomsBV = new boost::dynamic_bitset<>(lmol->getNumAtoms());
     BOOST_FOREACH (boost::uint32_t fAt, *fromAtoms) { fromAtomsBV->set(fAt); }
   }
   boost::dynamic_bitset<> *ignoreAtomsBV = nullptr;
@@ -413,8 +301,8 @@ SparseIntVect<boost::int64_t> *getTopologicalTorsionFingerprint(
       ignoreAtomsBV->set(fAt);
     }
   }
-  boost::dynamic_bitset<> pAtoms(mol.getNumAtoms());
-  PATH_LIST paths = findAllPathsOfLengthN(mol, targetSize, false);
+  boost::dynamic_bitset<> pAtoms(lmol->getNumAtoms());
+  PATH_LIST paths = findAllPathsOfLengthN(*lmol, targetSize, false);
   for (PATH_LIST::const_iterator pathIt = paths.begin(); pathIt != paths.end();
        ++pathIt) {
     bool keepIt = true;
@@ -478,10 +366,17 @@ void TorsionFpCalc(T *res, const ROMol &mol, unsigned int nBits,
                    bool includeChirality) {
   PRECONDITION(!atomInvariants || atomInvariants->size() >= mol.getNumAtoms(),
                "bad atomInvariants size");
+  const ROMol *lmol = &mol;
+  std::unique_ptr<ROMol> tmol;
+  if (includeChirality && !mol.hasProp(common_properties::_StereochemDone)) {
+    tmol = std::unique_ptr<ROMol>(new ROMol(mol));
+    MolOps::assignStereochemistry(*tmol);
+    lmol = tmol.get();
+  }
   std::vector<boost::uint32_t> atomCodes;
-  atomCodes.reserve(mol.getNumAtoms());
-  for (ROMol::ConstAtomIterator atomItI = mol.beginAtoms();
-       atomItI != mol.endAtoms(); ++atomItI) {
+  atomCodes.reserve(lmol->getNumAtoms());
+  for (ROMol::ConstAtomIterator atomItI = lmol->beginAtoms();
+       atomItI != lmol->endAtoms(); ++atomItI) {
     if (!atomInvariants) {
       atomCodes.push_back(getAtomCode(*atomItI, 0, includeChirality));
     } else {
@@ -493,18 +388,18 @@ void TorsionFpCalc(T *res, const ROMol &mol, unsigned int nBits,
 
   boost::dynamic_bitset<> *fromAtomsBV = nullptr;
   if (fromAtoms) {
-    fromAtomsBV = new boost::dynamic_bitset<>(mol.getNumAtoms());
+    fromAtomsBV = new boost::dynamic_bitset<>(lmol->getNumAtoms());
     BOOST_FOREACH (boost::uint32_t fAt, *fromAtoms) { fromAtomsBV->set(fAt); }
   }
   boost::dynamic_bitset<> *ignoreAtomsBV = nullptr;
   if (ignoreAtoms) {
-    ignoreAtomsBV = new boost::dynamic_bitset<>(mol.getNumAtoms());
+    ignoreAtomsBV = new boost::dynamic_bitset<>(lmol->getNumAtoms());
     BOOST_FOREACH (boost::uint32_t fAt, *ignoreAtoms) {
       ignoreAtomsBV->set(fAt);
     }
   }
 
-  PATH_LIST paths = findAllPathsOfLengthN(mol, targetSize, false);
+  PATH_LIST paths = findAllPathsOfLengthN(*lmol, targetSize, false);
   for (PATH_LIST::const_iterator pathIt = paths.begin(); pathIt != paths.end();
        ++pathIt) {
     bool keepIt = true;
@@ -543,7 +438,7 @@ void TorsionFpCalc(T *res, const ROMol &mol, unsigned int nBits,
   delete fromAtomsBV;
   delete ignoreAtomsBV;
 }
-}  // end of local namespace
+}  // namespace
 SparseIntVect<boost::int64_t> *getHashedTopologicalTorsionFingerprint(
     const ROMol &mol, unsigned int nBits, unsigned int targetSize,
     const std::vector<boost::uint32_t> *fromAtoms,

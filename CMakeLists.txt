@@ -14,6 +14,7 @@ set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/Code/cmake/Modules/")
 
 add_library(rdkit_base INTERFACE)
+add_dependencies(rdkit_base catch)
 
 option(RDK_BUILD_SWIG_WRAPPERS "build the SWIG wrappers" OFF )
 option(RDK_BUILD_PYTHON_WRAPPERS "build the standard python wrappers" ON )
@@ -21,9 +22,11 @@ option(RDK_BUILD_COMPRESSED_SUPPLIERS "build in support for compressed MolSuppli
 option(RDK_BUILD_INCHI_SUPPORT "build the rdkit inchi wrapper" OFF )
 option(RDK_BUILD_AVALON_SUPPORT "install support for the avalon toolkit. Use the variable AVALONTOOLS_DIR to set the location of the source." OFF )
 option(RDK_BUILD_PGSQL "build the PostgreSQL cartridge" OFF )
+option(RDK_BUILD_RPATH_SUPPORT "build shared libraries using rpath" OFF)
 option(RDK_PGSQL_STATIC "statically link rdkit libraries into the PostgreSQL cartridge" ON )
 option(RDK_BUILD_CONTRIB "build the Contrib directory" OFF )
 option(RDK_INSTALL_INTREE "install the rdkit in the source tree (former behavior)" ON )
+option(RDK_INSTALL_DLLS_MSVC "install the rdkit DLLs when using MSVC" OFF)
 option(RDK_INSTALL_STATIC_LIBS "install the rdkit static libraries" ON )
 option(RDK_INSTALL_PYTHON_TESTS "install the rdkit Python tests with the wrappers" OFF )
 option(RDK_BUILD_THREADSAFE_SSS "enable thread-safe substructure searching" ON )
@@ -45,6 +48,7 @@ option(RDK_BUILD_FREESASA_SUPPORT "build the rdkit freesasa wrapper" OFF )
 option(RDK_BUILD_COORDGEN_SUPPORT "build the rdkit coordgen wrapper" ON )
 option(RDK_BUILD_MOLINTERCHANGE_SUPPORT "build in support for CommonChem molecule interchange" ON )
 option(RDK_INSTALL_DEV_COMPONENT "install libraries and headers" ON)
+option(RDK_USE_BOOST_REGEX "use boost::regex instead of std::regex (needed for systems with g++-4.8)" OFF)
 if(NOT MSVC)
   if(RDK_OPTIMIZE_NATIVE)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
@@ -63,6 +67,9 @@ if(RDK_SWIG_STATIC AND RDK_BUILD_SWIG_WRAPPERS)
   endif(NOT RDK_INSTALL_STATIC_LIBS)
 endif()
 
+if(NOT (MSVC AND (NOT RDK_INSTALL_DLLS_MSVC)))
+  add_definitions(-DRDKIT_DYN_LINK)
+endif()
 
 if(RDK_PGSQL_STATIC AND RDK_BUILD_PGSQL)
   if(NOT RDK_INSTALL_STATIC_LIBS)
@@ -84,8 +91,8 @@ set(RDK_PYTHON_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/rdkit")
 #-------
 # Config variables:
 set(RDKit_Year "2018")
-set(RDKit_Month "03")
-set(RDKit_Revision "4")
+set(RDKit_Month "09")
+set(RDKit_Revision "1")
 set(RDKit_RevisionModifier "")
 set(RDKit_ABI "1")
 
@@ -95,6 +102,11 @@ string(REGEX REPLACE "^0" "" RDKit_intMonth ${RDKit_Month} )
 
 set(RDKit_CodeDir "${CMAKE_CURRENT_SOURCE_DIR}/Code")
 set(RDKit_ExternalDir "${CMAKE_CURRENT_SOURCE_DIR}/External")
+
+#include catch
+add_subdirectory(${RDKit_ExternalDir}/catch)
+include_directories(${CATCH_INCLUDE_DIR})
+message("CATCH: ${CATCH_INCLUDE_DIR}")
 
 if(RDK_INSTALL_INTREE)
   set(RDKit_BinDir "${CMAKE_SOURCE_DIR}/bin")
@@ -108,13 +120,39 @@ else(RDK_INSTALL_INTREE)
   set(RDKit_ShareDir "share/RDKit")
 endif(RDK_INSTALL_INTREE)
 
+if(RDK_BUILD_RPATH_SUPPORT)
+  # use, i.e. don't skip the full RPATH for the build tree
+  SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+  # when building, don't use the install RPATH already
+  # (but later on when installing)
+  SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+  message("CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib")
+  SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+  # add the automatically determined parts of the RPATH
+  # which point to directories outside the build tree to the install RPATH
+  SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+  # the RPATH to be used when installing, but only if it's not a system
+  # directory
+  LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES
+  "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+  IF("${isSystemDir}" STREQUAL "-1")
+     SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+  ENDIF("${isSystemDir}" STREQUAL "-1")
+endif()
+
+
+
 if(RDK_BUILD_SWIG_WRAPPERS)
   set(RDKit_JavaLibDir "${RDKit_ExternalDir}/java_lib")
 endif(RDK_BUILD_SWIG_WRAPPERS)
 
 
 if(RDK_BUILD_COORDGEN_SUPPORT)
-    add_definitions(-DBUILD_COORDGEN_SUPPORT)
+    add_definitions(-DRDK_BUILD_COORDGEN_SUPPORT)
     include_directories(${RDKit_ExternalDir})
 endif()
 
@@ -132,7 +170,7 @@ endif(MINGW)
 
 # defines macros: rdkit_python_extension, rdkit_test
 include(RDKitUtils)
-install(EXPORT ${RDKit_EXPORTED_TARGETS} DESTINATION ${RDKit_LibDir})
+install(EXPORT ${RDKit_EXPORTED_TARGETS} DESTINATION ${RDKit_LibDir}/cmake/rdkit)
 install(TARGETS rdkit_base EXPORT ${RDKit_EXPORTED_TARGETS}
         COMPONENT dev )
 
@@ -148,7 +186,7 @@ configure_file (
 install(FILES
     ${RDKit_BINARY_DIR}/rdkit-config.cmake
     ${RDKit_BINARY_DIR}/rdkit-config-version.cmake
-    DESTINATION ${RDKit_LibDir})
+    DESTINATION ${RDKit_LibDir}/cmake/rdkit)
 
 # disable some warnings that we don't care about
 if(MSVC)
@@ -187,19 +225,24 @@ if(RDK_BUILD_PYTHON_WRAPPERS)
   if(PYTHON_VERSION_MAJOR EQUAL 3)
     # Find boost-python3 using name specified as command line option then fall back to commonly used names
     set(RDK_BOOST_PYTHON3_NAME "python3" CACHE STRING "Name of the boost python3 library. If installed as libboost_python-xxx.so, use python-xxx.")
-    foreach(Boost_Python_Lib "${RDK_BOOST_PYTHON3_NAME}" "python-py3${PYTHON_VERSION_MINOR}" "python3")
-      find_package(Boost 1.56.0 COMPONENTS "${Boost_Python_Lib}" QUIET)
-      if(Boost_FOUND)
-        break()
-      endif()
-    endforeach()
-    # If boost-python3 not found, just find boost-python and hope that it is compatible with python3
-    if(NOT Boost_FOUND)
-      find_package(Boost 1.56.0 COMPONENTS python REQUIRED)
-    endif()
-  else(PYTHON_VERSION_MAJOR EQUAL 3)
-     find_package(Boost 1.56.0 COMPONENTS python REQUIRED)
+    list(APPEND Boost_Python_Names "${RDK_BOOST_PYTHON3_NAME}" "python-py3${PYTHON_VERSION_MINOR}" "python3")
   endif(PYTHON_VERSION_MAJOR EQUAL 3)
+
+  # Boost 1.67+ uses a version suffix like "python36" or "python27"
+  list(APPEND Boost_Python_Names "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
+
+  # Try each potential boost-python name until one works
+  foreach(Boost_Python_Lib ${Boost_Python_Names})
+    find_package(Boost 1.56.0 COMPONENTS "${Boost_Python_Lib}" QUIET)
+    if(Boost_FOUND)
+      break()
+    endif()
+  endforeach()
+
+  # Finally just try "python" and hope it is a compatible version
+  if(NOT Boost_FOUND)
+    find_package(Boost 1.56.0 COMPONENTS python REQUIRED)
+  endif()
 
 
   if(RDK_INSTALL_INTREE)

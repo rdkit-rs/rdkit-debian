@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <RDGeneral/utils.h>
 #include <RDGeneral/Invariant.h>
 #include <RDGeneral/RDLog.h>
@@ -2143,6 +2144,34 @@ void testSanitOps() {
   TEST_ASSERT(m->getAtomWithIdx(0)->getFormalCharge() == 1);
   delete m;
 
+  smi = "I(O)(O)(O)(O)O";
+  m = SmilesToMol(smi);
+  TEST_ASSERT(m);
+  TEST_ASSERT(m->getNumAtoms() == 6);
+  TEST_ASSERT(m->getAtomWithIdx(0)->getFormalCharge() == 0);
+  delete m;
+
+  smi = "I(O)(O)O";
+  m = SmilesToMol(smi);
+  TEST_ASSERT(m);
+  TEST_ASSERT(m->getNumAtoms() == 4);
+  TEST_ASSERT(m->getAtomWithIdx(0)->getFormalCharge() == 0);
+  delete m;
+
+  smi = "I(=O)(O)(O)(O)";
+  m = SmilesToMol(smi);
+  TEST_ASSERT(m);
+  TEST_ASSERT(m->getNumAtoms() == 5);
+  TEST_ASSERT(m->getAtomWithIdx(0)->getFormalCharge() == 1);
+  delete m;
+
+  smi = "CC(=O)O[IH2](O)OC(C)=O";
+  m = SmilesToMol(smi);
+  TEST_ASSERT(m);
+  TEST_ASSERT(m->getNumAtoms() == 10);
+  TEST_ASSERT(m->getAtomWithIdx(4)->getFormalCharge() == 0);
+  delete m;
+
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
 }
 
@@ -2476,24 +2505,8 @@ void testSFIssue1836576() {
   }
   TEST_ASSERT(ok);
   TEST_ASSERT(opThatFailed == MolOps::SANITIZE_PROPERTIES);
-
-  // this molecule shows a known bug related to ring
-  // ring finding in a molecule where all atoms are 4 connected.
-  smi = "C123C45C11C44C55C22C33C14C523";
-  m = SmilesToMol(smi, false, false);
-  TEST_ASSERT(m);
-
-  ok = false;
-  try {
-    MolOps::sanitizeMol(*m, opThatFailed);
-  } catch (ValueErrorException &vee) {
-    ok = true;
-  }
-  TEST_ASSERT(ok);
-  TEST_ASSERT(opThatFailed == MolOps::SANITIZE_SYMMRINGS);
-
   delete m;
-
+  
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
 }
 
@@ -4691,7 +4704,7 @@ void testRenumberAtoms() {
     ROMol *m = new ROMol;
     TEST_ASSERT(m);
     std::vector<unsigned int> nVect;
-    ROMol *nm = MolOps::renumberAtoms(*m, nVect);
+    MolOps::renumberAtoms(*m, nVect);
     delete m;
   }
 
@@ -5838,6 +5851,40 @@ void testAdjustQueryProperties() {
     delete qm;
     delete aqm;
   }
+
+  {  // ring-chain membership
+    std::string smiles = "CC1CCC1";
+    ROMol *qm = SmartsToMol(smiles);
+    TEST_ASSERT(qm);
+    TEST_ASSERT(qm->getNumAtoms() == 5);
+    MolOps::AdjustQueryParameters params;
+    params.adjustRingChain = true;
+    params.adjustDegree = false;
+    ROMol *aqm = MolOps::adjustQueryProperties(*qm, &params);
+    TEST_ASSERT(aqm);
+    TEST_ASSERT(aqm->getNumAtoms() == 5);
+    {
+      smiles = "C1CCC12CCC2";
+      ROMol *m = SmilesToMol(smiles);
+      TEST_ASSERT(m);
+      MatchVectType match;
+      TEST_ASSERT(SubstructMatch(*m, *qm, match));
+      TEST_ASSERT(!SubstructMatch(*m, *aqm, match));
+      delete m;
+    }
+    {
+      smiles = "C1CCC1CCC";
+      ROMol *m = SmilesToMol(smiles);
+      TEST_ASSERT(m);
+      MatchVectType match;
+      TEST_ASSERT(SubstructMatch(*m, *qm, match));
+      TEST_ASSERT(SubstructMatch(*m, *aqm, match));
+      delete m;
+    }
+    delete qm;
+    delete aqm;
+  }
+
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
 }
 
@@ -6682,6 +6729,7 @@ void testGithubIssue868() {
                 std::string::npos);
     delete m;
   }
+  rdWarningLog->ClearTee();
 
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
 }
@@ -6939,6 +6987,8 @@ void testGithub1281() {
       bool ok = false;
       try {
         RWMol *m = SmilesToMol(smiles);
+        // Can never get here:
+        delete m;
       } catch (const ValueErrorException &) {
         ok = true;
       }
