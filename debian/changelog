@@ -1,6 +1,7 @@
-rdkit (201803.4+dfsg-4) UNRELEASED; urgency=medium
+rdkit (201809.1+dfsg-4) UNRELEASED; urgency=medium
 
-  * 
+  [ Debichem Team ]
+  * New upstream release.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 08 Jan 2019 21:00:46 +0100
 
