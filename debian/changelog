@@ -1,3 +1,9 @@
+rdkit (201803.4+dfsg-4) UNRELEASED; urgency=medium
+
+  * 
+
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 08 Jan 2019 21:00:46 +0100
+
 rdkit (201803.4+dfsg-3) unstable; urgency=medium
 
   * debian/patches/postgres_Makefile_fixes.patch: Remove -mpopcnt from
