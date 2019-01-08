@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include "MaxMinPicker.h"
 #include <iostream>
 #include <RDGeneral/Invariant.h>
@@ -15,7 +16,7 @@
 
 namespace {
 double dist_on_line(unsigned int i, unsigned int j) {
-  return abs((double)i - (double)j);
+  return std::fabs((double)i - (double)j);
 }
 }
 void testGithub1421() {

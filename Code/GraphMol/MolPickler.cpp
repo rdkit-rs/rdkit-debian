@@ -11,6 +11,7 @@
 #include <GraphMol/RDKitQueries.h>
 #include <GraphMol/MolPickler.h>
 #include <GraphMol/MonomerInfo.h>
+#include <GraphMol/StereoGroup.h>
 #include <RDGeneral/utils.h>
 #include <RDGeneral/RDLog.h>
 #include <RDGeneral/StreamOps.h>
@@ -28,7 +29,7 @@ using boost::int32_t;
 using boost::uint32_t;
 namespace RDKit {
 
-const int32_t MolPickler::versionMajor = 9;
+const int32_t MolPickler::versionMajor = 10;
 const int32_t MolPickler::versionMinor = 0;
 const int32_t MolPickler::versionPatch = 0;
 const int32_t MolPickler::endianId = 0xDEADBEEF;
@@ -76,7 +77,7 @@ std::mutex &GetPropMutex() {
   return propmutex_get();
 }
 #endif
-}
+}  // namespace
 
 unsigned int MolPickler::getDefaultPickleProperties() {
 #ifdef RDK_THREADSAFE_SSS
@@ -287,6 +288,8 @@ void finalizeQueryFromDescription(Query<int, Atom const *, true> *query,
   } else if (descr == "AtomNull") {
     query->setDataFunc(nullDataFun);
     query->setMatchFunc(nullQueryFun);
+  } else if (descr == "AtomType") {
+    query->setDataFunc(queryAtomType);
   } else if (descr == "AtomInNRings" || descr == "RecursiveStructure") {
     // don't need to do anything here because the classes
     // automatically have everything set
@@ -319,6 +322,8 @@ void finalizeQueryFromDescription(Query<int, Bond const *, true> *query,
     query->setDataFunc(queryIsBondInRing);
   } else if (descr == "BondInNRings") {
     query->setDataFunc(queryIsBondInNRings);
+  } else if (descr == "SingleOrAromaticBond") {
+    query->setDataFunc(queryBondIsSingleOrAromatic);
   } else if (descr == "BondNull") {
     query->setDataFunc(nullDataFun);
     query->setMatchFunc(nullQueryFun);
@@ -773,11 +778,11 @@ void MolPickler::molFromPickle(std::istream &ss, ROMol *mol) {
   streamRead(ss, patchVersion);
   if (majorVersion > versionMajor ||
       (majorVersion == versionMajor && minorVersion > versionMinor)) {
-    BOOST_LOG(rdWarningLog) << "Depickling from a version number ("
-                            << majorVersion << "." << minorVersion << ")"
-                            << "that is higher than our version ("
-                            << versionMajor << "." << versionMinor
-                            << ").\nThis probably won't work." << std::endl;
+    BOOST_LOG(rdWarningLog)
+        << "Depickling from a version number (" << majorVersion << "."
+        << minorVersion << ")"
+        << "that is higher than our version (" << versionMajor << "."
+        << versionMinor << ").\nThis probably won't work." << std::endl;
   }
   majorVersion = 1000 * majorVersion + minorVersion * 10 + patchVersion;
   if (majorVersion == 1) {
@@ -861,6 +866,15 @@ void MolPickler::_pickle(const ROMol *mol, std::ostream &ss,
   if (ringInfo && ringInfo->isInitialized()) {
     streamWrite(ss, BEGINSSSR);
     _pickleSSSR<T>(ss, ringInfo, atomIdxMap);
+  }
+
+  // Write Stereo Groups
+  {
+    auto &stereo_groups = mol->getStereoGroups();
+    if (stereo_groups.size() > 0u) {
+      streamWrite(ss, BEGINSTEREOGROUP);
+      _pickleStereo<T>(ss, stereo_groups, atomIdxMap);
+    }
   }
 
   // pickle the conformations if necessary
@@ -983,6 +997,11 @@ void MolPickler::_depickle(std::istream &ss, ROMol *mol, int version,
     streamRead(ss, tag, version);
   }
 
+  if (tag == BEGINSTEREOGROUP) {
+    _depickleStereo<T>(ss, mol, version);
+    streamRead(ss, tag, version);
+  }
+
   if (tag == BEGINCONFS) {
     // read in the conformation
     streamRead(ss, tmpInt, version);
@@ -1068,7 +1087,7 @@ bool getAtomMapNumber(const Atom *atom, int &mapNum) {
   if (res) mapNum = tmpInt;
   return res;
 }
-}
+}  // namespace
 
 int32_t MolPickler::_pickleAtomData(std::ostream &tss, const Atom *atom) {
   int32_t propFlags = 0;
@@ -1226,8 +1245,14 @@ void MolPickler::_pickleAtom(std::ostream &ss, const Atom *atom) {
     streamWrite(ss, ENDQUERY);
   }
   if (getAtomMapNumber(atom, tmpInt)) {
-    tmpChar = static_cast<char>(tmpInt % 256);
-    streamWrite(ss, ATOM_MAPNUMBER, tmpChar);
+    if (tmpInt < 128) {
+      tmpChar = static_cast<char>(tmpInt % 128);
+      streamWrite(ss, ATOM_MAPNUMBER, tmpChar);
+    } else {
+      tmpChar = static_cast<char>(255);
+      streamWrite(ss, ATOM_MAPNUMBER, tmpChar);
+      streamWrite(ss, tmpInt);
+    }
   }
   if (atom->hasProp(common_properties::dummyLabel)) {
     streamWrite(ss, ATOM_DUMMYLABEL,
@@ -1406,7 +1431,7 @@ Atom *MolPickler::_addAtomFromPickle(std::istream &ss, ROMol *mol,
       Tags tag;
       streamRead(ss, tag, version);
       if (tag == ATOM_MAPNUMBER) {
-        int tmpInt;
+        int32_t tmpInt;
         streamRead(ss, tmpChar, version);
         tmpInt = tmpChar;
         atom->setProp(common_properties::molAtomMapNumber, tmpInt);
@@ -1423,7 +1448,11 @@ Atom *MolPickler::_addAtomFromPickle(std::istream &ss, ROMol *mol,
         }
         int tmpInt;
         streamRead(ss, tmpChar, version);
-        tmpInt = tmpChar;
+        if (tmpChar < 0 && version > 9000) {
+          streamRead(ss, tmpInt, version);
+        } else {
+          tmpInt = tmpChar;
+        }
         atom->setProp(common_properties::molAtomMapNumber, tmpInt);
       }
       if (hasDummyLabel) {
@@ -1698,6 +1727,53 @@ void MolPickler::_addRingInfoFromPickle(std::istream &ss, ROMol *mol,
   }
 }
 
+template <typename T>
+void MolPickler::_pickleStereo(std::ostream &ss,
+                               const std::vector<StereoGroup> &groups,
+                               std::map<int, int> &atomIdxMap) {
+  T tmpT = static_cast<T>(groups.size());
+  streamWrite(ss, tmpT);
+  for (auto &&group : groups) {
+    streamWrite(ss, static_cast<T>(group.getGroupType()));
+    auto& atoms = group.getAtoms();
+    streamWrite(ss, static_cast<T>(atoms.size()));
+    for (auto &&atom : atoms) {
+      tmpT = static_cast<T>(atomIdxMap[atom->getIdx()]);
+      streamWrite(ss, tmpT);
+    }
+  }
+}
+
+template <typename T>
+void MolPickler::_depickleStereo(std::istream &ss, ROMol *mol, int version) {
+  T tmpT;
+  streamRead(ss, tmpT, version);
+  const unsigned numGroups = static_cast<unsigned>(tmpT);
+
+  if (numGroups > 0u) {
+    std::vector<StereoGroup> groups;
+    for (unsigned group = 0u; group < numGroups; ++group) {
+      T tmpT;
+      streamRead(ss, tmpT, version);
+      const auto groupType = static_cast<RDKit::StereoGroupType>(tmpT);
+
+      streamRead(ss, tmpT, version);
+      const unsigned numAtoms = static_cast<unsigned>(tmpT);
+
+      std::vector<Atom *> atoms;
+      atoms.reserve(numAtoms);
+      for (unsigned i = 0u; i < numAtoms; ++i) {
+        streamRead(ss, tmpT, version);
+        atoms.push_back(mol->getAtomWithIdx(tmpT));
+      }
+
+      groups.emplace_back(groupType, std::move(atoms));
+    }
+
+    mol->setStereoGroups(std::move(groups));
+  }
+}
+
 void MolPickler::_pickleProperties(std::ostream &ss, const RDProps &props,
                                    unsigned int pickleFlags) {
   if (!pickleFlags) return;
@@ -1892,4 +1968,4 @@ void MolPickler::_addBondFromPickleV1(std::istream &ss, ROMol *mol) {
   }
   mol->addBond(bond, true);
 }
-};
+};  // namespace RDKit

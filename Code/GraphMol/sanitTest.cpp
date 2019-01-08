@@ -9,6 +9,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/RDKitQueries.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>

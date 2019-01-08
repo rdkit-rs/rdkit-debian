@@ -173,18 +173,20 @@ void halogenCleanup(RWMol &mol, Atom *atom) {
       ++nid1;
     }
     if (neighborsAllO) {
-      atom->setFormalCharge(ev / 2);
+      int formalCharge = 0;
       boost::tie(nid1, end1) = mol.getAtomNeighbors(atom);
       while (nid1 != end1) {
         Bond *b = mol.getBondBetweenAtoms(aid, *nid1);
         if (b->getBondType() == Bond::DOUBLE) {
           b->setBondType(Bond::SINGLE);
           Atom *otherAtom = mol.getAtomWithIdx(*nid1);
+          formalCharge++;
           otherAtom->setFormalCharge(-1);
           otherAtom->calcExplicitValence(false);
         }
         ++nid1;
       }
+      atom->setFormalCharge(formalCharge);
       atom->calcExplicitValence(false);
     }
   }
@@ -645,13 +647,13 @@ std::map<T, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
   }
   return res;
 }
-template std::map<std::string, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
+template RDKIT_GRAPHMOL_EXPORT std::map<std::string, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
     const ROMol &mol, std::string (*query)(const ROMol &, const Atom *),
     bool sanitizeFrags, const std::vector<std::string> *, bool);
-template std::map<int, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
+template RDKIT_GRAPHMOL_EXPORT std::map<int, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
     const ROMol &mol, int (*query)(const ROMol &, const Atom *),
     bool sanitizeFrags, const std::vector<int> *, bool);
-template std::map<unsigned int, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
+template RDKIT_GRAPHMOL_EXPORT std::map<unsigned int, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
     const ROMol &mol, unsigned int (*query)(const ROMol &, const Atom *),
     bool sanitizeFrags, const std::vector<unsigned int> *, bool);
 

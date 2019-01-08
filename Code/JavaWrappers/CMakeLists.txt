@@ -9,7 +9,7 @@ SET(CMAKE_SWIG_FLAGS "")
 
 
 set(swigRDKitLibSuffix "")
-if(RDK_SWIG_STATIC AND (NOT MSVC))
+if(RDK_SWIG_STATIC AND ((NOT MSVC) OR (MSVC AND RDK_INSTALL_DLLS_MSVC)))
   set(swigRDKitLibSuffix "_static")
 endif()
 set(swigRDKitLibList "")
@@ -20,7 +20,7 @@ if(RDK_BUILD_INCHI_SUPPORT)
   set(swigRDKitLibList "${swigRDKitLibList}RDInchiLib;${INCHI_LIBRARIES};")
 endif(RDK_BUILD_INCHI_SUPPORT)
 set(swigRDKitLibList "${swigRDKitLibList}"
-  "FilterCatalog;Catalogs;FMCS;MolDraw2D;FileParsers;SmilesParse;"
+  "MolStandardize;FilterCatalog;Catalogs;FMCS;MolDraw2D;FileParsers;SmilesParse;"
   "Depictor;SubstructMatch;ChemReactions;Fingerprints;ChemTransforms;"
   "Subgraphs;GraphMol;DataStructs;Trajectory;Descriptors;"
   "PartialCharges;MolTransforms;DistGeomHelpers;DistGeometry;"

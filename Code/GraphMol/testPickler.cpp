@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <RDGeneral/utils.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/RDKitQueries.h>
@@ -360,7 +361,8 @@ void testQueries() {
   MolPickler::molFromPickle(pickle, *m1);
   TEST_ASSERT(m1->getNumAtoms() == 1);
   TEST_ASSERT(m1->getAtomWithIdx(0)->hasQuery());
-  TEST_ASSERT(m1->getAtomWithIdx(0)->getQuery()->getDescription() == "AtomAnd");
+  TEST_ASSERT(m1->getAtomWithIdx(0)->getQuery()->getDescription() ==
+              "AtomType");
   // query should be for aliphatic C:
   smi = "C";
   m2 = SmilesToMol(smi);
@@ -527,7 +529,8 @@ void testQueries() {
   TEST_ASSERT(m1->getAtomWithIdx(0)->hasQuery());
   TEST_ASSERT(m1->getAtomWithIdx(1)->hasQuery());
   TEST_ASSERT(m1->getBondWithIdx(0)->hasQuery());
-  TEST_ASSERT(m1->getBondWithIdx(0)->getQuery()->getDescription() == "BondOr");
+  TEST_ASSERT(m1->getBondWithIdx(0)->getQuery()->getDescription() ==
+              "SingleOrAromaticBond");
   smi = "CC";
   m2 = SmilesToMol(smi);
   TEST_ASSERT(m2);
@@ -1271,6 +1274,68 @@ void testGithub1710() {
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
 
+void testGithub1999() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n";
+  BOOST_LOG(rdInfoLog) << "Testing Github 1999: pickling atom map numbers >127 "
+                          "gives negative values"
+                       << std::endl;
+
+  {
+    RWMol m;
+    m.addAtom(new Atom(6), false, true);
+    m.getAtomWithIdx(0)->setAtomMapNum(777);
+    std::string pkl;
+    MolPickler::pickleMol(m, pkl);
+    std::unique_ptr<RWMol> m2(new RWMol(pkl));
+    TEST_ASSERT(m2->getAtomWithIdx(0)->getAtomMapNum() == 777);
+  }
+  {
+    RWMol m;
+    m.addAtom(new Atom(6), false, true);
+    m.getAtomWithIdx(0)->setAtomMapNum(128);
+    std::string pkl;
+    MolPickler::pickleMol(m, pkl);
+    std::unique_ptr<RWMol> m2(new RWMol(pkl));
+    TEST_ASSERT(m2->getAtomWithIdx(0)->getAtomMapNum() == 128);
+  }
+  BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
+}
+
+void testEnhancedStereoChemistry() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n";
+  BOOST_LOG(rdInfoLog) << "Testing that enhanced stereochemistry is pickled"
+                       << std::endl;
+  RWMol m;
+  for (unsigned i = 0u; i < 6; ++i) {
+    m.addAtom(new Atom(6), false, true);
+  }
+
+  // add 3 stereo groups
+  {
+    std::vector<StereoGroup> groups;
+    std::vector<Atom *> atoms0 = {{m.getAtomWithIdx(0), m.getAtomWithIdx(1)}};
+    groups.emplace_back(RDKit::StereoGroupType::STEREO_ABSOLUTE,
+                        std::move(atoms0));
+    std::vector<Atom *> atoms1 = {{m.getAtomWithIdx(2), m.getAtomWithIdx(3)}};
+    groups.emplace_back(RDKit::StereoGroupType::STEREO_OR, std::move(atoms1));
+    std::vector<Atom *> atoms2 = {{m.getAtomWithIdx(4), m.getAtomWithIdx(5)}};
+    groups.emplace_back(RDKit::StereoGroupType::STEREO_AND, std::move(atoms2));
+    m.setStereoGroups(std::move(groups));
+  }
+
+  std::string pkl;
+  MolPickler::pickleMol(m, pkl);
+
+  std::unique_ptr<RWMol> roundTripped(new RWMol(pkl));
+
+  auto &ref_groups = m.getStereoGroups();
+  auto &new_groups = roundTripped->getStereoGroups();
+  TEST_ASSERT(ref_groups.size() == new_groups.size());
+  for (unsigned i = 0u; i < 3; ++i) {
+    TEST_ASSERT(ref_groups[i].getGroupType() == new_groups[i].getGroupType());
+  }
+}
+
 int main(int argc, char *argv[]) {
   RDLog::InitLogs();
   bool doLong = false;
@@ -1305,4 +1370,6 @@ int main(int argc, char *argv[]) {
   testGithub713();
   testGithub1563();
   testGithub1710();
+  testGithub1999();
+  testEnhancedStereoChemistry();
 }

@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/MonomerInfo.h>
 #include <GraphMol/RDKitQueries.h>

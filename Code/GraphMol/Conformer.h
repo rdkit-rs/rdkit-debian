@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef _RD_CONFORMER_H
 #define _RD_CONFORMER_H
 
@@ -18,7 +19,7 @@ namespace RDKit {
 class ROMol;
 
 //! used to indicate errors from incorrect confomer access
-class ConformerException : public std::exception {
+class RDKIT_GRAPHMOL_EXPORT ConformerException : public std::exception {
  public:
   //! construct with an error message
   ConformerException(const char *msg) : _msg(msg){};
@@ -38,7 +39,7 @@ class ConformerException : public std::exception {
   - a pointer to the owing molecule
   - a vector of 3D points (positions of atoms)
 */
-class Conformer {
+class RDKIT_GRAPHMOL_EXPORT Conformer {
  public:
   friend class ROMol;
 
@@ -114,9 +115,9 @@ class Conformer {
 
   //! Get the number of atoms
   inline unsigned int getNumAtoms() const { return rdcast<unsigned int>(d_positions.size()); }
-
   inline bool is3D() const { return df_is3D; }
   inline void set3D(bool v) { df_is3D = v; }
+
 
  protected:
   //! Set owning moelcule
@@ -133,6 +134,20 @@ class Conformer {
 };
 
 typedef boost::shared_ptr<Conformer> CONFORMER_SPTR;
+
+//! Returns true if any of the z coords are non zero, false otherwise
+/*!
+  \param conf  Conformer object to analyze
+*/
+inline bool hasNonZeroZCoords(const Conformer &conf) {
+  for(auto p: conf.getPositions()) {
+    if (p.z != 0.0)
+      return true;
+  }
+  return false;
+
+}
+
 }
 
 #endif

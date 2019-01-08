@@ -1,3 +1,5 @@
+
+add_definitions(-DRDKIT_GRAPHMOL_BUILD)
 rdkit_library(GraphMol
               Atom.cpp QueryAtom.cpp QueryBond.cpp Bond.cpp
               MolOps.cpp FindRings.cpp ROMol.cpp RWMol.cpp PeriodicTable.cpp
@@ -5,7 +7,7 @@ rdkit_library(GraphMol
               AtomIterators.cpp BondIterators.cpp Aromaticity.cpp Kekulize.cpp
               MolDiscriminators.cpp ConjugHybrid.cpp AddHs.cpp
               Matrices.cpp Chirality.cpp RingInfo.cpp Conformer.cpp
-              Renumber.cpp AdjustQuery.cpp Resonance.cpp
+              Renumber.cpp AdjustQuery.cpp Resonance.cpp StereoGroup.cpp
               new_canon.cpp
               SHARED
               LINK_LIBRARIES RDGeometryLib RDGeneral
@@ -37,6 +39,7 @@ rdkit_headers(Atom.h
               ROMol.h
               RWMol.h
               SanitException.h
+              StereoGroup.h
               MonomerInfo.h
               new_canon.h
               MolBundle.h
@@ -66,7 +69,6 @@ add_subdirectory(MolChemicalFeatures)
 add_subdirectory(ShapeHelpers)
 add_subdirectory(MolCatalog)
 
-add_subdirectory(MolDrawing)
 add_subdirectory(MolDraw2D)
 
 add_subdirectory(FMCS)
@@ -94,6 +96,8 @@ if(RDK_BUILD_SLN_SUPPORT AND NOT CMAKE_COMPILER_IS_CLANG)
 endif()
 
 add_subdirectory(Wrap)
+
+add_subdirectory(MolStandardize)
 
 rdkit_test(graphmolTest1 test1.cpp LINK_LIBRARIES FileParsers SmilesParse GraphMol
 RDGeometryLib RDGeneral SubstructMatch ForceFieldHelpers ForceField)
@@ -134,3 +138,6 @@ rdkit_test(molBundleTest testMolBundle.cpp
           LINK_LIBRARIES SmilesParse GraphMol RDGeometryLib RDGeneral SubstructMatch FileParsers)
 
 rdkit_test(test-valgrind test-valgrind.cpp LINK_LIBRARIES SmilesParse GraphMol RDGeneral)
+
+rdkit_catch_test(graphmolTestsCatch catch_tests.cpp
+           LINK_LIBRARIES SubstructMatch FileParsers SmilesParse GraphMol RDGeometryLib RDGeneral)

@@ -18,7 +18,7 @@
 #include <GraphMol/MolDraw2D/MolDraw2DSVG.h>
 #include <Geometry/point.h>
 #include <boost/python/suite/indexing/map_indexing_suite.hpp>
-#ifdef RDK_CAIRO_BUILD
+#ifdef RDK_BUILD_CAIRO_SUPPORT
 #include <cairo.h>
 #include <GraphMol/MolDraw2D/MolDraw2DCairo.h>
 #endif
@@ -89,7 +89,7 @@ void pyListToColourVec(python::object pyo, std::vector<DrawColour> &res) {
     res.push_back(pyTupleToDrawColour(tpl));
   }
 }
-}
+}  // namespace
 
 void drawMoleculeHelper1(MolDraw2D &self, const ROMol &mol,
                          python::object highlight_atoms,
@@ -136,8 +136,9 @@ void drawMoleculesHelper2(MolDraw2D &self, python::object pmols,
                           python::object highlight_bond_map,
                           python::object highlight_atom_radii,
                           python::object pconfIds, python::object plegends) {
-  std::unique_ptr<std::vector<ROMol *>> mols = pythonObjectToVect<ROMol *>(pmols);
-  if(mols==nullptr || !mols->size() ){
+  std::unique_ptr<std::vector<ROMol *>> mols =
+      pythonObjectToVect<ROMol *>(pmols);
+  if (mols == nullptr || !mols->size()) {
     return;
   }
   unsigned int nThere = mols->size();
@@ -244,7 +245,7 @@ void drawReactionHelper(MolDraw2D &self, const ChemicalReaction &rxn,
                     confIds.get());
 }
 
-#ifdef RDK_CAIRO_BUILD
+#ifdef RDK_BUILD_CAIRO_SUPPORT
 python::object getCairoDrawingText(const RDKit::MolDraw2DCairo &self) {
   std::string res = self.getDrawingText();
   python::object retval = python::object(
@@ -294,7 +295,13 @@ void setAtomPalette(RDKit::MolDrawOptions &self, python::object cmap) {
   self.atomColourPalette.clear();
   updateAtomPalette(self, cmap);
 }
+
+void addMoleculeMetadata(const RDKit::MolDraw2DSVG &self, const RDKit::ROMol &m,
+                         int confId) {
+  self.addMoleculeMetadata(m, confId);
 }
+
+}  // namespace RDKit
 
 BOOST_PYTHON_MODULE(rdMolDraw2D) {
   python::scope().attr("__doc__") =
@@ -411,18 +418,21 @@ BOOST_PYTHON_MODULE(rdMolDraw2D) {
       .def("DrawString", &RDKit::MolDraw2D::drawString,
            (python::arg("self"), python::arg("string"), python::arg("pos")),
            "add text to the canvas")
-      .def("GetDrawCoords", (RDGeom::Point2D(RDKit::MolDraw2D::*)(
-                                const RDGeom::Point2D &) const) &
-                                RDKit::MolDraw2D::getDrawCoords,
+      .def("GetDrawCoords",
+           (RDGeom::Point2D(RDKit::MolDraw2D::*)(const RDGeom::Point2D &)
+                const) &
+               RDKit::MolDraw2D::getDrawCoords,
            (python::arg("self"), python::arg("point")),
            "get the coordinates in drawing space for a particular point in "
            "molecule space")
-      .def("GetDrawCoords", (RDGeom::Point2D(RDKit::MolDraw2D::*)(int) const) &
-                                RDKit::MolDraw2D::getDrawCoords,
+      .def("GetDrawCoords",
+           (RDGeom::Point2D(RDKit::MolDraw2D::*)(int) const) &
+               RDKit::MolDraw2D::getDrawCoords,
            (python::arg("self"), python::arg("atomIndex")),
            "get the coordinates in drawing space for a particular atom")
-      .def("drawOptions", (RDKit::MolDrawOptions & (RDKit::MolDraw2D::*)()) &
-                              RDKit::MolDraw2D::drawOptions,
+      .def("drawOptions",
+           (RDKit::MolDrawOptions & (RDKit::MolDraw2D::*)()) &
+               RDKit::MolDraw2D::drawOptions,
            python::return_internal_reference<
                1, python::with_custodian_and_ward_postcall<0, 1>>(),
            "Returns a modifiable version of the current drawing options");
@@ -433,10 +443,13 @@ BOOST_PYTHON_MODULE(rdMolDraw2D) {
       .def(python::init<int, int, int, int>())
       .def("FinishDrawing", &RDKit::MolDraw2DSVG::finishDrawing,
            "add the last bits of SVG to finish the drawing")
+      .def("AddMoleculeMetadata", RDKit::addMoleculeMetadata,
+           (python::arg("mol"), python::arg("confId") = -1),
+           "add RDKit-specific information to the bottom of the drawing")
       .def("GetDrawingText", &RDKit::MolDraw2DSVG::getDrawingText,
            "return the SVG");
 
-#ifdef RDK_CAIRO_BUILD
+#ifdef RDK_BUILD_CAIRO_SUPPORT
   docString = "Cairo molecule drawer";
   python::class_<RDKit::MolDraw2DCairo, python::bases<RDKit::MolDraw2D>,
                  boost::noncopyable>("MolDraw2DCairo", docString.c_str(),

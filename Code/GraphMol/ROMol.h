@@ -14,6 +14,7 @@
 
 */
 
+#include <RDGeneral/export.h>
 #ifndef __RD_ROMOL_H__
 #define __RD_ROMOL_H__
 
@@ -32,8 +33,8 @@
 #include <RDGeneral/RDProps.h>
 #include "Atom.h"
 #include "Bond.h"
-
 #include "Conformer.h"
+#include "StereoGroup.h"
 
 namespace RDKit {
 class Atom;
@@ -62,9 +63,9 @@ class QueryAtomIterator_;
 template <class T1, class T2>
 class MatchingAtomIterator_;
 
-extern const int ci_RIGHTMOST_ATOM;
-extern const int ci_LEADING_BOND;
-extern const int ci_ATOM_HOLDER;
+RDKIT_GRAPHMOL_EXPORT extern const int ci_RIGHTMOST_ATOM;
+RDKIT_GRAPHMOL_EXPORT extern const int ci_LEADING_BOND;
+RDKIT_GRAPHMOL_EXPORT extern const int ci_ATOM_HOLDER;
 
 //! ROMol is a molecule class that is intended to have a fixed topology
 /*!
@@ -165,7 +166,7 @@ struct CXXBondIterator {
   CXXBondIter end() { return {graph, vend}; }
 };
 
-class ROMol : public RDProps {
+class RDKIT_GRAPHMOL_EXPORT ROMol : public RDProps {
  public:
   friend class MolPickler;
   friend class RWMol;
@@ -647,12 +648,23 @@ class ROMol : public RDProps {
   Bond *operator[](const edge_descriptor &e) { return d_graph[e]; };
   const Bond *operator[](const edge_descriptor &e) const { return d_graph[e]; };
 
+  //! Gets a reference to the groups of atoms with relative stereochemistry
+  /*!
+    Stereo groups are also called enhanced stereochemistry in the SDF/Mol3000
+    file format.
+  */
+  const std::vector<StereoGroup> &getStereoGroups() const {
+    return d_stereo_groups;
+  }
+
  private:
   MolGraph d_graph;
   ATOM_BOOKMARK_MAP d_atomBookmarks;
   BOND_BOOKMARK_MAP d_bondBookmarks;
   RingInfo *dp_ringInfo;
   CONF_SPTR_LIST d_confs;
+  std::vector<StereoGroup> d_stereo_groups;
+
   ROMol &operator=(
       const ROMol &);  // disable assignment, RWMol's support assignment
 
@@ -686,6 +698,15 @@ class ROMol : public RDProps {
     \return the new number of bonds
   */
   unsigned int addBond(Bond *bond, bool takeOwnership = false);
+
+  //! Sets groups of atoms with relative stereochemistry
+  /*!
+    \param stereo_groups the new set of stereo groups. All will be replaced.
+
+    Stereo groups are also called enhanced stereochemistry in the SDF/Mol3000
+    file format. stereo_groups should be std::move()ed into this function.
+  */
+  void setStereoGroups(std::vector<StereoGroup> stereo_groups);
   //! adds a Bond to our collection
   /*!
     \param bond          pointer to the Bond to add
@@ -707,5 +728,5 @@ typedef std::vector<ROMOL_SPTR> MOL_SPTR_VECT;
 typedef MOL_PTR_VECT::const_iterator MOL_PTR_VECT_CI;
 typedef MOL_PTR_VECT::iterator MOL_PTR_VECT_I;
 
-};  // end of RDKit namespace
+};  // namespace RDKit
 #endif

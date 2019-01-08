@@ -29,6 +29,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#include <RDGeneral/export.h>
 #ifndef RDKIT_H_PSQL
 #define RDKIT_H_PSQL
 
@@ -261,6 +262,8 @@ CChemicalReaction parseChemReactCTAB(char *data, bool warnOnFail);
 char *makeChemReactBlob(CChemicalReaction data, int *len);
 char *makeChemReactText(CChemicalReaction data, int *len, bool asSmarts);
 char *makeCTABChemReact(CChemicalReaction data, int *len);
+char *ReactionGetSVG(CChemicalReaction i, unsigned int w, unsigned int h,
+                     bool highlightByReactant, const char *params);
 
 int ChemReactNumReactants(CChemicalReaction rxn);
 int ChemReactNumProducts(CChemicalReaction rxn);

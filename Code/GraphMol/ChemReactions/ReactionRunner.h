@@ -30,6 +30,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <RDGeneral/export.h>
 #ifndef RD_REACTION_RUNNER_H
 #define RD_REACTION_RUNNER_H
 
@@ -45,7 +46,8 @@ namespace RDKit {
                     rxn->getNumReactantTemplates()
                     Caution: The order of the reactant templates determines the
   order of the reactants!
-
+  \param maxProducts:  if non zero, the maximum number of products to generate
+                       before stopping.  If hit a warning will be generated.
   \return a vector of vectors of products. Each subvector will be
           rxn->getNumProductTemplates() long.
 
@@ -53,8 +55,9 @@ namespace RDKit {
   map multiple times onto its reactant. This leads to multiple possible result
   sets.
 */
-std::vector<MOL_SPTR_VECT> run_Reactants(const ChemicalReaction& rxn,
-                                         const MOL_SPTR_VECT& reactants);
+RDKIT_CHEMREACTIONS_EXPORT std::vector<MOL_SPTR_VECT> run_Reactants(
+    const ChemicalReaction& rxn, const MOL_SPTR_VECT& reactants,
+    unsigned int maxProducts=1000);
 
 //! Runs a single reactant against a single reactant template
 /*!
@@ -71,7 +74,7 @@ std::vector<MOL_SPTR_VECT> run_Reactants(const ChemicalReaction& rxn,
 
 */
 
-std::vector<MOL_SPTR_VECT> run_Reactant(const ChemicalReaction& rxn,
+RDKIT_CHEMREACTIONS_EXPORT std::vector<MOL_SPTR_VECT> run_Reactant(const ChemicalReaction& rxn,
                                         const ROMOL_SPTR& reactant,
                                         unsigned int reactantIdx);
 
@@ -90,15 +93,15 @@ std::vector<MOL_SPTR_VECT> run_Reactant(const ChemicalReaction& rxn,
          _rgroupBonds property which indicates the bondtype for each atommap bonded
 */
 
-ROMol* reduceProductToSideChains(const ROMOL_SPTR& product,
+RDKIT_CHEMREACTIONS_EXPORT ROMol* reduceProductToSideChains(const ROMOL_SPTR& product,
                                  bool addDummyAtoms = true);
 
 namespace ReactionRunnerUtils {
-MOL_SPTR_VECT generateOneProductSet(
+RDKIT_CHEMREACTIONS_EXPORT MOL_SPTR_VECT generateOneProductSet(
     const ChemicalReaction &rxn, const MOL_SPTR_VECT &reactants,
     const std::vector<MatchVectType> &reactantsMatch);
 
-RWMOL_SPTR convertTemplateToMol(const ROMOL_SPTR prodTemplateSptr);
+RDKIT_CHEMREACTIONS_EXPORT RWMOL_SPTR convertTemplateToMol(const ROMOL_SPTR prodTemplateSptr);
 }
 
 }  // end of RDKit namespace

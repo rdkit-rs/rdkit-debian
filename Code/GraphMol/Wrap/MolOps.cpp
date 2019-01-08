@@ -993,7 +993,8 @@ struct molops_wrapper {
     - Hs connected to dummy atoms will not be removed\n\
     - Hs that are part of the definition of double bond Stereochemistry\n\
       will not be removed\n\
-\n";
+    - Hs that are not connected to anything else will not be removed\n\
+\n ";
     python::def("RemoveHs",
                 (ROMol * (*)(const ROMol &, bool, bool, bool)) MolOps::removeHs,
                 (python::arg("mol"), python::arg("implicitOnly") = false,
@@ -1573,6 +1574,23 @@ struct molops_wrapper {
                 (python::arg("mol"), python::arg("cleanIt") = false,
                  python::arg("force") = false,
                  python::arg("flagPossibleStereoCenters") = false),
+                docString.c_str());
+
+    // ------------------------------------------------------------------------
+    docString =
+        "Uses a conformer (should be 3D) to assign ChiralTypes to a molecule's atoms\n\
+        and stereo flags to its bonds\n\
+\n\
+  ARGUMENTS:\n\
+\n\
+    - mol: the molecule to use\n\
+    - confId: (optional) the conformation to use \n\
+    - replaceExistingTags: (optional) replace any existing information about stereochemistry\n\
+\n";
+    python::def("AssignStereochemistryFrom3D",
+                MolOps::assignStereochemistryFrom3D,
+                (python::arg("mol"), python::arg("confId") = -1,
+                 python::arg("replaceExistingTags") = true),
                 docString.c_str());
 
     // ------------------------------------------------------------------------
@@ -2160,7 +2178,7 @@ Attributes:\n\
   - adjustRingCount: \n\
       modified atoms have a ring-count query added based on their ring count in the query \n\
   - adjustRingCountFlags: \n\
-      controls which atoms have a ring-cout query added \n\
+      controls which atoms have a ring-count query added \n\
   - makeDummiesQueries: \n\
       dummy atoms that do not have a specified isotope are converted to any-atom queries \n\
   - aromatizeIfPossible: \n\
@@ -2173,6 +2191,10 @@ Attributes:\n\
       convert atoms to generic (any) atoms \n\
   - makeAtomsGenericFlags: \n\
       controls which atoms are made generic \n\
+  - adjustRingChain: \n\
+      modified atoms have a ring-chain query added based on whether or not they are in a ring \n\
+  - adjustRingChainFlags: \n\
+      controls which atoms have a ring-chain query added \n\
 \n\
 A note on the flags controlling which atoms/bonds are modified: \n\
    These generally limit the set of atoms/bonds to be modified.\n\
@@ -2206,7 +2228,11 @@ A note on the flags controlling which atoms/bonds are modified: \n\
         .def_readwrite("makeAtomsGeneric",
                        &MolOps::AdjustQueryParameters::makeAtomsGeneric)
         .def_readwrite("makeAtomsGenericFlags",
-                       &MolOps::AdjustQueryParameters::makeAtomsGenericFlags);
+                       &MolOps::AdjustQueryParameters::makeAtomsGenericFlags)
+        .def_readwrite("adjustRingChain",
+                       &MolOps::AdjustQueryParameters::adjustRingChain)
+        .def_readwrite("adjustRingChainFlags",
+                       &MolOps::AdjustQueryParameters::adjustRingChainFlags);
 
     docString =
         "Returns a new molecule where the query properties of atoms have been "

@@ -11,6 +11,7 @@
 //! \file Rings.h
 //! \brief utility functionality for working with ring systems
 
+#include <RDGeneral/export.h>
 #ifndef _RDRINGS_H_
 #define _RDRINGS_H_
 
@@ -42,8 +43,11 @@ typedef std::map<int, std::vector<int>> INT_INT_VECT_MAP;
    \param depth used to track recursion depth
 
 */
-void pickFusedRings(int curr, const INT_INT_VECT_MAP &neighMap, INT_VECT &res,
-                    boost::dynamic_bitset<> &done, int depth = 0);
+RDKIT_GRAPHMOL_EXPORT void pickFusedRings(int curr,
+                                          const INT_INT_VECT_MAP &neighMap,
+                                          INT_VECT &res,
+                                          boost::dynamic_bitset<> &done,
+                                          int depth = 0);
 
 //! \brief For each ring in bring compute and strore the ring that are fused
 //! (share atleast one bond with it).
@@ -61,9 +65,10 @@ void pickFusedRings(int curr, const INT_INT_VECT_MAP &neighMap, INT_VECT &res,
                         this will not be considered to be neighbors
 
 */
-void makeRingNeighborMap(const VECT_INT_VECT &brings,
-                         INT_INT_VECT_MAP &neighMap, unsigned int maxSize = 0,
-                         unsigned int maxOverlapSize = 0);
+RDKIT_GRAPHMOL_EXPORT void makeRingNeighborMap(const VECT_INT_VECT &brings,
+                                               INT_INT_VECT_MAP &neighMap,
+                                               unsigned int maxSize = 0,
+                                               unsigned int maxOverlapSize = 0);
 
 //! converts a list of atom indices into a list of bond indices
 /*!
@@ -77,8 +82,9 @@ void makeRingNeighborMap(const VECT_INT_VECT &brings,
    - each list of atom ids in "res" form a legitimate ring
    - each of these list of ordered such that a ring can be traversed
 */
-void convertToBonds(const VECT_INT_VECT &res, VECT_INT_VECT &brings,
-                    const RDKit::ROMol &mol);
-};
+RDKIT_GRAPHMOL_EXPORT void convertToBonds(const VECT_INT_VECT &res,
+                                          VECT_INT_VECT &brings,
+                                          const RDKit::ROMol &mol);
+};  // namespace RingUtils
 
 #endif

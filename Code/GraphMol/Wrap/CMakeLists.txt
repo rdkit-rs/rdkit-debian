@@ -1,3 +1,4 @@
+remove_definitions(-DRDKIT_GRAPHMOL_BUILD)
 rdkit_python_extension(rdchem
                        rdchem.cpp Table.cpp Atom.cpp Bond.cpp Mol.cpp
                        Conformer.cpp RingInfo.cpp EditableMol.cpp MonomerInfo.cpp
@@ -21,17 +22,23 @@ rdkit_python_extension(rdqueries
                        LINK_LIBRARIES
                        GraphMol RDGeometryLib DataStructs RDGeneral RDBoost  )
 
+if(RDK_BUILD_COORDGEN_SUPPORT)
+    set (maesupplier MaeMolSupplier.cpp)
+else()
+    set (maesupplier "")
+endif()
+
 if(RDK_BUILD_COMPRESSED_SUPPLIERS)
 find_package(Boost 1.56.0 COMPONENTS iostreams REQUIRED)
 set(rdmolfiles_sources rdmolfiles.cpp
-                       ForwardSDMolSupplier.cpp
+                       ForwardSDMolSupplier.cpp ${maesupplier}
                        SDMolSupplier.cpp TDTMolSupplier.cpp
                        SmilesMolSupplier.cpp SmilesWriter.cpp SDWriter.cpp
                        TDTWriter.cpp CompressedSDMolSupplier.cpp
                        PDBWriter.cpp )
 else(RDK_BUILD_COMPRESSED_SUPPLIERS)
 set(rdmolfiles_sources rdmolfiles.cpp
-                       ForwardSDMolSupplier.cpp
+                       ForwardSDMolSupplier.cpp ${maesupplier}
                        SDMolSupplier.cpp TDTMolSupplier.cpp
                        SmilesMolSupplier.cpp SmilesWriter.cpp SDWriter.cpp
                        TDTWriter.cpp

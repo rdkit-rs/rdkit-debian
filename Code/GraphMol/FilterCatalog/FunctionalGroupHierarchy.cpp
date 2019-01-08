@@ -30,6 +30,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "FunctionalGroupHierarchy.h"
 #include "FilterMatchers.h"
 #include "FilterCatalog.h"
 #include <GraphMol/SmilesParse/SmilesParse.h>
@@ -171,9 +172,6 @@ const FuncData_t FuncDataArray[] = {
      "Aliphatic Nitro", nullptr},
 
     {0, "TerminalAlkyne", "[C;$(C#[CH])]", "Terminal Alkyne", nullptr}};
-
-const unsigned int NUM_FUNCS =
-    static_cast<unsigned int>(sizeof(FuncDataArray) / sizeof(FuncData_t));
 
 FilterCatalog &hierarchy_get() {
   static FilterCatalog fgroup;

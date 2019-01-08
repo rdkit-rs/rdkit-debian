@@ -9,6 +9,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/test.h>
 #include <RDGeneral/utils.h>
 #include <Geometry/point.h>
 #include <GraphMol/RDKitBase.h>

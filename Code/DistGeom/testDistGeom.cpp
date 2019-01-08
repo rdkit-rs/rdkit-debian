@@ -9,6 +9,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/test.h>
 #include "BoundsMatrix.h"
 #include "TriangleSmooth.h"
 #include <iostream>

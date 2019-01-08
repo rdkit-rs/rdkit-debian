@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/export.h>
 #ifndef PMI_H_SEPT2016
 #define PMI_H_SEPT2016
 
@@ -18,22 +19,32 @@ namespace Descriptors {
 //! Normalized principal moments ratio 1 (=I1/I3)
 //!  from Sauer and Schwarz JCIM 43:987-1003 (2003)
 //!  https://dx.doi.org/10.1021/ci025599w
-double NPR1(const ROMol&, int confId = -1, bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT double NPR1(const ROMol&, int confId = -1,
+                                     bool useAtomicMasses = true,
+                                     bool force = false);
 const std::string NPR1Version = "1.0.0";
 //! Normalized principal moments ratio 2 (=I2/I3)
 //!  from Sauer and Schwarz JCIM 43:987-1003 (2003)
 //!  https://dx.doi.org/10.1021/ci025599w
-double NPR2(const ROMol&, int confId = -1, bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT double NPR2(const ROMol&, int confId = -1,
+                                     bool useAtomicMasses = true,
+                                     bool force = false);
 const std::string NPR2Version = "1.0.0";
 
 //! First (smallest) principal moment of inertia
-double PMI1(const ROMol&, int confId = -1, bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT double PMI1(const ROMol&, int confId = -1,
+                                     bool useAtomicMasses = true,
+                                     bool force = false);
 const std::string PMI1Version = "1.0.0";
 //! second principal moment of inertia
-double PMI2(const ROMol&, int confId = -1, bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT RDKIT_DESCRIPTORS_EXPORT double PMI2(
+    const ROMol&, int confId = -1, bool useAtomicMasses = true,
+    bool force = false);
 const std::string PMI2Version = "1.0.0";
 //! Third (largest) principal moment of inertia
-double PMI3(const ROMol&, int confId = -1, bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT double PMI3(const ROMol&, int confId = -1,
+                                     bool useAtomicMasses = true,
+                                     bool force = false);
 const std::string PMI3Version = "1.0.0";
 
 /*!
@@ -45,8 +56,9 @@ const std::string PMI3Version = "1.0.0";
  Definition (eq: A4):
     sqrt(t_1 + t_2 + t_3) where t_i is the ith moment from the gyration matrix
 */
-double radiusOfGyration(const ROMol&, int confId = -1,
-                        bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT double radiusOfGyration(const ROMol&, int confId = -1,
+                                                 bool useAtomicMasses = true,
+                                                 bool force = false);
 const std::string radiusOfGyrationVersion = "1.0.0";
 /*!
  Inertial shape factor
@@ -57,8 +69,10 @@ const std::string radiusOfGyrationVersion = "1.0.0";
  Definition:
    pm2 / (pm1*pm3)
 */
-double inertialShapeFactor(const ROMol&, int confId = -1,
-                           bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT double inertialShapeFactor(const ROMol&,
+                                                    int confId = -1,
+                                                    bool useAtomicMasses = true,
+                                                    bool force = false);
 const std::string inertialShapeFactorVersion = "1.0.0";
 /*!
  Molecular eccentricity
@@ -69,7 +83,9 @@ const std::string inertialShapeFactorVersion = "1.0.0";
  Definition (eq 4):
  sqrt(pm_3**2 -pm_1**2) / pm_3**2  where pm_i is the ith moment of inertia
 */
-double eccentricity(const ROMol&, int confId = -1, bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT double eccentricity(const ROMol&, int confId = -1,
+                                             bool useAtomicMasses = true,
+                                             bool force = false);
 const std::string eccentricityVersion = "1.0.0";
 /*!
  molecular asphericity
@@ -89,7 +105,9 @@ const std::string eccentricityVersion = "1.0.0";
    The definition here corresponds to what Dragon generates and seem logical
 
 */
-double asphericity(const ROMol&, int confId = -1, bool useAtomicMasses = true);
+RDKIT_DESCRIPTORS_EXPORT double asphericity(const ROMol&, int confId = -1,
+                                            bool useAtomicMasses = true,
+                                            bool force = false);
 const std::string asphericityVersion = "1.0.0";
 /*!
  Spherocity index
@@ -101,9 +119,10 @@ const std::string asphericityVersion = "1.0.0";
  3 * t_1 / (t_1+t_2+t_3)
     where the moments of the gyration matrix are calculated without weights
 */
-double spherocityIndex(const ROMol&, int confId = -1);
+RDKIT_DESCRIPTORS_EXPORT double spherocityIndex(const ROMol&, int confId = -1,
+                                                bool force = false);
 const std::string spherocityIndexVersion = "1.0.0";
-}
-}
+}  // namespace Descriptors
+}  // namespace RDKit
 #endif
 #endif
