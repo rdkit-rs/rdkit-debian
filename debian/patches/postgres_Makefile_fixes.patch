@@ -1,13 +1,12 @@
---- ./Code/PgSQL/rdkit/Makefile.orig	2018-12-09 13:38:26.549092930 +0100
-+++ ./Code/PgSQL/rdkit/Makefile	2018-12-09 13:38:43.793595402 +0100
-@@ -10,9 +10,10 @@
- #STATIC_LINK=1
+--- ./Code/PgSQL/rdkit/Makefile.orig	2018-12-09 22:59:02.537960843 +0100
++++ ./Code/PgSQL/rdkit/Makefile	2018-12-09 22:59:21.682102215 +0100
+@@ -11,8 +11,9 @@
  # -------------------------
  
-+override with_llvm=no
  
- RDKIT=$(RDBASE)
--
+-RDKIT=$(RDBASE)
+ 
++RDKIT=$(RDBASE)
 +RDKIT_PGSQL_SRCDIR=$(RDBASE)/Code/PgSQL/rdkit
  
  ifeq ($(USE_INCHI),1)
@@ -55,3 +54,13 @@
  EXTRA_CLEAN = $(EXTENSION)--$(EXTVERSION).sql
  include $(PGXS)
  
+@@ -101,3 +102,9 @@
+ 
+ %.o : %.cpp
+ 	$(CXX) $(CPLUSPLUSFLAGS) $(CPPFLAGS) -fPIC -c -o $@ $<
++
++COMPILE.cxx.bc = $(CLANG) -xc++ -Wno-ignored-attributes $(BITCODE_CXXFLAGS) $(CPPFLAGS) -emit-llvm -c
++
++%.bc : %.cpp
++	$(COMPILE.cxx.bc) -o $@ $<
++	opt-7 -module-summary -f $@ -o $@
