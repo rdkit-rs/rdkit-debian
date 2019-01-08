@@ -1,6 +1,5 @@
-rdkit (201803.4+dfsg-3) UNRELEASED; urgency=medium
+rdkit (201803.4+dfsg-3) unstable; urgency=medium
 
-  [ Michael Banck ]
   * debian/patches/postgres_Makefile_fixes.patch: Remove -mpopcnt from
     PG_CPPFLAGS.
   * debian/control.in (postgresql-PGVERSION-rdkit/Section): Fixed.
@@ -9,7 +8,7 @@ rdkit (201803.4+dfsg-3) UNRELEASED; urgency=medium
     description.
   * debian/control: Regenerated.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 08 Jan 2019 17:57:56 +0100
+ -- Michael Banck <mbanck@debian.org>  Tue, 08 Jan 2019 21:00:28 +0100
 
 rdkit (201803.4+dfsg-2) unstable; urgency=medium
 
