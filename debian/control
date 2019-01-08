@@ -161,7 +161,7 @@ Architecture: any
 Section: database
 Depends: ${misc:Depends}, ${shlibs:Depends}, postgresql-11
 Suggests:
-Description: Collection of cheminformatics and machine-learning software (PostgreSQL Cartridge)
+Description: Cheminformatics and machine-learning software (PostgreSQL Cartridge)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
  .
