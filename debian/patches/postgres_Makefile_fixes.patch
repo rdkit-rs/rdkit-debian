@@ -1,5 +1,7 @@
---- ./Code/PgSQL/rdkit/Makefile.orig	2018-12-09 22:59:02.537960843 +0100
-+++ ./Code/PgSQL/rdkit/Makefile	2018-12-09 22:59:21.682102215 +0100
+Index: rdkit/Code/PgSQL/rdkit/Makefile
+===================================================================
+--- rdkit.orig/Code/PgSQL/rdkit/Makefile
++++ rdkit/Code/PgSQL/rdkit/Makefile
 @@ -11,8 +11,9 @@
  # -------------------------
  
@@ -11,7 +13,13 @@
  
  ifeq ($(USE_INCHI),1)
    INCHILIBS=-lRDInchiLib -lInchi
-@@ -32,12 +33,13 @@
+@@ -26,18 +27,17 @@ ifeq ($(USE_AVALON),1)
+   AVALONREGRESS=avalon
+ endif
+ 
+-POPCOUNTFLAGS=-DUSE_BUILTIN_POPCOUNT -mpopcnt
+-
+ ifeq ($(USE_THREADS),1)
    THREADLIBS=-L${BOOSTHOME}/lib -lboost_thread -lboost_system
  endif
  
@@ -28,7 +36,16 @@
  endif
  
  ifndef BOOSTHOME
-@@ -56,7 +58,7 @@
+@@ -47,7 +47,7 @@ SHLIB_LINK += -pthread
+ 
+ SHLIB_LINK += ${THREADLIBS}
+ 
+-PG_CPPFLAGS = -I${BOOSTHOME}/include -I${RDKIT}/Code -DRDKITVER='"007300"' ${AVALONFLAGS} ${INCHIFLAGS} ${POPCOUNTFLAGS}
++PG_CPPFLAGS = -I${BOOSTHOME}/include -I${RDKIT}/Code -DRDKITVER='"007300"' ${AVALONFLAGS} ${INCHIFLAGS}
+ 
+ CPLUSPLUSFLAGS = $(filter-out -fexcess-precision=standard -Wmissing-prototypes -Wdeclaration-after-statement, $(CFLAGS))
+ CPLUSPLUSFLAGS += -Wno-unused-function
+@@ -56,7 +56,7 @@ CPLUSPLUSFLAGS += $(PG_CPPFLAGS)
  CPLUSPLUSFLAGS := $(filter-out -fexcess-precision=standard,$(CPLUSPLUSFLAGS))
  
  EXTENSION  = rdkit
@@ -37,7 +54,7 @@
  PG_CONFIG  = pg_config
  MODULE_big = rdkit
  OBJS       = rdkit_io.o mol_op.o bfp_op.o sfp_op.o rxn_op.o rdkit_gist.o bfp_gist.o bfp_gin.o low_gist.o guc.o cache.o adapter.o bitstring.o
-@@ -71,7 +73,6 @@
+@@ -71,7 +71,6 @@ $(EXTENSION)--$(EXTVERSION).sql: $(EXTEN
  	sed -e's/@RDKIT_PG_BFP_GIST_FETCH@/FUNCTION    9   gbfp_fetch (internal),/;' \
  -e's/@RDKIT_GIN_BFP_TRICONSISTENT@/FUNCTION    6   gin_bfp_triconsistent(internal, int2, bfp, int4, internal, internal, internal),/' \
   $< > $@
@@ -45,7 +62,7 @@
  else
  ifeq ($(PG92),no)
  $(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
-@@ -87,7 +88,7 @@
+@@ -87,7 +86,7 @@ endif
  endif
  
  REGRESS    = rdkit-91 props btree molgist bfpgist-91 bfpgin sfpgist slfpgist fps reaction ${INCHIREGRESS} ${AVALONREGRESS}
@@ -54,7 +71,7 @@
  EXTRA_CLEAN = $(EXTENSION)--$(EXTVERSION).sql
  include $(PGXS)
  
-@@ -101,3 +102,9 @@
+@@ -101,3 +100,9 @@ CC = $(CXX)
  
  %.o : %.cpp
  	$(CXX) $(CPLUSPLUSFLAGS) $(CPPFLAGS) -fPIC -c -o $@ $<
