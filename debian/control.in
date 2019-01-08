@@ -113,7 +113,7 @@ Description: Collection of cheminformatics and machine-learning software (shared
   * Chirality support, including calculation of (R/S) stereochemistry codes
   * 2D pharmacophore searching
   * Fingerprinting, including Daylight-like, atom pairs, topological
-    torsions, Morgan alogrithm and MACCS keys
+    torsions, Morgan algorithm and MACCS keys
   * Calculation of shape similarity
   * Multi-molecule maximum common substructure
   * Machine-learning via clustering and information theory algorithms
@@ -145,7 +145,7 @@ Description: Collection of cheminformatics and machine-learning software (develo
   * Chirality support, including calculation of (R/S) stereochemistry codes
   * 2D pharmacophore searching
   * Fingerprinting, including Daylight-like, atom pairs, topological
-    torsions, Morgan alogrithm and MACCS keys
+    torsions, Morgan algorithm and MACCS keys
   * Calculation of shape similarity
   * Multi-molecule maximum common substructure
   * Machine-learning via clustering and information theory algorithms
@@ -158,7 +158,7 @@ Description: Collection of cheminformatics and machine-learning software (develo
 
 Package: postgresql-PGVERSION-rdkit
 Architecture: any
-Section: databases
+Section: database
 Depends: ${misc:Depends}, ${shlibs:Depends}, postgresql-PGVERSION
 Suggests:
 Description: Collection of cheminformatics and machine-learning software (PostgreSQL Cartridge)
@@ -178,7 +178,7 @@ Description: Collection of cheminformatics and machine-learning software (Postgr
   * Chirality support, including calculation of (R/S) stereochemistry codes
   * 2D pharmacophore searching
   * Fingerprinting, including Daylight-like, atom pairs, topological
-    torsions, Morgan alogrithm and MACCS keys
+    torsions, Morgan algorithm and MACCS keys
   * Calculation of shape similarity
   * Multi-molecule maximum common substructure
   * Machine-learning via clustering and information theory algorithms
