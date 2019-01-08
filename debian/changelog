@@ -9,7 +9,7 @@ rdkit (201809.1+dfsg-1) UNRELEASED; urgency=medium
     upstream tarballs. 
   * debian/patches/sphinx_imgconverter.patch: New patch, enabled the Sphinx
     imgconverter extension in order to conver the .svg files for LaTeX.
-  * debian/control.in (Build-Depends): Added imagemagick.
+  * debian/control.in (Build-Depends): Added imagemagick and librsvg2-bin.
   * debian/control: Regenerated.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 08 Jan 2019 21:00:46 +0100
