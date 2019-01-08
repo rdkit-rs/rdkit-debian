@@ -3,3 +3,4 @@ postgres_v11_support.patch
 postgres_Makefile_fixes.patch
 postgres_disable_failing_tests.patch
 disable_hanging_test.patch
+sphinx_imgconverter.patch
