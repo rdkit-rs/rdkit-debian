@@ -81,7 +81,6 @@ override_dh_auto_build:
 	dh_auto_build
 	+STATIC_LINK=0 RDKIT_LIBDIR=$(wildcard $(CURDIR)/obj-*/)/lib pg_buildext build $(CURDIR)/Code/PgSQL/rdkit build-%v
 	(cd $(CURDIR)/Code; doxygen doxygen/doxygen.config)
-	(cd $(CURDIR)/rdkit; epydoc --config  epydoc.config)
 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) html)
 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) latexpdf)
 
