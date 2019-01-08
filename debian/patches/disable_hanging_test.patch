@@ -1,0 +1,11 @@
+--- ./Code/GraphMol/ChemReactions/CMakeLists.txt.orig	2019-01-08 16:05:12.061289472 +0100
++++ ./Code/GraphMol/ChemReactions/CMakeLists.txt	2019-01-08 16:05:23.557405089 +0100
+@@ -49,8 +49,4 @@
+ ChemReactions Descriptors Fingerprints Subgraphs DataStructs ChemTransforms FileParsers SmilesParse SubstructMatch
+ GraphMol RDGeneral RDGeometryLib ${RDKit_SERIALIZATION_LIBS})
+ 
+-rdkit_test(testEnumeration Enumerate/testEnumerate.cpp LINK_LIBRARIES
+-ChemReactions ChemTransforms Descriptors Fingerprints Subgraphs DataStructs FileParsers SmilesParse SubstructMatch
+-GraphMol RDGeneral RDGeometryLib ${RDKit_SERIALIZATION_LIBS} )
+-
+ add_subdirectory(Wrap)
