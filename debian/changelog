@@ -1,11 +1,10 @@
-rdkit (201809.1+dfsg-2) UNRELEASED; urgency=medium
+rdkit (201809.1+dfsg-2) unstable; urgency=medium
 
-  [ Michael Banck ]
   * debian/patches/catch2_header.patch: New patch, adds the catch2 headers from
     https://github.com/catchorg/Catch2/ which are otherwise downloaded during
     build.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Wed, 09 Jan 2019 00:30:15 +0100
+ -- Michael Banck <mbanck@debian.org>  Wed, 09 Jan 2019 10:46:23 +0100
 
 rdkit (201809.1+dfsg-1) unstable; urgency=medium
 
