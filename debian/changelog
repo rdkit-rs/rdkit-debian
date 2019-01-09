@@ -1,10 +1,9 @@
-rdkit (201809.1+dfsg-3) UNRELEASED; urgency=medium
+rdkit (201809.1+dfsg-3) unstable; urgency=medium
 
-  [ Michael Banck ]
   * debian/control.in (Build-Depends): Removed python-epydoc (Closes: #881562).
   * debian/control: Regenerated. 
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Wed, 09 Jan 2019 10:46:51 +0100
+ -- Michael Banck <mbanck@debian.org>  Wed, 09 Jan 2019 10:58:57 +0100
 
 rdkit (201809.1+dfsg-2) unstable; urgency=medium
 
