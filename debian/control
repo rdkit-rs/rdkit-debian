@@ -21,11 +21,15 @@ Build-Depends: bison,
                pandoc,
                postgresql-server-dev-all,
                python-dev,
-               python-pil,
                python-numpy,
                python-pandas,
-               python3-sphinx,
+               python-pil,
+               python3-dev,
+               python3-numpy,
+               python3-pandas,
+               python3-pil | python3-imaging,
                python3-recommonmark,
+               python3-sphinx,
                rapidjson-dev,
                texlive-fonts-recommended,
                texlive-generic-extra,
@@ -73,6 +77,45 @@ Description: Collection of cheminformatics and machine-learning software
  .
  File formats RDKit supports include MDL Mol, PDB, SDF, TDT, SMILES and RDKit
  binary format.
+
+Package: python3-rdkit
+Section: python
+Architecture: any
+Depends: fonts-freefont-ttf,
+         rdkit-data,
+         ${misc:Depends},
+         ${python3:Depends},
+         ${shlibs:Depends}
+Suggests: rdkit-doc
+Provides: ${python3:Provides}
+XB-Python-Version: ${python3:Versions}
+Description: Collection of cheminformatics and machine-learning software
+ RDKit is a Python/C++ based cheminformatics and machine-learning software
+ environment.  Features Include:
+ .
+  * Chemical reaction handling and transforms
+  * Substructure searching with SMARTS
+  * Canonical SMILES
+  * Molecule-molecule alignment
+  * Large number of molecular descriptors, including topological,
+    compositional, EState, SlogP/SMR, VSA and Feature-map vectors
+  * Fragmentation using RECAP rules
+  * 2D coordinate generation and depiction, including constrained depiction
+  * 3D coordinate generation using geometry embedding
+  * UFF and MMFF94 forcefields
+  * Chirality support, including calculation of (R/S) stereochemistry codes
+  * 2D pharmacophore searching
+  * Fingerprinting, including Daylight-like, atom pairs, topological
+    torsions, Morgan alogrithm and MACCS keys
+  * Calculation of shape similarity
+  * Multi-molecule maximum common substructure
+  * Machine-learning via clustering and information theory algorithms
+  * Gasteiger-Marsili partial charge calculation
+ .
+ File formats RDKit supports include MDL Mol, PDB, SDF, TDT, SMILES and RDKit
+ binary format.
+ .
+ Python3 package
 
 Package: rdkit-doc
 Section: doc
