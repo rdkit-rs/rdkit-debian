@@ -6,6 +6,8 @@ rdkit (201809.1+dfsg-4) UNRELEASED; urgency=medium
   * debian/control.in: Added libschroedinger-coordgenlibs-dev and
     libschroedinger-maeparser-dev.
   * debian/control: Regenerated.
+  * debian/rules (override_dh_auto_configure): Removed
+    -DRDK_BUILD_COORDGEN_SUPPORT=OFF and -RDK_BUILD_MOLINTERCHANGE_SUPPORT=OFF.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Wed, 09 Jan 2019 10:59:16 +0100
 
