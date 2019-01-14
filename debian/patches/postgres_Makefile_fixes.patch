@@ -1,7 +1,5 @@
-Index: rdkit/Code/PgSQL/rdkit/Makefile
-===================================================================
---- rdkit.orig/Code/PgSQL/rdkit/Makefile
-+++ rdkit/Code/PgSQL/rdkit/Makefile
+--- ./Code/PgSQL/rdkit/Makefile.orig	2019-01-14 15:16:06.892096754 +0100
++++ ./Code/PgSQL/rdkit/Makefile	2019-01-14 15:16:18.788148697 +0100
 @@ -11,8 +11,9 @@
  # -------------------------
  
@@ -13,7 +11,7 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
  
  ifeq ($(USE_INCHI),1)
    INCHILIBS=-lRDInchiLib -lInchi
-@@ -26,18 +27,17 @@ ifeq ($(USE_AVALON),1)
+@@ -26,18 +27,17 @@
    AVALONREGRESS=avalon
  endif
  
@@ -36,7 +34,7 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
  endif
  
  ifndef BOOSTHOME
-@@ -47,7 +47,7 @@ SHLIB_LINK += -pthread
+@@ -47,7 +47,7 @@
  
  SHLIB_LINK += ${THREADLIBS}
  
@@ -45,7 +43,7 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
  
  CPLUSPLUSFLAGS = $(filter-out -fexcess-precision=standard -Wmissing-prototypes -Wdeclaration-after-statement, $(CFLAGS))
  CPLUSPLUSFLAGS += -Wno-unused-function
-@@ -56,7 +56,7 @@ CPLUSPLUSFLAGS += $(PG_CPPFLAGS)
+@@ -56,38 +56,49 @@
  CPLUSPLUSFLAGS := $(filter-out -fexcess-precision=standard,$(CPLUSPLUSFLAGS))
  
  EXTENSION  = rdkit
@@ -54,16 +52,43 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
  PG_CONFIG  = pg_config
  MODULE_big = rdkit
  OBJS       = rdkit_io.o mol_op.o bfp_op.o sfp_op.o rxn_op.o rdkit_gist.o bfp_gist.o bfp_gin.o low_gist.o guc.o cache.o adapter.o bitstring.o
-@@ -71,7 +71,6 @@ $(EXTENSION)--$(EXTVERSION).sql: $(EXTEN
+ PGXS       := $(shell $(PG_CONFIG) --pgxs)
++PG96 = $(shell $(PG_CONFIG) --version | grep -qE " 9\.[1-5]" && echo no || echo yes)
+ PG95 = $(shell $(PG_CONFIG) --version | grep -qE " 9\.[1-4]" && echo no || echo yes)
+ PG92 = $(shell $(PG_CONFIG) --version | grep -qE " 9\.[1-2]" && echo yes || echo no)
+ 
+ all: $(EXTENSION)--$(EXTVERSION).sql
+ 
++ifeq ($(PG96),yes)
++$(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
++	sed -e's/@RDKIT_PG_BFP_GIST_FETCH@/FUNCTION    9   gbfp_fetch (internal),/;' \
++-e's/@RDKIT_GIN_BFP_TRICONSISTENT@/FUNCTION    6   gin_bfp_triconsistent(internal, int2, bfp, int4, internal, internal, internal),/' \
++-e's/@RDKIT_PARALLEL_SAFE@/PARALLEL SAFE/' \
++ $< > $@
++else
+ ifeq ($(PG95),yes)
+ $(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
  	sed -e's/@RDKIT_PG_BFP_GIST_FETCH@/FUNCTION    9   gbfp_fetch (internal),/;' \
  -e's/@RDKIT_GIN_BFP_TRICONSISTENT@/FUNCTION    6   gin_bfp_triconsistent(internal, int2, bfp, int4, internal, internal, internal),/' \
++-e's/@RDKIT_PARALLEL_SAFE@//' \
   $< > $@
 -	cp $< $@
  else
  ifeq ($(PG92),no)
  $(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
-@@ -87,7 +86,7 @@ endif
+ 	sed -e's/@RDKIT_PG_BFP_GIST_FETCH@//;' \
+ -e's/@RDKIT_GIN_BFP_TRICONSISTENT@/FUNCTION    6   gin_bfp_triconsistent(internal, int2, bfp, int4, internal, internal, internal),/' \
++-e's/@RDKIT_PARALLEL_SAFE@//' \
+ $< > $@
+ else
+ $(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
+ 	sed -e's/@RDKIT_PG_BFP_GIST_FETCH@//;' \
+ -e's/@RDKIT_GIN_BFP_TRICONSISTENT@//;' \
++-e's/@RDKIT_PARALLEL_SAFE@//' \
+ $< > $@
  endif
+ endif
++endif
  
  REGRESS    = rdkit-91 props btree molgist bfpgist-91 bfpgin sfpgist slfpgist fps reaction ${INCHIREGRESS} ${AVALONREGRESS}
 -DATA = $(EXTENSION)--$(EXTVERSION).sql
@@ -71,7 +96,7 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
  EXTRA_CLEAN = $(EXTENSION)--$(EXTVERSION).sql
  include $(PGXS)
  
-@@ -101,3 +100,9 @@ CC = $(CXX)
+@@ -101,3 +112,9 @@
  
  %.o : %.cpp
  	$(CXX) $(CPLUSPLUSFLAGS) $(CPPFLAGS) -fPIC -c -o $@ $<
