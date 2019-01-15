@@ -17,7 +17,7 @@ Build-Depends: bison,
                libboost-system-dev,
                libboost-thread-dev,
                libschroedinger-coordgenlibs-dev,
-               libschroedinger-maeparser-dev.
+               libschroedinger-maeparser-dev,
                librsvg2-bin,
                libsqlite3-dev,
                pandoc,
