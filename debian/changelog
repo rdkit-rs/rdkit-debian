@@ -8,6 +8,9 @@ rdkit (201809.1+dfsg-4) UNRELEASED; urgency=medium
   * debian/control: Regenerated.
   * debian/rules (override_dh_auto_configure): Removed
     -DRDK_BUILD_COORDGEN_SUPPORT=OFF and -RDK_BUILD_MOLINTERCHANGE_SUPPORT=OFF.
+  * debian/patches/disable_hanging_test.patch: Removed and replaced with ...
+  * debian/patches/testcase_32bit_fix.patch: ... this patch, taken from
+    upstream commit 3f3613c8.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Wed, 09 Jan 2019 10:59:16 +0100
 
