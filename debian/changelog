@@ -1,6 +1,5 @@
-rdkit (201809.1+dfsg-4) UNRELEASED; urgency=medium
+rdkit (201809.1+dfsg-4) unstable; urgency=medium
 
-  [ Michael Banck ]
   * debian/patches/postgres_Makefile_fixes.patch: Replace @RDKIT_PARALLEL_SAFE@
     tag according to version.
   * debian/control.in: Added libschroedinger-coordgenlibs-dev and
@@ -12,7 +11,7 @@ rdkit (201809.1+dfsg-4) UNRELEASED; urgency=medium
   * debian/patches/testcase_32bit_fix.patch: ... this patch, taken from
     upstream commit 3f3613c8.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Wed, 09 Jan 2019 10:59:16 +0100
+ -- Michael Banck <mbanck@debian.org>  Sat, 26 Jan 2019 15:09:55 +0100
 
 rdkit (201809.1+dfsg-3) unstable; urgency=medium
 
