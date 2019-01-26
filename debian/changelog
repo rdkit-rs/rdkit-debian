@@ -1,3 +1,9 @@
+rdkit (201809.1+dfsg-5) UNRELEASED; urgency=medium
+
+  * 
+
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 26 Jan 2019 15:10:15 +0100
+
 rdkit (201809.1+dfsg-4) unstable; urgency=medium
 
   * debian/patches/postgres_Makefile_fixes.patch: Replace @RDKIT_PARALLEL_SAFE@
