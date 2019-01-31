@@ -1,8 +1,9 @@
-rdkit (201809.1+dfsg-5) UNRELEASED; urgency=medium
+rdkit (201809.1+dfsg-5) unstable; urgency=medium
 
-  * 
+  * debian/patches/series: Reenabled and refreshed NoDownloads.patch (Closes:
+    #920986).
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 26 Jan 2019 15:10:15 +0100
+ -- Michael Banck <mbanck@debian.org>  Thu, 31 Jan 2019 12:36:47 +0100
 
 rdkit (201809.1+dfsg-4) unstable; urgency=medium
 
