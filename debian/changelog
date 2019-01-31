@@ -1,6 +1,8 @@
 rdkit (201809.1+dfsg-6) UNRELEASED; urgency=medium
 
-  * 
+  [ Michael Banck ]
+  * debian/patches/fix_coordgen_include_path.patch: New patch, fixes the
+    include path for system-installed coordgen headers. 
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Thu, 31 Jan 2019 12:37:08 +0100
 
