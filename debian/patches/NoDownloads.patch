@@ -1,34 +1,39 @@
-Index: rdkit/External/CMakeLists.txt
-===================================================================
---- rdkit.orig/External/CMakeLists.txt
-+++ rdkit/External/CMakeLists.txt
+--- a/External/CMakeLists.txt
++++ b/External/CMakeLists.txt
 @@ -1,4 +1,3 @@
  add_subdirectory(INCHI-API)
  add_subdirectory(AvalonTools)
  add_subdirectory(FreeSASA)
 -add_subdirectory(CoordGen)
-Index: rdkit/External/CoordGen/CMakeLists.txt
-===================================================================
---- rdkit.orig/External/CoordGen/CMakeLists.txt
-+++ rdkit/External/CoordGen/CMakeLists.txt
-@@ -1,51 +1,13 @@
+--- a/External/CoordGen/CMakeLists.txt
++++ b/External/CoordGen/CMakeLists.txt
+@@ -1,4 +1,5 @@
 -add_custom_target(coordgen_support ALL)
 +include_directories(/usr/include/maeparser)
 +include_directories(/usr/include/coordgenlibs)
  
  if(RDK_BUILD_COORDGEN_SUPPORT)
+     add_definitions(-DIN_MAEPARSER)
+@@ -7,56 +8,10 @@
      if(NOT DEFINED MAEPARSER_DIR)
        set(MAEPARSER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/maeparser")
      endif()
 -    if(NOT EXISTS "${MAEPARSER_DIR}/MaeParser.hpp")
--        set(SHA "83368293dcc0eb07562dadfb7728b8d18d23a6cb")
--        downloadAndCheckMD5("https://codeload.github.com/schrodinger/maeparser/tar.gz/${SHA}"
+-        set(RELEASE_NO "1.0.1")
+-        downloadAndCheckMD5("https://github.com/schrodinger/maeparser/archive/v${RELEASE_NO}.tar.gz"
 -              "${CMAKE_CURRENT_SOURCE_DIR}/master.tar.gz"
--              "32c0c3b315bba49fbf4c41a07aa58528")
+-              "1292494df756e95fd1cce722286f28fe")
 -        execute_process(COMMAND ${CMAKE_COMMAND} -E tar zxf
 -          ${CMAKE_CURRENT_SOURCE_DIR}/master.tar.gz
 -          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
--        file(RENAME "maeparser-${SHA}" "${MAEPARSER_DIR}")
+-        file(RENAME "maeparser-${RELEASE_NO}" "${MAEPARSER_DIR}")
+-        patchCoordGenMaeExportHeaders("MAEPARSER" "${MAEPARSER_DIR}/MaeParserConfig.hpp")
+-
+-        # patch a bug in the 1.0.0 release of maeparser
+-        #file(READ "${MAEPARSER_DIR}/Buffer.cpp" buffer)
+-        #string(REPLACE "m_data->reserve(m_size + 1);"
+-        #       "m_data->resize(m_size + 1);" buffer "${buffer}")
+-        #file(WRITE "${MAEPARSER_DIR}/Buffer.cpp" "${buffer}")
 -    else()
 -      message("-- Found MAEParser source in ${MAEPARSER_DIR}")
 -    endif()
@@ -36,19 +41,21 @@ Index: rdkit/External/CoordGen/CMakeLists.txt
 -    file(GLOB MAESOURCES "${MAEPARSER_DIR}/*.cpp")
 -    rdkit_library(maeparser ${MAESOURCES} SHARED )
 -    install(TARGETS maeparser DESTINATION ${RDKit_LibDir})
--
+ 
      if(NOT DEFINED COORDGEN_DIR)
        set(COORDGEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/coordgenlibs")
      endif()
 -    if(NOT EXISTS "${COORDGEN_DIR}/sketcherMinimizer.h")
+-        set(RELEASE_NO "1.1")
 -        set(SHA "ede3191bf1c1dde53f70ca086014ff9ec7768c55")
--        downloadAndCheckMD5("https://codeload.github.com/schrodinger/coordgenlibs/tar.gz/${SHA}"
+-        downloadAndCheckMD5("https://github.com/schrodinger/coordgenlibs/archive/v${RELEASE_NO}.tar.gz"
 -              "${CMAKE_CURRENT_SOURCE_DIR}/master.tar.gz"
--              "") # we aren't testing the md5 here because this code is still changing quickly
+-              "493cf2eab7d4ab6242e25da112831798")
 -        execute_process(COMMAND ${CMAKE_COMMAND} -E tar zxf
 -          ${CMAKE_CURRENT_SOURCE_DIR}/master.tar.gz
 -          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
--        file(RENAME "coordgenlibs-${SHA}" "${COORDGEN_DIR}")
+-        file(RENAME "coordgenlibs-${RELEASE_NO}" "${COORDGEN_DIR}")
+-        patchCoordGenMaeExportHeaders("COORDGEN" "${COORDGEN_DIR}/CoordgenConfig.hpp")
 -    else()
 -      message("-- Found coordgenlibs source in ${COORDGEN_DIR}")
 -    endif()
@@ -61,14 +68,11 @@ Index: rdkit/External/CoordGen/CMakeLists.txt
 -    install(FILES ${MAE_FILES}
 -            DESTINATION ${RDKit_ShareDir}/Data
 -            COMPONENT data )
--
+ 
      include_directories(${CMAKE_CURRENT_SOURCE_DIR})
      set(RDK_COORDGEN_LIBS MolAlign coordgenlib maeparser CACHE STRING "the external libraries" FORCE)
-     rdkit_headers(CoordGen.h DEST GraphMol)
-Index: rdkit/Code/GraphMol/MolInterchange/CMakeLists.txt
-===================================================================
---- rdkit.orig/Code/GraphMol/MolInterchange/CMakeLists.txt
-+++ rdkit/Code/GraphMol/MolInterchange/CMakeLists.txt
+--- a/Code/GraphMol/MolInterchange/CMakeLists.txt
++++ b/Code/GraphMol/MolInterchange/CMakeLists.txt
 @@ -1,16 +1,5 @@
  
 -if(NOT EXISTS "${CMAKE_SOURCE_DIR}/External/rapidjson-1.1.0")
@@ -85,13 +89,11 @@ Index: rdkit/Code/GraphMol/MolInterchange/CMakeLists.txt
 -include_directories(${CMAKE_SOURCE_DIR}/External/rapidjson-1.1.0/include)
 +include_directories(/usr/include/rapidjson)
  
- rdkit_library(MolInterchange
-               Parser.cpp Writer.cpp
-Index: rdkit/Code/GraphMol/CMakeLists.txt
-===================================================================
---- rdkit.orig/Code/GraphMol/CMakeLists.txt
-+++ rdkit/Code/GraphMol/CMakeLists.txt
-@@ -11,7 +11,7 @@ rdkit_library(GraphMol
+ 
+ remove_definitions(-DRDKIT_GRAPHMOL_BUILD)
+--- a/Code/GraphMol/CMakeLists.txt
++++ b/Code/GraphMol/CMakeLists.txt
+@@ -13,7 +13,7 @@
                LINK_LIBRARIES RDGeometryLib RDGeneral
                   ${RDKit_THREAD_LIBS})
  
