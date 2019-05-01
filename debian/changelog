@@ -1,8 +1,12 @@
 rdkit (201809.1+dfsg-7) UNRELEASED; urgency=medium
 
-  * 
+  [ Alexandre Mestiashvili ]
+  * Update d/control.in, add python3-rdkit package and python3 build-deps
+  * Update d/rules, enable hardening, build python2 and python3 bindings
+  * Remove debian/python-rdkit.install, install modules via d/rules
+  * Update d/control with pg_buildext updatecontrol
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Thu, 31 Jan 2019 14:20:42 +0100
+ -- Alexandre Mestiashvili <mestia@debian.org>  Thu, 10 Jan 2019 19:56:24 +0100
 
 rdkit (201809.1+dfsg-6) unstable; urgency=medium
 
@@ -36,7 +40,7 @@ rdkit (201809.1+dfsg-4) unstable; urgency=medium
 rdkit (201809.1+dfsg-3) unstable; urgency=medium
 
   * debian/control.in (Build-Depends): Removed python-epydoc (Closes: #881562).
-  * debian/control: Regenerated. 
+  * debian/control: Regenerated.
 
  -- Michael Banck <mbanck@debian.org>  Wed, 09 Jan 2019 10:58:57 +0100
 
@@ -53,7 +57,7 @@ rdkit (201809.1+dfsg-1) unstable; urgency=medium
   * New upstream release.
   * debian/patches/disable_hanging_test.patch: Updated.
   * debian/copryright (Files-Excluded): Removed files no longer present in the
-    upstream tarballs. 
+    upstream tarballs.
   * debian/patches/sphinx_imgconverter.patch: New patch, enabled the Sphinx
     imgconverter extension in order to conver the .svg files for LaTeX.
   * debian/control.in (Build-Depends): Added imagemagick and librsvg2-bin.
@@ -68,7 +72,7 @@ rdkit (201803.4+dfsg-3) unstable; urgency=medium
   * debian/patches/postgres_Makefile_fixes.patch: Remove -mpopcnt from
     PG_CPPFLAGS.
   * debian/control.in (postgresql-PGVERSION-rdkit/Section): Fixed.
-  * debian/control.in: Fixed spelling error in description. 
+  * debian/control.in: Fixed spelling error in description.
   * debian/control.in (postgresql-PGVERSION-rdkit/Description): Shortened short
     description.
   * debian/control: Regenerated.
@@ -82,7 +86,7 @@ rdkit (201803.4+dfsg-2) unstable; urgency=medium
 
   [ Michael Banck ]
   * debian/patches/disable_hanging_test.patch: New patch, removes the
-    testEnumeration test, which makes 32-bit architectures hang 
+    testEnumeration test, which makes 32-bit architectures hang
     (Closes: #894202).
 
  -- Michael Banck <mbanck@debian.org>  Tue, 08 Jan 2019 17:03:28 +0100
@@ -142,7 +146,7 @@ rdkit (201603.5+dfsg-1) unstable; urgency=medium
 rdkit (201603.5-2) unstable; urgency=medium
 
   * Team upload.
-  * debian/control (Build-Depends): Added pandoc and 
+  * debian/control (Build-Depends): Added pandoc and
     texlive-generic-extra. (Closes: #831264)
   * debian/rules (override_dh_auto_configure): Added
     -DRDK_OPTIMIZE_NATIVE=OFF to prevent FTBFS on ppc64el.
@@ -171,7 +175,7 @@ rdkit (201603.5-1) unstable; urgency=medium
 
   [ Michael Banck ]
   * debian/rules (override_dh_auto_clean): No longer remove
-    Code/RDGeneral/versions.h, this is shipped upstream now. 
+    Code/RDGeneral/versions.h, this is shipped upstream now.
   * debian/rdkit-doc.install: Removed, no longer needed.
   * debian/rules (override_dh_installchangelogs): Update for new ReleaseNotes
     extension.
@@ -288,14 +292,14 @@ rdkit (201203-3) unstable; urgency=low
 
   * debian/patches/big-endian_support.patch: New patch, fixes big-endian
     architectures, taken from upstream revisions 2071, 2079, 2080 and 2140.
-  * debian/rules (override_dh_auto_test): Activate testsuite again 
+  * debian/rules (override_dh_auto_test): Activate testsuite again
     (Closes: #678188).
 
  -- Michael Banck <mbanck@debian.org>  Sat, 28 Jul 2012 21:18:42 +0200
 
 rdkit (201203-2) unstable; urgency=low
 
-  * debian/rules (override_dh_auto_test): Deactivated for now 
+  * debian/rules (override_dh_auto_test): Deactivated for now
     (Closes: #670053, #670054).
 
  -- Michael Banck <mbanck@debian.org>  Tue, 12 Jun 2012 13:45:10 +0200

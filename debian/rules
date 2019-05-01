@@ -9,6 +9,8 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
 export CPPFLAGS     := $(shell dpkg-buildflags --get CPPFLAGS)
 export CFLAGS       := $(shell dpkg-buildflags --get CFLAGS) $(CPPFLAGS)
 export CXXFLAGS     := $(shell dpkg-buildflags --get CXXFLAGS) $(CPPFLAGS)
@@ -18,10 +20,22 @@ export DOCDIR       := $(CURDIR)/debian/rdkit-doc/usr/share/doc/rdkit/
 
 export RDBASE       := $(CURDIR)
 
+PY2VERS = $(shell pyversions -v -d)
+PY3VERS = $(shell py3versions -v -d)
+PY2 = $(shell which python$(PY2VERS))
+PY3 = $(shell which python$(PY3VERS))
+export PY2BUILDDIR := $(CURDIR)/builddir-py2
+export DEBTMP := $(CURDIR)/debian/tmp
+
+DH_AUTO_CONFIGURE_OPTS := -DCMAKE_BUILD_TYPE=None -DCMAKE_SKIP_RPATH=ON \
+                          -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=OFF \
+                          -DRDK_BUILD_THREADSAFE_SSS=ON -DRDK_BUILD_PYTHON_WRAPPERS=ON \
+                          -DRDK_OPTIMIZE_NATIVE=OFF -DCMAKE_INSTALL_PREFIX=/usr
+
 include /usr/share/postgresql-common/pgxs_debian_control.mk
 
 %:
-	dh $@ --with python2 --buildsystem=cmake --parallel
+	dh $@ --with python2,python3 --buildsystem=cmake --parallel
 
 override_dh_auto_clean:
 	find $(CURDIR) -name "*.pyc" | xargs rm -f
@@ -66,37 +80,56 @@ override_dh_auto_clean:
 	rdkit/ML/Data/test_data/testgeneral.dat.pkl \
 	rdkit/ML/Data/test_data/testquant.qdat.pkl
 	$(RM) Code/RDGeneral/versions.h rdkit/sping/tests/testallps.ps
+	$(RM) -rf $(PY2BUILDDIR)
 	dh_auto_clean
 	+pg_buildext clean $(CURDIR)/Code/PgSQL/rdkit build-%v
 
 override_dh_auto_configure:
-	dh_auto_configure -- \
-	    -DCMAKE_BUILD_TYPE=None -DCMAKE_SKIP_RPATH=ON \
-	    -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=OFF \
-	    -DRDK_BUILD_THREADSAFE_SSS=ON -DRDK_BUILD_PYTHON_WRAPPERS=ON \
-	    -DRDK_OPTIMIZE_NATIVE=OFF
+	dh_auto_configure --builddir=$(PY2BUILDDIR) -- $(DH_AUTO_CONFIGURE_OPTS) \
+	-DPYTHON_EXECUTABLE=$(PY2) -DPYTHON_INSTDIR=python$(PY2VERS)/dist-packages/ ../
+	dh_auto_configure -- $(DH_AUTO_CONFIGURE_OPTS) -DPYTHON_EXECUTABLE=$(PY3) ../
 
 override_dh_auto_build:
+	dh_auto_build --builddir=$(PY2BUILDDIR)
 	dh_auto_build
 	+STATIC_LINK=0 RDKIT_LIBDIR=$(wildcard $(CURDIR)/obj-*/)/lib pg_buildext build $(CURDIR)/Code/PgSQL/rdkit build-%v
 	(cd $(CURDIR)/Code; doxygen doxygen/doxygen.config)
 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) html)
 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) latexpdf)
 
+override_dh_auto_install:
+	dh_auto_install
+	dh_auto_install --builddir=$(PY2BUILDDIR) --destdir=$(DEBTMP)/py2build
+
 override_dh_install:
+	mv $(DEBTMP)/py2build/usr/python$(PY2VERS) $(DEBTMP)/usr/lib/python$(PY2VERS)
+	$(RM) -rf $(DEBTMP)/py2build
+	ln -sf /usr/share/fonts/truetype/freefont/FreeSans.ttf $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/Chem/Draw/FreeSans.ttf
+	ln -sf /usr/share/fonts/truetype/freefont/FreeSans.ttf $(DEBTMP)/usr/lib/python$(PY2VERS)/dist-packages/rdkit/Chem/Draw/FreeSans.ttf
+	dh_install -ppython-rdkit /usr/lib/python$(PY2VERS)
+	dh_install -ppython3-rdkit /usr/lib/python3
+	$(RM) -rf  $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/docs/
+	$(RM) -rf  $(DEBTMP)/usr/lib/python$(PY2VERS)/dist-packages/rdkit/docs/
 	dh_numpy
 	dh_install --list-missing
 	mkdir -p $(DOCDIR)
 	cp $(CURDIR)/Docs/Book/_build/latex/RDKit.pdf $(DOCDIR)
 	cp -a $(CURDIR)/Docs/Book/_build/html $(DOCDIR)
 	+pg_buildext install $(CURDIR)/Code/PgSQL/rdkit build-%v postgresql-%v-rdkit
- 
+	ln -sf /usr/share/javascript/jquery/jquery.js $(DOCDIR)/html/cppapi/jquery.js
+	ln -sf /usr/share/javascript/jquery/jquery.js $(DOCDIR)/html/_static/jquery.js
+	ln -sf /usr/share/javascript/underscore/underscore.js $(DOCDIR)/html/_static/underscore.js
+
 override_dh_installchangelogs:
 	dh_installchangelogs ReleaseNotes.md
 
 override_dh_python2:
 	dh_python2 -ppython-rdkit
 	dh_numpy -ppython-rdkit
+
+override_dh_python3:
+	dh_python3 -ppython3-rdkit
+	dh_numpy3 -ppython3-rdkit
 
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 override_dh_auto_test:
