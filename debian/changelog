@@ -1,4 +1,6 @@
-rdkit (201809.1+dfsg-7) UNRELEASED; urgency=medium
+rdkit (201809.1+dfsg-7) unstable; urgency=medium
+
+  * Team upload.
 
   [ Alexandre Mestiashvili ]
   * Update d/control.in, add python3-rdkit package and python3 build-deps
@@ -6,7 +8,7 @@ rdkit (201809.1+dfsg-7) UNRELEASED; urgency=medium
   * Remove debian/python-rdkit.install, install modules via d/rules
   * Update d/control with pg_buildext updatecontrol
 
- -- Alexandre Mestiashvili <mestia@debian.org>  Thu, 10 Jan 2019 19:56:24 +0100
+ -- Andrius Merkys <merkys@debian.org>  Wed, 01 May 2019 07:56:24 -0400
 
 rdkit (201809.1+dfsg-6) unstable; urgency=medium
 
