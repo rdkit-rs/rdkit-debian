@@ -4,6 +4,7 @@ rdkit (201809.1+dfsg-7) unstable; urgency=medium
 
   [ Alexandre Mestiashvili ]
   * Update d/control.in, add python3-rdkit package and python3 build-deps
+    (Closes: #919161)
   * Update d/rules, enable hardening, build python2 and python3 bindings
   * Remove debian/python-rdkit.install, install modules via d/rules
   * Update d/control with pg_buildext updatecontrol
