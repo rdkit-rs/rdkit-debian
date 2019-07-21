@@ -7,6 +7,7 @@ rdkit (201903.1-1) UNRELEASED; urgency=medium
   * debian/copyright: Removed Files-Excluded, no longer needed. 
   * debian/patches/NoDownloads.patch: Remove CoordGen-specific hunks, no longer
     needed.
+  * debian/patches/sphinx_imgconverter.patch: Updated.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 21 Jul 2019 10:17:45 -0300
 
