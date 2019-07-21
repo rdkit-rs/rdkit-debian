@@ -40,8 +40,8 @@ class RDKIT_RDGENERAL_EXPORT Dict {
     RDValue val;
 
     Pair() : key(), val() {}
-    Pair(const std::string &s) : key(s), val() {}
-    Pair(const std::string &s, const RDValue &v) : key(s), val(v) {}
+    explicit Pair(std::string s) : key(std::move(s)), val() {}
+    Pair(std::string s, const RDValue &v) : key(std::move(s)), val(v) {}
   };
 
   typedef std::vector<Pair> DataType;
@@ -50,7 +50,7 @@ class RDKIT_RDGENERAL_EXPORT Dict {
 
   Dict(const Dict &other) : _data(other._data) {
     _hasNonPodData = other._hasNonPodData;
-    if (other._hasNonPodData) { // other has non pod data, need to copy
+    if (other._hasNonPodData) {  // other has non pod data, need to copy
       std::vector<Pair> data(other._data.size());
       _data.swap(data);
       for (size_t i = 0; i < _data.size(); ++i) {
@@ -94,7 +94,7 @@ class RDKIT_RDGENERAL_EXPORT Dict {
   Dict &operator=(const Dict &other) {
     if (this == &other) return *this;
     if (_hasNonPodData) reset();
-    
+
     if (other._hasNonPodData) {
       std::vector<Pair> data(other._data.size());
       _data.swap(data);
@@ -105,9 +105,14 @@ class RDKIT_RDGENERAL_EXPORT Dict {
     } else {
       _data = other._data;
     }
-    _hasNonPodData = other._hasNonPodData;    
+    _hasNonPodData = other._hasNonPodData;
     return *this;
   };
+
+  //----------------------------------------------------------
+  //! \brief Access to the underlying non-POD containment flag
+  //! This is meant to be used only in bulk updates of _data.
+  bool &getNonPODStatus() { return _hasNonPodData; }
 
   //----------------------------------------------------------
   //! \brief Access to the underlying data.
@@ -119,8 +124,8 @@ class RDKIT_RDGENERAL_EXPORT Dict {
   //! \brief Returns whether or not the dictionary contains a particular
   //!        key.
   bool hasVal(const std::string &what) const {
-    for (size_t i = 0; i < _data.size(); ++i) {
-      if (_data[i].key == what) return true;
+    for (const auto &data : _data) {
+      if (data.key == what) return true;
     }
     return false;
   };
@@ -159,9 +164,9 @@ class RDKIT_RDGENERAL_EXPORT Dict {
   //! \overload
   template <typename T>
   T getVal(const std::string &what) const {
-    for (size_t i = 0; i < _data.size(); ++i) {
-      if (_data[i].key == what) {
-        return from_rdvalue<T>(_data[i].val);
+    for (auto &data : _data) {
+      if (data.key == what) {
+        return from_rdvalue<T>(data.val);
       }
     }
     throw KeyErrorException(what);
@@ -187,9 +192,9 @@ class RDKIT_RDGENERAL_EXPORT Dict {
 
   template <typename T>
   bool getValIfPresent(const std::string &what, T &res) const {
-    for (size_t i = 0; i < _data.size(); ++i) {
-      if (_data[i].key == what) {
-        res = from_rdvalue<T>(_data[i].val);
+    for (const auto &data : _data) {
+      if (data.key == what) {
+        res = from_rdvalue<T>(data.val);
         return true;
       }
     }
@@ -215,10 +220,10 @@ class RDKIT_RDGENERAL_EXPORT Dict {
   template <typename T>
   void setVal(const std::string &what, T &val) {
     _hasNonPodData = true;
-    for (size_t i = 0; i < _data.size(); ++i) {
-      if (_data[i].key == what) {
-        RDValue::cleanup_rdvalue(_data[i].val);
-        _data[i].val = val;
+    for (auto &&data : _data) {
+      if (data.key == what) {
+        RDValue::cleanup_rdvalue(data.val);
+        data.val = val;
         return;
       }
     }
@@ -228,10 +233,10 @@ class RDKIT_RDGENERAL_EXPORT Dict {
   template <typename T>
   void setPODVal(const std::string &what, T val) {
     // don't change the hasNonPodData status
-    for (size_t i = 0; i < _data.size(); ++i) {
-      if (_data[i].key == what) {
-        RDValue::cleanup_rdvalue(_data[i].val);
-        _data[i].val = val;
+    for (auto &&data : _data) {
+      if (data.key == what) {
+        RDValue::cleanup_rdvalue(data.val);
+        data.val = val;
         return;
       }
     }
@@ -285,8 +290,8 @@ class RDKIT_RDGENERAL_EXPORT Dict {
   //!
   void reset() {
     if (_hasNonPodData) {
-      for (size_t i = 0; i < _data.size(); ++i) {
-        RDValue::cleanup_rdvalue(_data[i].val);
+      for (auto &&data : _data) {
+        RDValue::cleanup_rdvalue(data.val);
       }
     }
     DataType data;
@@ -324,5 +329,9 @@ class RDKIT_RDGENERAL_EXPORT Dict {
   bool _hasNonPodData;  // if true, need a deep copy
                         //  (copy_rdvalue)
 };
-}
+
+template <>
+RDKIT_RDGENERAL_EXPORT std::string Dict::getVal<std::string>(const std::string &what) const;
+
+}  // namespace RDKit
 #endif

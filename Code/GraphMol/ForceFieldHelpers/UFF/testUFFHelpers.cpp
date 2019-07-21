@@ -131,6 +131,7 @@ void testUFFTyper1() {
   TEST_ASSERT(key == "Rb");
   key = UFF::Tools::getAtomLabel(mol->getAtomWithIdx(4));
   TEST_ASSERT(key == "Cs");
+  delete mol;
 
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }
@@ -163,6 +164,7 @@ void testUFFTyper2() {
        it != types.end(); it++) {
     TEST_ASSERT((*it));
   }
+  delete mol2;
 
   // connected with sf.net bug 2094445
   mol = SmilesToMol("[SiH2]=C");
@@ -171,6 +173,7 @@ void testUFFTyper2() {
   TEST_ASSERT(key == "Si3");
   key = UFF::Tools::getAtomLabel(mol->getAtomWithIdx(1));
   TEST_ASSERT(key == "C_2");
+  delete mol;
 
   mol = SmilesToMol("[AlH]=C");
   TEST_ASSERT(mol);
@@ -178,6 +181,7 @@ void testUFFTyper2() {
   TEST_ASSERT(key == "Al3");
   key = UFF::Tools::getAtomLabel(mol->getAtomWithIdx(1));
   TEST_ASSERT(key == "C_2");
+  delete mol;
 
   mol = SmilesToMol("[Mg]=C");
   TEST_ASSERT(mol);
@@ -185,6 +189,7 @@ void testUFFTyper2() {
   TEST_ASSERT(key == "Mg3+2");
   key = UFF::Tools::getAtomLabel(mol->getAtomWithIdx(1));
   TEST_ASSERT(key == "C_2");
+  delete mol;
 
   mol = SmilesToMol("[SiH3][Si]([SiH3])=C");
   TEST_ASSERT(mol);
@@ -196,6 +201,7 @@ void testUFFTyper2() {
   TEST_ASSERT(key == "Si3");
   key = UFF::Tools::getAtomLabel(mol->getAtomWithIdx(3));
   TEST_ASSERT(key == "C_2");
+  delete mol;
 
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }
@@ -210,7 +216,7 @@ void testUFFBuilder1() {
   UFF::AtomicParamVect types;
   bool foundAll;
   ForceFields::ForceField *field;
-  boost::shared_array<boost::uint8_t> nbrMat;
+  boost::shared_array<std::uint8_t> nbrMat;
 
   mol = SmilesToMol("CC(O)C");
   auto *conf = new Conformer(mol->getNumAtoms());
@@ -473,7 +479,7 @@ void testUFFBuilder2() {
 
     UFF::AtomicParamVect types;
     bool foundAll;
-    boost::shared_array<boost::uint8_t> nbrMat;
+    boost::shared_array<std::uint8_t> nbrMat;
     boost::tie(types, foundAll) = UFF::getAtomTypes(*mol);
 
     ForceFields::ForceField *field;
@@ -566,6 +572,9 @@ void testUFFBuilder2() {
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }
 
+#ifdef RDK_TEST_MULTITHREADED
+void testUFFBatch() {}
+#else
 void testUFFBatch() {
   BOOST_LOG(rdErrorLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdErrorLog)
@@ -608,9 +617,11 @@ void testUFFBatch() {
     delete mol;
     mol = suppl.next();
   }
+  delete mol;
 
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }
+#endif
 
 void testUFFBuilderSpecialCases() {
   BOOST_LOG(rdErrorLog) << "-------------------------------------" << std::endl;
@@ -916,7 +927,7 @@ void testSFIssue1653802() {
 
   UFF::AtomicParamVect types;
   bool foundAll;
-  boost::shared_array<boost::uint8_t> nbrMat;
+  boost::shared_array<std::uint8_t> nbrMat;
   boost::tie(types, foundAll) = UFF::getAtomTypes(*mol);
   TEST_ASSERT(foundAll);
   TEST_ASSERT(types.size() == mol->getNumAtoms());
@@ -1102,7 +1113,9 @@ void testGitHubIssue62() {
     SmilesMolSupplier smiSupplier(pathName + "/Issue62.smi");
     SDWriter *sdfWriter = new SDWriter(pathName + "/Issue62.sdf");
     for (unsigned int i = 0; i < smiSupplier.length(); ++i) {
-      ROMol *mol = MolOps::addHs(*(smiSupplier[i]));
+      auto *tmp = smiSupplier[i];
+      ROMol *mol = MolOps::addHs(*tmp);
+      delete tmp;
       TEST_ASSERT(mol);
       std::string molName = "";
       if (mol->hasProp(common_properties::_Name)) {
@@ -1118,8 +1131,11 @@ void testGitHubIssue62() {
       double e = field->calcEnergy();
       BOOST_LOG(rdErrorLog) << molName << " " << e << std::endl;
       TEST_ASSERT(fabs(e - energyValues[i]) < 1.);
+      delete field;
+      delete mol;
     }
     sdfWriter->close();
+    delete sdfWriter;
     BOOST_LOG(rdErrorLog) << "  done" << std::endl;
   }
 }
@@ -1131,6 +1147,7 @@ void testUFFParamGetters() {
     ROMol *mol = SmilesToMol("c1ccccc1CCNN");
     TEST_ASSERT(mol);
     ROMol *molH = MolOps::addHs(*mol);
+    delete mol;
     TEST_ASSERT(molH);
     ForceFields::UFF::UFFBond uffBondStretchParams;
     TEST_ASSERT(
@@ -1161,6 +1178,7 @@ void testUFFParamGetters() {
     TEST_ASSERT(UFF::getUFFVdWParams(*molH, 0, 9, uffVdWParams));
     TEST_ASSERT(((int)boost::math::round(uffVdWParams.x_ij * 1000) == 3754) &&
                 ((int)boost::math::round(uffVdWParams.D_ij * 1000) == 85));
+    delete molH;
   }
 }
 
@@ -1169,7 +1187,7 @@ namespace {
 void runblock_uff(const std::vector<ROMol *> &mols,
                   const std::vector<double> &energies, unsigned int count,
                   unsigned int idx) {
-  for (unsigned int rep = 0; rep < 1000; ++rep) {
+  for (unsigned int rep = 0; rep < 200; ++rep) {
     for (unsigned int i = 0; i < mols.size(); ++i) {
       if (i % count != idx) continue;
       ROMol *mol = mols[i];
@@ -1192,7 +1210,7 @@ void runblock_uff(const std::vector<ROMol *> &mols,
     }
   }
 }
-}
+}  // namespace
 #include <thread>
 #include <future>
 void testUFFMultiThread() {
@@ -1262,7 +1280,7 @@ void testUFFMultiThread2() {
   ROMol *m = suppl[4];
   TEST_ASSERT(m);
   auto *om = new ROMol(*m);
-  for (unsigned int i = 0; i < 1000; ++i) {
+  for (unsigned int i = 0; i < 200; ++i) {
     m->addConformer(new Conformer(m->getConformer()), true);
   }
   std::vector<std::pair<int, double>> res;
@@ -1314,6 +1332,7 @@ void testGitHubIssue613() {
     TEST_ASSERT(ap);
     TEST_ASSERT(ap->r1 == types[0]->r1);
     TEST_ASSERT(ap->theta0 == types[0]->theta0);
+    delete mol;
   }
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }

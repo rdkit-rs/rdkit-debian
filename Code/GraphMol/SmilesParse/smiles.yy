@@ -22,7 +22,6 @@
 
 extern int yysmiles_lex(YYSTYPE *,void *,int &);
 
-
 using namespace RDKit;
 namespace {
  void yyErrorCleanup(std::vector<RDKit::RWMol *> *molList){
@@ -42,8 +41,14 @@ yysmiles_error( const char *input,
                 std::list<unsigned int> *branchPoints,
 		void *scanner,int start_token, const char * msg )
 {
+  RDUNUSED_PARAM(input);
+  RDUNUSED_PARAM(lastAtom);
+  RDUNUSED_PARAM(lastBond);
+  RDUNUSED_PARAM(branchPoints);
+  RDUNUSED_PARAM(scanner);
+  RDUNUSED_PARAM(start_token);
   yyErrorCleanup(ms);
-  throw RDKit::SmilesParseException(msg);
+  BOOST_LOG(rdErrorLog) << "SMILES Parse Error: " << msg << " while parsing: " << input << std::endl;
 }
 
 void
@@ -52,8 +57,12 @@ yysmiles_error( const char *input,
                 std::list<unsigned int> *branchPoints,
 		void *scanner,int start_token, const char * msg )
 {
+  RDUNUSED_PARAM(input);
+  RDUNUSED_PARAM(branchPoints);
+  RDUNUSED_PARAM(scanner);
+  RDUNUSED_PARAM(start_token);
   yyErrorCleanup(ms);
-  throw RDKit::SmilesParseException(msg);
+  BOOST_LOG(rdErrorLog) << "SMILES Parse Error: " << msg << " while parsing: " << input << std::endl;
 }
 
 
@@ -96,21 +105,37 @@ yysmiles_error( const char *input,
 %token ATOM_OPEN_TOKEN ATOM_CLOSE_TOKEN
 %token EOS_TOKEN
 
+%destructor { delete $$; } <atom>
+%destructor { delete $$; } <bond>
+
 %start meta_start
 
 %%
 
-meta_start: START_MOL mol {
+/* --------------------------------------------------------------- */
+meta_start:
+START_MOL mol {
 // the molList has already been updated, no need to do anything
 }
-| START_ATOM atomd {
+| START_ATOM atomd EOS_TOKEN {
   lastAtom = $2;
+  YYACCEPT;
+}
+| START_ATOM bad_atom_def {
+  YYABORT;
+}
+| START_BOND bondd EOS_TOKEN {
+  lastBond = $2;
+  YYACCEPT;
 }
 | START_BOND bondd {
-  lastBond = $2;
+  delete $2;
+  YYABORT;
+}
+| START_BOND {
+  YYABORT;
 }
 | meta_start error EOS_TOKEN{
-  yyclearin;
   yyerrok;
   yyErrorCleanup(molList);
   YYABORT;
@@ -119,13 +144,21 @@ meta_start: START_MOL mol {
   YYACCEPT;
 }
 | error EOS_TOKEN {
-  yyclearin;
   yyerrok;
   yyErrorCleanup(molList);
   YYABORT;
 }
 ;
 
+bad_atom_def:
+ATOM_OPEN_TOKEN bad_atom_def
+| ATOM_CLOSE_TOKEN bad_atom_def
+| COLON_TOKEN bad_atom_def
+| charge_element {
+  delete $1;
+  YYABORT;
+}
+;
 
 /* --------------------------------------------------------------- */
 // FIX: mol MINUS DIGIT
@@ -135,8 +168,8 @@ mol: atomd {
   (*molList)[ sz ] = new RWMol();
   RDKit::RWMol *curMol = (*molList)[ sz ];
   $1->setProp(RDKit::common_properties::_SmilesStart,1);
-  curMol->addAtom($1);
-  delete $1;
+  curMol->addAtom($1, true, true);
+  //delete $1;
   $$ = sz;
 }
 
@@ -200,7 +233,6 @@ mol: atomd {
   atom->getPropIfPresent(RDKit::common_properties::_RingClosures,tmp);
   tmp.push_back(-($2+1));
   atom->setProp(RDKit::common_properties::_RingClosures,tmp);
-
 }
 
 | mol BOND_TOKEN ring_number {
@@ -208,6 +240,9 @@ mol: atomd {
   Atom *atom=mp->getActiveAtom();
   Bond *newB = mp->createPartialBond(atom->getIdx(),
 				     $2->getBondType());
+  if($2->hasProp(RDKit::common_properties::_unspecifiedOrder)){
+    newB->setProp(RDKit::common_properties::_unspecifiedOrder,1);
+  }
   newB->setBondDir($2->getBondDir());
   mp->setAtomBookmark(atom,$3);
   mp->setBondBookmark(newB,$3);
@@ -290,8 +325,6 @@ bondd:      BOND_TOKEN
           }
 ;
 
-
-
 /* --------------------------------------------------------------- */
 atomd:	simple_atom
 | ATOM_OPEN_TOKEN charge_element COLON_TOKEN number ATOM_CLOSE_TOKEN
@@ -300,7 +333,6 @@ atomd:	simple_atom
   $$->setNoImplicit(true);
   $$->setProp(RDKit::common_properties::molAtomMapNumber,$4);
 }
-
 | ATOM_OPEN_TOKEN charge_element ATOM_CLOSE_TOKEN
 {
   $$ = $2;
@@ -316,7 +348,7 @@ charge_element:	h_element
 | h_element MINUS_TOKEN { $1->setFormalCharge(-1); }
 | h_element MINUS_TOKEN MINUS_TOKEN { $1->setFormalCharge(-2); }
 | h_element MINUS_TOKEN number { $1->setFormalCharge(-$3); }
-		;
+;
 
 /* --------------------------------------------------------------- */
 h_element:      H_TOKEN { $$ = new Atom(1); }
@@ -346,7 +378,7 @@ element:	simple_atom
 		;
 
 /* --------------------------------------------------------------- */
-simple_atom:      ORGANIC_ATOM_TOKEN
+simple_atom:       ORGANIC_ATOM_TOKEN
                 | AROMATIC_ATOM_TOKEN
                 ;
 
