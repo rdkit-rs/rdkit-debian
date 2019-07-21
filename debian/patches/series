@@ -1,8 +1,5 @@
 NoDownloads.patch
-postgres_v11_support.patch
 postgres_Makefile_fixes.patch
 postgres_disable_failing_tests.patch
 sphinx_imgconverter.patch
 catch2_header.patch
-testcase_32bit_fix.patch
-fix_coordgen_include_path.patch
