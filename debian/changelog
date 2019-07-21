@@ -13,6 +13,8 @@ rdkit (201903.1-1) UNRELEASED; urgency=medium
   * debian/patches/testcase_32bit_fix.patch: Likewise.
   * debian/patches/fix_coordgen_include_path.patch: Likewise.
   * debian/control.in (Build-Depends): Added libboost-iostreams-dev.
+  * debian/control.in (Build-Depends): Added versioned Depends on version 1.1-4
+    of libschroedinger-coordgenlibs-dev.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 21 Jul 2019 10:17:45 -0300
 
