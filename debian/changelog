@@ -12,6 +12,7 @@ rdkit (201903.1-1) UNRELEASED; urgency=medium
   * debian/patches/postgres_v11_support.patch: Removed, no longer needed.
   * debian/patches/testcase_32bit_fix.patch: Likewise.
   * debian/patches/fix_coordgen_include_path.patch: Likewise.
+  * debian/control.in (Build-Depends): Added libboost-iostreams-dev.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 21 Jul 2019 10:17:45 -0300
 
