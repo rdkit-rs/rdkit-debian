@@ -5,8 +5,9 @@ rdkit (201903.1-1) UNRELEASED; urgency=medium
 
   [ Michael Banck ]
   * debian/copyright: Removed Files-Excluded, no longer needed. 
-  * debian/patches/NoDownloads.patch: Remove CoordGen-specific hunks, no longer
-    needed.
+  * debian/patches/NoDownloads.patch: Remove CoordGen-specific hunks and add
+    another CoordGen-specific hunk that drops the template.mae template
+    support.
   * debian/patches/sphinx_imgconverter.patch: Updated.
   * debian/patches/postgres_v11_support.patch: Removed, no longer needed.
   * debian/patches/testcase_32bit_fix.patch: Likewise.
