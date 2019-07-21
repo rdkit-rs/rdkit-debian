@@ -89,11 +89,11 @@ void test1MolWithQueryAlign() {
 
   std::string rdbase = getenv("RDBASE");
   std::string fname1 = rdbase + "/Code/GraphMol/MolAlign/test_data/1oir.mol";
-  auto *m1 = new RWMol(*MolFileToMol(fname1));
+  auto *m1 = MolFileToMol(fname1);
   auto *a1 = new QueryAtom(6);
   std::string fname2 =
       rdbase + "/Code/GraphMol/MolAlign/test_data/1oir_conf.mol";
-  auto *m2 = new RWMol(*MolFileToMol(fname2));
+  auto *m2 = MolFileToMol(fname2);
   auto *a2 = new QueryAtom(6);
 
   // we replace the same nitrogen instead with a null
@@ -107,8 +107,9 @@ void test1MolWithQueryAlign() {
   std::string fname3 =
       rdbase + "/Code/GraphMol/MolAlign/test_data/1oir_trans.mol";
 
-  auto *m3 = new RWMol(*MolFileToMol(fname3));
-  m3->replaceAtom(0, new QueryAtom(5));
+  auto *m3 = MolFileToMol(fname3);
+  auto *a3 = new QueryAtom(5);
+  m3->replaceAtom(0, a3);
 
   const Conformer &conf1 = m2->getConformer(0);
   const Conformer &conf2 = m3->getConformer(0);
@@ -133,6 +134,9 @@ void test1MolWithQueryAlign() {
   delete m1;
   delete m2;
   delete m3;
+  delete a1;
+  delete a2;
+  delete a3;
 }
 
 void test2AtomMap() {
@@ -205,6 +209,13 @@ void testIssue241() {
   ff2->minimize(200, 1e-8, 1e-6);
 
   double rmsd = MolAlign::alignMol(*ref, *probe);
+
+  delete ff1;
+  delete ff2;
+  delete m1;
+  delete ref;
+  delete probe;
+
   TEST_ASSERT(RDKit::feq(rmsd, 0.0));
 }
 
@@ -386,9 +397,12 @@ void testMMFFO3AConstraints() {
   ForceFields::ForceField *field = MMFF::constructForceField(*m1, &mp);
   field->initialize();
   field->minimize();
+  delete field;
+
   RWMol *patt = SmartsToMol("nccc-cccc");
   MatchVectType matchVect;
   TEST_ASSERT(SubstructMatch(*m1, (ROMol &)*patt, matchVect));
+  delete patt;
   unsigned int nIdx = matchVect[0].second;
   unsigned int cIdx = matchVect[matchVect.size() - 1].second;
   MolTransforms::setDihedralDeg(m1->getConformer(), matchVect[2].second,
@@ -431,9 +445,11 @@ void testCrippenO3AConstraints() {
   ForceFields::ForceField *field = MMFF::constructForceField(*m1, &mp);
   field->initialize();
   field->minimize();
+  delete field;
   RWMol *patt = SmartsToMol("nccc-cccc");
   MatchVectType matchVect;
   TEST_ASSERT(SubstructMatch(*m1, (ROMol &)*patt, matchVect));
+  delete patt;
   unsigned int nIdx = matchVect[0].second;
   unsigned int cIdx = matchVect[matchVect.size() - 1].second;
   MolTransforms::setDihedralDeg(m1->getConformer(), matchVect[2].second,
@@ -533,6 +549,8 @@ void testMMFFO3AConstraintsAndLocalOnly() {
                    .length();
     TEST_ASSERT(feq(d, distOS[i], 0.1));
   }
+  delete refMol;
+  delete prbMol;
 }
 
 void testCrippenO3AConstraintsAndLocalOnly() {
@@ -585,6 +603,8 @@ void testCrippenO3AConstraintsAndLocalOnly() {
                    .length();
     TEST_ASSERT(feq(d, distOS[i], 0.1));
   }
+  delete prbMol;
+  delete refMol;
 }
 
 #ifdef RDK_TEST_MULTITHREADED
@@ -593,7 +613,7 @@ void runblock_o3a_mmff(ROMol *refMol, const std::vector<ROMol *> &mols,
                        const std::vector<double> &rmsds,
                        const std::vector<double> &scores, unsigned int count,
                        unsigned int idx) {
-  for (unsigned int rep = 0; rep < 30; ++rep) {
+  for (unsigned int rep = 0; rep < 10; ++rep) {
     MMFF::MMFFMolProperties refMP(*refMol);
     for (unsigned int i = 0; i < mols.size(); ++i) {
       if (i % count != idx) continue;
@@ -615,7 +635,7 @@ void runblock_o3a_crippen(ROMol *refMol, const std::vector<ROMol *> &mols,
                           const std::vector<double> &scores, unsigned int count,
                           unsigned int idx) {
   ROMol refMolCopy(*refMol);
-  for (unsigned int rep = 0; rep < 30; ++rep) {
+  for (unsigned int rep = 0; rep < 10; ++rep) {
     unsigned int refNAtoms = refMolCopy.getNumAtoms();
     std::vector<double> refLogpContribs(refNAtoms);
     std::vector<double> refMRContribs(refNAtoms);
@@ -647,7 +667,7 @@ void runblock_o3a_crippen(ROMol *refMol, const std::vector<ROMol *> &mols,
     }
   }
 }
-}
+}  // namespace
 #include <thread>
 #include <future>
 void testMMFFO3AMultiThread() {
@@ -697,7 +717,7 @@ void testMMFFO3AMultiThread() {
     fut.get();
   }
 
-  BOOST_FOREACH (ROMol *mol, mols) { delete mol; }
+  BOOST_FOREACH (auto &&mol, mols) { delete mol; }
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }
 
@@ -848,7 +868,7 @@ void testO3AMultiThreadBug() {
     ROMol *mol = suppl.next();
     if (!mol) continue;
 
-    while (mol->getNumConformers() < 50) {
+    while (mol->getNumConformers() < 20) {
       auto *conf = new Conformer(mol->getConformer(0));
       mol->addConformer(conf, true);
     }
@@ -865,7 +885,7 @@ void testO3AMultiThreadBug() {
   {
     for (auto &mol : mols) {
       ROMol prbMol = *mol;
-      TEST_ASSERT(prbMol.getNumConformers() == 50);
+      TEST_ASSERT(prbMol.getNumConformers() == 20);
 
       MMFF::MMFFMolProperties prbMP(prbMol);
 
@@ -893,8 +913,7 @@ void testO3AMultiThreadBug() {
 
 #endif
   delete refMol;
-  for (auto &mol : mols) delete mol;
-
+  BOOST_FOREACH (auto &&mol, mols) { delete mol; }
   BOOST_LOG(rdErrorLog) << "  done" << std::endl;
 }
 
@@ -980,12 +999,6 @@ int main() {
   std::cout << "\t---------------------------------\n";
   std::cout << "\t test getO3AForProbeConfs\n\n";
   testGetO3AForProbeConfs();
-#endif
-
-#ifdef RDK_TEST_MULTITHREADED
-  std::cout << "\t---------------------------------\n";
-  std::cout << "\t test O3A multithreading bug\n\n";
-  testO3AMultiThreadBug();
 #endif
 
   std::cout << "***********************************************************\n";

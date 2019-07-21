@@ -1,5 +1,6 @@
 %{
 
+  // $Id$
   //
   //  Copyright (C) 2003-2018 Greg Landrum and Rational Discovery LLC
   //
@@ -20,16 +21,6 @@
 
 extern int yysmarts_lex(YYSTYPE *,void *, int &);
 
-void
-yysmarts_error( const char *input,
-                std::vector<RDKit::RWMol *> *ms,
-                RDKit::Atom* &lastAtom,
-                RDKit::Bond* &lastBond,
-		void *scanner,int start_token, const char * msg )
-{
-  throw RDKit::SmilesParseException(msg);
-}
-
 using namespace RDKit;
 namespace {
  void yyErrorCleanup(std::vector<RDKit::RWMol *> *molList){
@@ -40,6 +31,21 @@ namespace {
   molList->clear();
   molList->resize(0);
  }
+}
+void
+yysmarts_error( const char *input,
+                std::vector<RDKit::RWMol *> *ms,
+                RDKit::Atom* &lastAtom,
+                RDKit::Bond* &lastBond,
+		void *scanner,int start_token, const char * msg )
+{
+  RDUNUSED_PARAM(input);
+  RDUNUSED_PARAM(lastAtom);
+  RDUNUSED_PARAM(lastBond);
+  RDUNUSED_PARAM(scanner);
+  RDUNUSED_PARAM(start_token);
+  yyErrorCleanup(ms);
+  BOOST_LOG(rdErrorLog) << "SMARTS Parse Error: " << msg << " while parsing: " << input << std::endl;
 }
 %}
 
@@ -93,22 +99,40 @@ namespace {
 %left AND_TOKEN
 %right NOT_TOKEN
 
+%destructor { delete $$; } <atom>
+%destructor { delete $$; } <bond>
+
 %start meta_start
 
 %%
 
 /* --------------------------------------------------------------- */
-meta_start: START_MOL mol {
+meta_start:
+START_MOL mol {
 // the molList has already been updated, no need to do anything
 }
-| START_ATOM atomd {
+| START_ATOM atomd EOS_TOKEN {
   lastAtom = $2;
+  YYACCEPT;
+}
+| START_ATOM bad_atom_def {
+  YYABORT;
+}
+| START_ATOM {
+  YYABORT;
+}
+| START_BOND bond_expr EOS_TOKEN {
+  lastBond = $2;
+  YYACCEPT;
 }
 | START_BOND bond_expr {
-  lastBond = $2;
+  delete $2;
+  YYABORT;
+}
+| START_BOND {
+  YYABORT;
 }
 | meta_start error EOS_TOKEN{
-  yyclearin;
   yyerrok;
   yyErrorCleanup(molList);
   YYABORT;
@@ -117,9 +141,18 @@ meta_start: START_MOL mol {
   YYACCEPT;
 }
 | error EOS_TOKEN {
-  yyclearin;
   yyerrok;
   yyErrorCleanup(molList);
+  YYABORT;
+}
+;
+
+bad_atom_def:
+ATOM_OPEN_TOKEN bad_atom_def
+| ATOM_CLOSE_TOKEN bad_atom_def
+| COLON_TOKEN bad_atom_def
+| atom_expr {
+  delete $1;
   YYABORT;
 }
 ;
@@ -245,7 +278,6 @@ mol: atomd {
     molList->resize( sz-1 );
   }
 }
-
 ;
 
 /* --------------------------------------------------------------- */

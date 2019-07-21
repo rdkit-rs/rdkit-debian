@@ -611,15 +611,14 @@ ExplicitBitVect *wrapRDKFingerprintMol(
       pythonObjectToVect<unsigned int>(atomInvariants);
   std::unique_ptr<std::vector<unsigned int>> lFromAtoms =
       pythonObjectToVect(fromAtoms, mol.getNumAtoms());
-  std::vector<std::vector<boost::uint32_t>> *lAtomBits = nullptr;
-  std::map<boost::uint32_t, std::vector<std::vector<int>>> *lBitInfo = nullptr;
+  std::vector<std::vector<std::uint32_t>> *lAtomBits = nullptr;
+  std::map<std::uint32_t, std::vector<std::vector<int>>> *lBitInfo = nullptr;
   // if(!(atomBits.is_none())){
   if (atomBits != python::object()) {
-    lAtomBits =
-        new std::vector<std::vector<boost::uint32_t>>(mol.getNumAtoms());
+    lAtomBits = new std::vector<std::vector<std::uint32_t>>(mol.getNumAtoms());
   }
   if (bitInfo != python::object()) {
-    lBitInfo = new std::map<boost::uint32_t, std::vector<std::vector<int>>>;
+    lBitInfo = new std::map<std::uint32_t, std::vector<std::vector<int>>>;
   }
   ExplicitBitVect *res;
   res = RDKit::RDKFingerprintMol(mol, minPath, maxPath, fpSize, nBitsPerHash,
@@ -631,7 +630,7 @@ ExplicitBitVect *wrapRDKFingerprintMol(
     python::list &pyl = static_cast<python::list &>(atomBits);
     for (unsigned int i = 0; i < mol.getNumAtoms(); ++i) {
       python::list tmp;
-      BOOST_FOREACH (boost::uint32_t v, (*lAtomBits)[i]) { tmp.append(v); }
+      BOOST_FOREACH (std::uint32_t v, (*lAtomBits)[i]) { tmp.append(v); }
       pyl.append(tmp);
     }
     delete lAtomBits;
@@ -1578,6 +1577,21 @@ struct molops_wrapper {
 
     // ------------------------------------------------------------------------
     docString =
+        "Uses bond directions to assign ChiralTypes to a molecule's atoms.\n\
+\n\
+  ARGUMENTS:\n\
+\n\
+    - mol: the molecule to use\n\
+    - confId: (optional) the conformation to use \n\
+    - replaceExistingTags: (optional) replace any existing information about stereochemistry\n\
+\n";
+    python::def("AssignChiralTypesFromBondDirs",
+                MolOps::assignChiralTypesFromBondDirs,
+                (python::arg("mol"), python::arg("confId") = -1,
+                 python::arg("replaceExistingTags") = true),
+                docString.c_str());
+    // ------------------------------------------------------------------------
+    docString =
         "Uses a conformer (should be 3D) to assign ChiralTypes to a molecule's atoms\n\
         and stereo flags to its bonds\n\
 \n\
@@ -1946,17 +1960,17 @@ Calling:\n\
   NOTES:\n\
 \n\
     - The original molecule is *not* modified.\n\
-EXAMPLES:\n\
+EXAMPLES:\n\n\
     >>> from rdkit.Chem import MolToSmiles, MolFromSmiles, ReplaceCore\n\
     >>> mol = MolFromSmiles('C1ONNCC1')\n\
     >>> core = MolFromSmiles('NN')\n\
 \n\
-    Note: Using isomericSmiles is necessary to see the labels.\n\
+    Note: Using isomericSmiles is necessary to see the labels.\n\n\
     >>> MolToSmiles(ReplaceCore(mol, core, mol.GetSubstructMatch(core)), isomericSmiles=True)\n\
     '[1*]OCCC[2*]'\n\
 \n\
     Since NN is symmetric, we should actually get two matches here if we don't\n\
-    uniquify the matches.\n\
+    uniquify the matches.\n\n\
     >>> [MolToSmiles(ReplaceCore(mol, core, match), isomericSmiles=True)\n\
     ...     for match in mol.GetSubstructMatches(core, uniquify=False)]\n\
     ['[1*]OCCC[2*]', '[1*]CCCO[2*]']\n\
@@ -2013,16 +2027,16 @@ EXAMPLES:\n\
    The isotope label by default is matched by the first connection found. In order to\n\
    indicate which atom the decoration is attached in the core query, use labelByIndex=True.\n\
    Here the attachment is from the third atom in the smiles string, which is indexed by 3\n\
-   in the core, like all good computer scientists expect, atoms indices start at 0.\n\
+   in the core, like all good computer scientists expect, atoms indices start at 0.\n\n\
    >>> MolToSmiles(ReplaceCore(MolFromSmiles('CCN1CCC1'),MolFromSmiles('C1CCN1'),\n\
    ...                         labelByIndex=True),\n\
    ...   isomericSmiles=True)\n\
    '[3*]CC'\n\
 \n\
-   Non-core matches just return None\n\
+   Non-core matches just return None\n\n\
    >>> ReplaceCore(MolFromSmiles('CCC1CC1'),MolFromSmiles('C1CCC1'))\n\
 \n\
-   The bond between atoms are considered part of the core and are removed as well\n\
+   The bond between atoms are considered part of the core and are removed as well\n\n\
    >>> MolToSmiles(ReplaceCore(MolFromSmiles('C1CC2C1CCC2'),MolFromSmiles('C1CCC1')),\n\
    ...             isomericSmiles=True)\n\
    '[1*]CCC[2*]'\n\
@@ -2033,7 +2047,7 @@ EXAMPLES:\n\
    When using dummy atoms, cores should be read in as SMARTS.  When read as SMILES\n\
    dummy atoms only match other dummy atoms.\n\
    The replaceDummies flag indicates whether matches to the dummy atoms should be considered as part\n\
-   of the core or as part of the decoration (r-group)\n\
+   of the core or as part of the decoration (r-group)\n\n\
    >>> MolToSmiles(ReplaceCore(MolFromSmiles('C1CNCC1'),MolFromSmarts('[*]N[*]'),\n\
    ...                         replaceDummies=True),\n\
    ...             isomericSmiles=True)\n\

@@ -30,7 +30,7 @@ using namespace RDKit;
 
 namespace RDKit {
 void tossit() { throw IndexErrorException(1); }
-}
+}  // namespace RDKit
 
 void rdExceptionTranslator(RDKit::ConformerException const &x) {
   RDUNUSED_PARAM(x);
@@ -47,12 +47,14 @@ void wrap_table();
 void wrap_atom();
 void wrap_conformer();
 void wrap_bond();
+void wrap_stereogroup();
 void wrap_mol();
 void wrap_ringinfo();
 void wrap_EditableMol();
 void wrap_monomerinfo();
 void wrap_resmolsupplier();
 void wrap_molbundle();
+void wrap_sgroup();
 
 struct PySysErrWrite : std::ostream, std::streambuf {
   std::string prefix;
@@ -105,8 +107,7 @@ void WrapLogs() {
   static PySysErrWrite error("RDKit ERROR: ");
   static PySysErrWrite info("RDKit INFO: ");
   static PySysErrWrite warning("RDKit WARNING: ");
-  if (rdDebugLog == nullptr || rdInfoLog == nullptr || rdErrorLog == nullptr ||
-      rdWarningLog == nullptr) {
+  if (!rdDebugLog || !rdInfoLog || !rdErrorLog || !rdWarningLog) {
     RDLog::InitLogs();
   }
   if (rdDebugLog != nullptr) rdDebugLog->SetTee(debug);
@@ -180,12 +181,14 @@ BOOST_PYTHON_MODULE(rdchem) {
   wrap_atom();
   wrap_conformer();
   wrap_bond();
+  wrap_stereogroup();
   wrap_mol();
   wrap_EditableMol();
   wrap_ringinfo();
   wrap_monomerinfo();
   wrap_resmolsupplier();
   wrap_molbundle();
+  wrap_sgroup();
 
   //*********************************************
   //

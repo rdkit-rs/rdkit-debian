@@ -9,6 +9,7 @@
 //
 #include <RDGeneral/test.h>
 #include <RDGeneral/utils.h>
+#include <DataStructs/ExplicitBitVect.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/RDKitQueries.h>
 #include <GraphMol/MolPickler.h>
@@ -231,6 +232,8 @@ void test4() {
   TEST_ASSERT(!m3.getRingInfo()->isBondInRingOfSize(0, 4));
   TEST_ASSERT(!m3.getRingInfo()->isBondInRingOfSize(4, 3));
   TEST_ASSERT(m3.getRingInfo()->isBondInRingOfSize(4, 4));
+  delete m1;
+  delete m2;
 
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
@@ -268,6 +271,9 @@ void testIssue164() {
 
   TEST_ASSERT(m3->getNumAtoms() == m4.getNumAtoms());
   TEST_ASSERT(m3->getNumBonds() == m4.getNumBonds());
+  delete m1;
+  delete m3;
+
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
 
@@ -295,6 +301,8 @@ void testIssue219() {
   MolPickler::molFromPickle(pickle, *m2);
   TEST_ASSERT(m1->getNumAtoms() == m2->getNumAtoms());
   TEST_ASSERT(m2->getConformer().getId() == 23);
+  delete m1;
+  delete m2;
 
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
@@ -324,6 +332,8 @@ void testIssue220() {
                 m2->getBondWithIdx(i)->getStereoAtoms());
   }
 
+  delete m1;
+  delete m2;
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
 
@@ -379,6 +389,7 @@ void testQueries() {
   TEST_ASSERT(m2);
   TEST_ASSERT(!m1->getAtomWithIdx(0)->Match(m2->getAtomWithIdx(0)));
   delete m1;
+  delete m2;
 
   // atom lists:
   smi = "[C,N,O]";
@@ -418,6 +429,7 @@ void testQueries() {
   TEST_ASSERT(!m1->getAtomWithIdx(0)->Match(m2->getAtomWithIdx(1)));
   TEST_ASSERT(!m1->getAtomWithIdx(0)->Match(m2->getAtomWithIdx(2)));
   delete m1;
+  delete m2;
 
   // more complex atom queries:
   smi = "[C&D2,N&D1]";
@@ -464,6 +476,7 @@ void testQueries() {
   m2 = SmilesToMol(smi);
   TEST_ASSERT(m2);
   TEST_ASSERT(!m1->getAtomWithIdx(0)->Match(m2->getAtomWithIdx(0)));
+  delete m1;
   delete m2;
 
   // basic recursive queries:
@@ -493,6 +506,7 @@ void testQueries() {
   TEST_ASSERT(m2);
   TEST_ASSERT(SubstructMatch(*m2, *m1, matchV));
   delete m1;
+  delete m2;
 
   smi = "[R2]";
   m1 = SmartsToMol(smi);
@@ -515,6 +529,7 @@ void testQueries() {
   TEST_ASSERT(m2);
   TEST_ASSERT(m1->getAtomWithIdx(0)->Match(m2->getAtomWithIdx(0)));
   TEST_ASSERT(!m1->getAtomWithIdx(0)->Match(m2->getAtomWithIdx(1)));
+  delete m1;
   delete m2;
 
   // basic bond queries:
@@ -550,6 +565,7 @@ void testQueries() {
   m2 = SmilesToMol(smi);
   TEST_ASSERT(m2);
   TEST_ASSERT(SubstructMatch(*m2, *m1, matchV));
+  delete m1;
   delete m2;
 
   smi = "[#6]-[#6]";
@@ -584,6 +600,7 @@ void testQueries() {
   m2 = SmilesToMol(smi);
   TEST_ASSERT(m2);
   TEST_ASSERT(!SubstructMatch(*m2, *m1, matchV));
+  delete m1;
   delete m2;
 
   smi = "C=C";
@@ -596,6 +613,7 @@ void testQueries() {
   TEST_ASSERT(m1->getNumAtoms() == 2);
   smi = MolToSmarts(*m1);
   TEST_ASSERT(smi == "C=C");
+  delete m1;
 
   smi = "C=[$(C=O)]";
   m1 = SmartsToMol(smi);
@@ -608,6 +626,7 @@ void testQueries() {
   smi = MolToSmarts(*m1);
   BOOST_LOG(rdErrorLog) << smi << std::endl;
   TEST_ASSERT(smi == "C=[$(C=O)]");
+  delete m1;
 
   smi = "S(=O)(=O)-[C;H2]([F,Br,I,Cl])";
   m1 = SmartsToMol(smi);
@@ -620,6 +639,7 @@ void testQueries() {
   smi2 = MolToSmarts(*m1);
   BOOST_LOG(rdErrorLog) << smi << " " << smi2 << std::endl;
   TEST_ASSERT(smi == smi2);
+  delete m1;
 
   // more complex recursive queries:
   smi = "[$(C)]";
@@ -648,6 +668,7 @@ void testQueries() {
   TEST_ASSERT(m2);
   TEST_ASSERT(!SubstructMatch(*m2, *m1, matchV));
   delete m1;
+  delete m2;
 
   // more complex recursive queries:
   smi = "[$(C=O);$(C-N)]";
@@ -669,9 +690,9 @@ void testQueries() {
   m2 = SmilesToMol(smi);
   TEST_ASSERT(m2);
   TEST_ASSERT(SubstructMatch(*m2, *m1, matchV));
+  delete m1;
   delete m2;
 
-  delete m1;
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
 
@@ -691,6 +712,8 @@ void testRadicals() {
   TEST_ASSERT(m1->getNumAtoms() == m2->getNumAtoms());
   TEST_ASSERT(m1->getNumBonds() == m2->getNumBonds());
   TEST_ASSERT(m2->getAtomWithIdx(1)->getNumRadicalElectrons() == 1);
+  delete m1;
+  delete m2;
 
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
@@ -941,12 +964,14 @@ void testAtomResidues() {
   {
     auto *m = new RWMol();
 
-    m->addAtom(new Atom(6));
-    m->addAtom(new Atom(6));
+    bool updateLabel = true;
+    bool takeOwnership = true;
+    m->addAtom(new Atom(6), updateLabel, takeOwnership);
+    m->addAtom(new Atom(6), updateLabel, takeOwnership);
     m->addBond(0, 1, Bond::SINGLE);
-    m->addAtom(new Atom(6));
+    m->addAtom(new Atom(6), updateLabel, takeOwnership);
     m->addBond(1, 2, Bond::SINGLE);
-    m->addAtom(new Atom(6));
+    m->addAtom(new Atom(6), updateLabel, takeOwnership);
     m->addBond(2, 3, Bond::SINGLE);
 
     m->getAtomWithIdx(0)->setMonomerInfo(
@@ -968,6 +993,7 @@ void testAtomResidues() {
                     ->getSerialNumber() == 3);
     TEST_ASSERT(!(m2->getAtomWithIdx(2)->getMonomerInfo()));
     TEST_ASSERT(!(m2->getAtomWithIdx(3)->getMonomerInfo()));
+    delete m2;
   }
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
@@ -1216,7 +1242,8 @@ void testGithub1563() {
       << std::endl;
   RWMol m;
   auto *qa = new QueryAtom();
-  qa->setQuery(makeAtomHeavyAtomDegreeQuery(3));
+  auto *query = makeAtomHeavyAtomDegreeQuery(3);
+  qa->setQuery(query);
   m.addAtom(qa);
   TEST_ASSERT(m.getAtomWithIdx(0)->hasQuery());
   TEST_ASSERT(m.getAtomWithIdx(0)->getQuery()->getDescription() ==
@@ -1231,7 +1258,7 @@ void testGithub1563() {
   TEST_ASSERT(nm2.getAtomWithIdx(0)->hasQuery());
   TEST_ASSERT(nm2.getAtomWithIdx(0)->getQuery()->getDescription() ==
               "AtomHeavyAtomDegree");
-
+  delete qa;
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
 
@@ -1336,6 +1363,34 @@ void testEnhancedStereoChemistry() {
   }
 }
 
+void testCustomPickler() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n";
+  BOOST_LOG(rdInfoLog) << "Testing custom pickler (bitvector)"
+                       << std::endl;  
+  const bool bitsSet = false;
+  ExplicitBitVect bv(1024, bitsSet);
+  bv.setBit(100);
+  RWMol m;
+  m.addAtom(new Atom(6), false, true);
+
+  m.getAtomWithIdx(0)->setProp<ExplicitBitVect>("bv", bv);
+
+  TEST_ASSERT(
+      m.getAtomWithIdx(0)->getProp<ExplicitBitVect>("bv").getBit(100) == true);
+  TEST_ASSERT(
+      m.getAtomWithIdx(0)->getProp<ExplicitBitVect>("bv").getBit(101) == false);
+  
+  std::string pkl;
+  MolPickler::pickleMol(m, pkl, PicklerOps::AllProps);
+  std::unique_ptr<RWMol> roundTripped(new RWMol(pkl));
+  
+  TEST_ASSERT(roundTripped->getAtomWithIdx(0)->hasProp("bv"));
+  TEST_ASSERT(
+      roundTripped->getAtomWithIdx(0)->getProp<ExplicitBitVect>("bv").getBit(100) == true);
+  TEST_ASSERT(
+      roundTripped->getAtomWithIdx(0)->getProp<ExplicitBitVect>("bv").getBit(101) == false);
+}
+
 int main(int argc, char *argv[]) {
   RDLog::InitLogs();
   bool doLong = false;
@@ -1372,4 +1427,5 @@ int main(int argc, char *argv[]) {
   testGithub1710();
   testGithub1999();
   testEnhancedStereoChemistry();
+  testCustomPickler();
 }

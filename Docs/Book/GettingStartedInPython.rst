@@ -1,7 +1,12 @@
 Getting Started with the RDKit in Python
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+Important note
+**************
 
+Beginning with the 2019.03 release, the RDKit is no longer supporting Python 2.
+If you need to continue using Python 2, please stick with a release from the 2018.09
+release cycle.
 
 What is this?
 *************
@@ -665,7 +670,7 @@ but they are important for getting realistic geometries, so they
 generally should be added.  They can always be removed afterwards
 if necessary with a call to `Chem.RemoveHs()`.
 
-With the RDKit, multiple conformers can also be generated using the 
+With the RDKit, multiple conformers can also be generated using the
 different embedding methods. In both cases this is simply a matter of
 running the distance geometry calculation multiple times from
 different random start points. The option `numConfs` allows the user to
@@ -2542,7 +2547,7 @@ but that are, of course, complete nonsense, as sanitization will indicate:
 
   >>> Chem.SanitizeMol(m)
   Traceback (most recent call last):
-    File "/usr/lib/python2.6/doctest.py", line 1253, in __run
+    File "/usr/lib/python3.6/doctest.py", line 1253, in __run
       compileflags, 1) in test.globs
     File "<doctest default[0]>", line 1, in <module>
       Chem.SanitizeMol(m)
@@ -2726,8 +2731,8 @@ List of Available Descriptors
 |TPSA                                                 |*J. Med. Chem.*                                             | C++      |
 |                                                     |**43**:3714\-7,                                             |          |
 |                                                     |(2000)                                                      |          |
-|                                                     | See the section in the RDKit book describing differences   |          |
-|                                                     |   to the original publication.                             |          |
+|                                                     |See the section in the RDKit book describing differences    |          |
+|                                                     |to the original publication.                                |          |
 +-----------------------------------------------------+------------------------------------------------------------+----------+
 |LabuteASA                                            |*J. Mol. Graph. Mod.*                                       | C++      |
 |                                                     |**18**:464\-77 (2000)                                       |          |
