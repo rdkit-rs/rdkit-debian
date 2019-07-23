@@ -1,9 +1,6 @@
-rdkit (201903.1-1) UNRELEASED; urgency=medium
+rdkit (201903.1-1) unstable; urgency=medium
 
-  [ Debichem Team ]
   * New upstream release.
-
-  [ Michael Banck ]
   * debian/copyright: Removed Files-Excluded, no longer needed. 
   * debian/patches/NoDownloads.patch: Remove CoordGen-specific hunks and add
     another CoordGen-specific hunk that drops the template.mae template
@@ -25,7 +22,7 @@ rdkit (201903.1-1) UNRELEASED; urgency=medium
   * debian/rules (override_dh_install): Remove pycache directory before
     install.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 21 Jul 2019 10:17:45 -0300
+ -- Michael Banck <mbanck@debian.org>  Tue, 23 Jul 2019 12:27:30 -0300
 
 rdkit (201809.1+dfsg-7) unstable; urgency=medium
 
