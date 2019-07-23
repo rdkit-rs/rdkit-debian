@@ -19,9 +19,9 @@ rdkit (201903.1-1) UNRELEASED; urgency=medium
   * debian/control.in (Build-Depends): Removed python-dev, python-numpy,
     python-pandas and python-pil.
   * debian/rules: Removed python(2) support.
-  * debian/control: Regenerated.
   * debian/control.in (Build-Depends): Added versioned Depends on version 1.2-1
     of libschroedinger-maeparser-dev.
+  * debian/control: Regenerated.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 21 Jul 2019 10:17:45 -0300
 
