@@ -96,7 +96,8 @@ override_dh_auto_install:
 override_dh_install:
 	ln -sf /usr/share/fonts/truetype/freefont/FreeSans.ttf $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/Chem/Draw/FreeSans.ttf
 	dh_install -ppython3-rdkit /usr/lib/python3
-	$(RM) -rf  $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/docs/
+	$(RM) -rf $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/docs/
+	$(RM) -rf $(DEBTMP)/usr/share/RDKit/Projects/__pycache__
 	dh_numpy3
 	dh_install --list-missing
 	mkdir -p $(DOCDIR)
