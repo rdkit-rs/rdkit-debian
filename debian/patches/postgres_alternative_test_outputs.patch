@@ -1,0 +1,3024 @@
+--- /dev/null	2019-10-21 09:46:46.351315135 +0200
++++ ./Code/PgSQL/rdkit/expected/rdkit-91_1.out	2019-11-02 21:02:13.079044510 +0100
+@@ -0,0 +1,878 @@
++--
++-- first, define the datatype.  Turn off echoing so that expected file
++-- does not depend on contents of rdkit.sql.
++--
++SET client_min_messages = warning;
++\set ECHO none
++RESET client_min_messages;
++SELECT is_valid_smiles('c1ccccc1');
++ is_valid_smiles 
++-----------------
++ t
++(1 row)
++
++SELECT mol_from_smiles('c1ccccc1');
++ mol_from_smiles 
++-----------------
++ c1ccccc1
++(1 row)
++
++SELECT is_valid_smiles('c1ccccc');
++ is_valid_smiles 
++-----------------
++ f
++(1 row)
++
++SELECT mol_from_smiles('c1ccccc');
++WARNING:  could not create molecule from SMILES 'c1ccccc'
++ mol_from_smiles 
++-----------------
++ 
++(1 row)
++
++SELECT mol_from_smiles('cccccc');
++WARNING:  could not create molecule from SMILES 'cccccc'
++ mol_from_smiles 
++-----------------
++ 
++(1 row)
++
++SELECT is_valid_smiles('c1cccn1');
++ is_valid_smiles 
++-----------------
++ f
++(1 row)
++
++SELECT is_valid_smarts('c1ccc[n,c]1');
++ is_valid_smarts 
++-----------------
++ t
++(1 row)
++
++SELECT mol_from_smarts('c1ccc[n,c]1');
++ mol_from_smarts 
++-----------------
++ *1cccc1
++(1 row)
++
++SELECT is_valid_smarts('c1ccc');
++ is_valid_smarts 
++-----------------
++ f
++(1 row)
++
++SELECT mol_from_smarts('c1ccc');
++WARNING:  could not create molecule from SMILES 'c1ccc'
++ mol_from_smarts 
++-----------------
++ 
++(1 row)
++
++SELECT mol_to_smiles(mol_from_smiles('c1ccccc1'));
++ mol_to_smiles 
++---------------
++ c1ccccc1
++(1 row)
++
++SELECT mol_to_smarts(mol_from_smiles('c1ccccc1'));
++          mol_to_smarts           
++----------------------------------
++ [#6]1:[#6]:[#6]:[#6]:[#6]:[#6]:1
++(1 row)
++
++SELECT mol_to_smarts('c1cccc[n,c]1'::qmol);
++ mol_to_smarts 
++---------------
++ c1cccc[n,c]1
++(1 row)
++
++SELECT mol_to_smiles('c1cccc[n,c]1'::qmol);
++ mol_to_smiles 
++---------------
++ *1ccccc1
++(1 row)
++
++SELECT is_valid_smiles('');
++ is_valid_smiles 
++-----------------
++ t
++(1 row)
++
++SELECT mol_from_smiles('');
++ mol_from_smiles 
++-----------------
++ 
++(1 row)
++
++SELECT mol_to_smiles(mol_from_smiles(''));
++ mol_to_smiles 
++---------------
++ 
++(1 row)
++
++CREATE TABLE pgmol (id int, m mol);
++\copy pgmol from 'data/data'
++CREATE UNIQUE INDEX mol_ididx ON pgmol (id);
++SELECT count(*) FROM pgmol;
++ count 
++-------
++  1000
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE m @> 'c1ccccc1';
++ count 
++-------
++   901
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE m @> 'c1cccnc1';
++ count 
++-------
++   245
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE 'c1ccccc1' <@ m;
++ count 
++-------
++   901
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE 'c1cccnc1' <@ m;
++ count 
++-------
++   245
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE m @> mol_from_smarts('c1ccccc1');
++ count 
++-------
++   901
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE m @> mol_from_smarts('c1cccnc1');
++ count 
++-------
++   245
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE m @> mol_from_smarts('c1ccc[n,c]c1');
++ count 
++-------
++   939
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE mol_from_smarts('c1ccccc1') <@ m;
++ count 
++-------
++   901
++(1 row)
++
++SELECT count(*) FROM pgmol WHERE mol_from_smarts('c1ccc[n,c]c1') <@ m;
++ count 
++-------
++   939
++(1 row)
++
++SELECT id, rdkit_fp(m) AS f, maccs_fp(m) as maccsf INTO pgbfp FROM pgmol;
++CREATE UNIQUE INDEX bfp_ididx ON pgbfp (id);
++SELECT id, morgan_fp(m,1) AS f INTO pgsfp FROM pgmol;
++CREATE UNIQUE INDEX sfp_ididx ON pgsfp (id);
++SELECT id, torsion_fp(m) AS f INTO pgtorsfp FROM pgmol;
++SELECT id, atompair_fp(m) AS f INTO pgpairfp FROM pgmol;
++set rdkit.tanimoto_threshold=0.5;
++set rdkit.dice_threshold=0.5;
++SELECT
++	id,
++	tanimoto_sml(rdkit_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol), f)
++FROM
++	 (SELECT * FROM pgbfp ORDER BY id) AS t
++WHERE rdkit_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol) % f
++LIMIT 10;
++ id | tanimoto_sml 
++----+--------------
++(0 rows)
++
++SELECT
++	id,
++	dice_sml(rdkit_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol), f)
++FROM
++	 (SELECT * FROM pgbfp ORDER BY id) AS t
++WHERE rdkit_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol) % f
++LIMIT 10;
++ id | dice_sml 
++----+----------
++(0 rows)
++
++SELECT
++	id,
++	tanimoto_sml(rdkit_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol), f)
++FROM
++	 (SELECT * FROM pgbfp ORDER BY id) AS t
++WHERE rdkit_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol) # f
++LIMIT 10;
++   id   |    tanimoto_sml     
++--------+---------------------
++  66722 |  0.3601036269430052
++ 498250 |  0.3682983682983683
++ 576770 | 0.35368421052631577
++ 644427 |  0.3370165745856354
++ 645921 | 0.36594202898550726
++ 690546 |               0.402
++ 698576 |  0.4226579520697168
++ 714484 |  0.3830734966592428
++ 771595 | 0.34393638170974156
++ 788060 | 0.33386581469648563
++(10 rows)
++
++SELECT
++	id,
++	dice_sml(rdkit_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol), f),
++	size(f)
++FROM
++	 (SELECT * FROM pgbfp ORDER BY id) AS t
++WHERE rdkit_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol) # f
++LIMIT 10;
++   id   |      dice_sml      | size 
++--------+--------------------+------
++  66722 | 0.5295238095238095 | 1024
++ 498250 | 0.5383304940374787 | 1024
++ 576770 | 0.5225505443234837 | 1024
++ 644427 | 0.5041322314049587 | 1024
++ 645921 | 0.5358090185676393 | 1024
++ 690546 | 0.5734664764621968 | 1024
++ 698576 | 0.5941807044410413 | 1024
++ 714484 | 0.5539452495974235 | 1024
++ 771595 | 0.5118343195266272 | 1024
++ 788060 | 0.5005988023952096 | 1024
++(10 rows)
++
++set rdkit.tanimoto_threshold=0.4;
++SELECT
++	id,
++	tanimoto_sml(morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)))'::mol, 1), f)
++FROM
++	 (SELECT * FROM pgsfp ORDER BY id) AS t
++WHERE morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)))'::mol, 1) % f
++LIMIT 10;
++   id    |    tanimoto_sml    
++---------+--------------------
++ 3761688 | 0.4418604651162791
++(1 row)
++
++SELECT
++	id,
++	dice_sml(morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)))'::mol, 1), f)
++FROM
++	 (SELECT * FROM pgsfp ORDER BY id) AS t
++WHERE morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)))'::mol, 1) % f
++LIMIT 10;
++   id    |      dice_sml      
++---------+--------------------
++ 3761688 | 0.6129032258064516
++(1 row)
++
++SELECT
++	id,
++	tanimoto_sml(morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol, 1), f)
++FROM
++	 (SELECT * FROM pgsfp ORDER BY id) AS t
++WHERE morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol, 1) # f
++LIMIT 10;
++    id    |    tanimoto_sml     
++----------+---------------------
++   902176 | 0.34782608695652173
++  2952787 | 0.36585365853658536
++  5281628 | 0.34615384615384615
++ 10560368 |  0.4358974358974359
++ 16196768 |               0.375
++(5 rows)
++
++SELECT
++	id,
++	dice_sml(morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol, 1), f)
++FROM
++	 (SELECT * FROM pgsfp ORDER BY id) AS t
++WHERE morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol, 1) # f
++LIMIT 10;
++    id    |      dice_sml      
++----------+--------------------
++   902176 | 0.5161290322580645
++  2952787 | 0.5357142857142857
++  5281628 | 0.5142857142857142
++ 10560368 | 0.6071428571428571
++ 16196768 | 0.5454545454545454
++(5 rows)
++
++select dice_sml(morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol, 1), morgan_fp('C1C(OC2=CC(=CC(=C2C1=O)O)N)'::mol, 1)) sml;
++        sml         
++--------------------
++ 0.8846153846153846
++(1 row)
++
++select dice_sml(featmorgan_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol, 1), featmorgan_fp('C1C(OC2=CC(=CC(=C2C1=O)O)N)'::mol, 1)) sml;
++        sml         
++--------------------
++ 0.8846153846153846
++(1 row)
++
++select dice_sml(morganbv_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol, 1), morganbv_fp('C1C(OC2=CC(=CC(=C2C1=O)O)N)'::mol, 1)) sml;
++        sml         
++--------------------
++ 0.8888888888888888
++(1 row)
++
++select dice_sml(featmorganbv_fp('C1C(OC2=CC(=CC(=C2C1=O)O)O)'::mol, 1), featmorganbv_fp('C1C(OC2=CC(=CC(=C2C1=O)O)N)'::mol, 1)) sml;
++        sml         
++--------------------
++ 0.9032258064516129
++(1 row)
++
++select 'Cc1ccccc1'::mol@='c1ccccc1C'::mol;
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'Cc1ccccc1'::mol@='c1ccccc1CC'::mol;
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'Cc1ccccc1'::mol@='c1cccnc1C'::mol;
++ ?column? 
++----------
++ f
++(1 row)
++
++select subtract(torsion_fp('CCC1CCNCC1'),torsion_fp('OCC1CCNCC1'))=subtract(torsion_fp('CCC1CCOCC1'),torsion_fp('OCC1CCOCC1'));
++ ?column? 
++----------
++ t
++(1 row)
++
++select subtract(torsion_fp('CCC1CCNCC1'),torsion_fp('OCC1CCNCC1'))=subtract(torsion_fp('CCC1CCOCC1'),torsion_fp('NCC1CCOCC1'));
++ ?column? 
++----------
++ f
++(1 row)
++
++select add(torsion_fp('CCC1CCNCC1'),torsion_fp('OCC1CCNCC1'))=add(torsion_fp('CCC1CCOCC1'),torsion_fp('OCC1CCOCC1'));
++ ?column? 
++----------
++ f
++(1 row)
++
++select add(torsion_fp('CCC1CCNCC1'),torsion_fp('OCC1CCNCC1'))=add(torsion_fp('CCC1CCOCC1'),torsion_fp('NCC1CCOCC1'));
++ ?column? 
++----------
++ f
++(1 row)
++
++select add(torsion_fp('CCC1CCNCC1'),torsion_fp('OCC1CCNCC1'))=subtract(torsion_fp('CCC1CCNCC1'),torsion_fp('OCC1CCNCC1'));
++ ?column? 
++----------
++ f
++(1 row)
++
++select add(torsion_fp('CCC1CCNCC1'),torsion_fp('OCC1CCNCC1'))=subtract(torsion_fp('CCC1CCOCC1'),torsion_fp('OCC1CCOCC1'));
++ ?column? 
++----------
++ f
++(1 row)
++
++select is_valid_ctab('chiral1.mol
++  ChemDraw04200416412D
++
++  5  4  0  0  0  0  0  0  0  0999 V2000
++   -0.0141    0.0553    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.8109    0.0553    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.4266    0.7697    0.0000 Br  0  0  0  0  0  0  0  0  0  0  0  0
++   -0.0141   -0.7697    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0
++   -0.8109   -0.1583    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  1  0
++  1  3  1  0
++  1  4  1  1
++  1  5  1  0
++M  END');
++ is_valid_ctab 
++---------------
++ t
++(1 row)
++
++select is_valid_ctab('invalid');
++ is_valid_ctab 
++---------------
++ f
++(1 row)
++
++select mol_from_ctab('chiral1.mol
++  ChemDraw04200416412D
++
++  5  4  0  0  0  0  0  0  0  0999 V2000
++   -0.0141    0.0553    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.8109    0.0553    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.4266    0.7697    0.0000 Br  0  0  0  0  0  0  0  0  0  0  0  0
++   -0.0141   -0.7697    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0
++   -0.8109   -0.1583    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  1  0
++  1  3  1  0
++  1  4  1  1
++  1  5  1  0
++M  END');
++ mol_from_ctab  
++----------------
++ C[C@](F)(Cl)Br
++(1 row)
++
++-- mol_to_ctab() - suppress auto-generation of depiction.
++select mol_to_ctab(mol('CCC'), false);
++                              mol_to_ctab                              
++-----------------------------------------------------------------------
++                                                                      +
++      RDKit          2D                                               +
++                                                                      +
++   3  2  0  0  0  0  0  0  0  0999 V2000                              +
++     0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++     1.2990    0.7500    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++     2.5981   -0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++   1  2  1  0                                                         +
++   2  3  1  0                                                         +
++ M  END                                                               +
++ 
++(1 row)
++
++-- mol_to_ctab() - with auto-generated depiction.
++select mol_to_ctab(mol('CCC'));
++                              mol_to_ctab                              
++-----------------------------------------------------------------------
++                                                                      +
++      RDKit          2D                                               +
++                                                                      +
++   3  2  0  0  0  0  0  0  0  0999 V2000                              +
++     0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++     1.2990    0.7500    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++     2.5981   -0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++   1  2  1  0                                                         +
++   2  3  1  0                                                         +
++ M  END                                                               +
++ 
++(1 row)
++
++-- mol_to_ctab() - should preserve existing/input depiction. Note the
++-- extra 'true' parameter to 'mol_from_ctab()' that forces the cartridge
++-- to preserve the input conformer. Otherwise the conformer will be lost.
++select mol_to_ctab(mol_from_ctab('chiral1.mol
++  ChemDraw04200416412D
++
++  5  4  0  0  0  0  0  0  0  0999 V2000
++   -0.0141    0.0553    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.8109    0.0553    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.4266    0.7697    0.0000 Br  0  0  0  0  0  0  0  0  0  0  0  0
++   -0.0141   -0.7697    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0
++   -0.8109   -0.1583    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  1  0
++  1  3  1  0
++  1  4  1  1
++  1  5  1  0
++M  END', true));
++                              mol_to_ctab                              
++-----------------------------------------------------------------------
++                                                                      +
++      RDKit          2D                                               +
++                                                                      +
++   5  4  0  0  0  0  0  0  0  0999 V2000                              +
++    -0.0141    0.0553    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++     0.8109    0.0553    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0+
++    -0.4266    0.7697    0.0000 Br  0  0  0  0  0  0  0  0  0  0  0  0+
++    -0.0141   -0.7697    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0+
++    -0.8109   -0.1583    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++   1  2  1  0                                                         +
++   1  3  1  0                                                         +
++   1  4  1  0                                                         +
++   1  5  1  6                                                         +
++ M  END                                                               +
++ 
++(1 row)
++
++select all_values_lt(torsion_fp('c1ccccc1C'::mol),2);
++ all_values_lt 
++---------------
++ f
++(1 row)
++
++select all_values_lt(torsion_fp('c1ccccc1C'::mol),3);
++ all_values_lt 
++---------------
++ t
++(1 row)
++
++select all_values_gt(torsion_fp('c1ccccc1C'::mol),1);
++ all_values_gt 
++---------------
++ t
++(1 row)
++
++select all_values_gt(torsion_fp('c1ccccc1C'::mol),2);
++ all_values_gt 
++---------------
++ f
++(1 row)
++
++select is_valid_mol_pkl('foo'::bytea);
++ is_valid_mol_pkl 
++------------------
++ f
++(1 row)
++
++select is_valid_mol_pkl(mol_to_pkl('c1ccccc1'::mol));
++ is_valid_mol_pkl 
++------------------
++ t
++(1 row)
++
++select mol_from_pkl(mol_to_pkl('c1ccccc1'::mol));
++ mol_from_pkl 
++--------------
++ c1ccccc1
++(1 row)
++
++select tanimoto_sml(morganbv_fp('c1ccccn1'::mol),morganbv_fp('c1ccccc1'::mol));
++    tanimoto_sml    
++--------------------
++ 0.3333333333333333
++(1 row)
++
++select tanimoto_sml(bfp_from_binary_text(bfp_to_binary_text(morganbv_fp('c1ccccn1'::mol))),
++                    bfp_from_binary_text(bfp_to_binary_text(morganbv_fp('c1ccccc1'::mol))));
++    tanimoto_sml    
++--------------------
++ 0.3333333333333333
++(1 row)
++
++-- GitHub issue 9
++select 'C1CC2CC3C45C2C2C6C7C8C9C%10C(C1)C1C%11%10C%109C98C87C76C42C24C65C3C3C56C64C4%12C72C28C79C8%10C9%11C1C1C%109C98C87C42C24C7%12C%116C65C3C3C56C6%11C%117C74C4%12C82C29C8%10C1C1C98C42C24C89C1C1C98C84C4%10C%122C27C7%11C%116C65C3C3C56C6%11C%117C42C24C7%11C%116C65C3C3C56C6%11C%117C74C4%12C%102C28C89C1C1C98C42C24C89C1C1C98C84C4%10C%122C27C7%11C%116C65C3C3C56C6%11C%117C42C24C7%11C%116C65C3C3C56C6%11C%117C74C4%12C%102C28C89C1C1C98C42C24C89C1CC8C4C1C%122C27C4%11C76C65C3CC6C7C4C12'::mol;
++                                                                                                                                                                                                                                                                                                                                                                                       mol                                                                                                                                                                                                                                                                                                                                                                                        
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
++ C1CC2CC3C4C5C6C7C8C9C%10C%11C%12C%13C%14C%15C%16CC%17C%18C%19C%20C%21C%22C%23CC%24C%25C%26C%27C%28C%29C%30C%31C%32C%33C%34C%35C%36C%37C(C1)C1C%38C%39C%40C%41C%42C2C32C%423C%41%42C%40%41C%39%40C%38%39C1%37C%361C%35%36C%34%35C%33%34C%32%33C%31%32C%30%31C%29%30C%28%29C%27%28C%26%27C%25%26C%23%24C%22%23C%21%22C%20%21C%19%20C%18%19C%17%16C%15%16C%14%15C%13%14C%12%13C%11%12C%10%11C9%10C89C78C67C56C42C32C%423C%414C%405C%391C%361C%35%17C%34%18C%33%24C%32%25C%31%32C%30%31C%29%30C%28%29C%27%28C%23%26C%22%23C%21%22C%20%21C%19%16C%15%16C%14%15C%13%14C%12%13C%11%12C%10%11C9%10C89C78C62C32C43C51C%171C%184C%245C%256C%327C%31%17C%30%18C%29%19C%23%28C%22%20C%21%16C%15%16C%14%15C%13%14C%12%13C%11%12C%10%11C9%10C82C31C%104C%115C%126C%137C%14%17C%15%18C%20%16%19
++(1 row)
++
++-- chiral matching
++select 'C[C@H](F)Cl'::mol@>'CC(F)Cl'::mol as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'C[C@H](F)Cl'::mol@>'C[C@H](F)Cl'::mol as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'C[C@H](F)Cl'::mol@>'C[C@@H](F)Cl'::mol as match;
++ match 
++-------
++ t
++(1 row)
++
++set rdkit.do_chiral_sss=true;
++select 'C[C@H](F)Cl'::mol@>'CC(F)Cl'::mol as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'C[C@H](F)Cl'::mol@>'C[C@H](F)Cl'::mol as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'C[C@H](F)Cl'::mol@>'C[C@@H](F)Cl'::mol as match;
++ match 
++-------
++ f
++(1 row)
++
++set rdkit.do_chiral_sss=false;
++-- substructure counts
++select substruct_count('c1ccncc1'::mol,'c1ccncc1'::mol);
++ substruct_count 
++-----------------
++               1
++(1 row)
++
++select substruct_count('c1ccncc1'::mol,'c1ccncc1'::mol,false);
++ substruct_count 
++-----------------
++               2
++(1 row)
++
++-- special queries
++select 'c1ccc[nH]1'::mol@>mol_from_smiles('c1cccn1[H]') as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'c1cccn1C'::mol@>mol_from_smiles('c1cccn1[H]') as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'c1ccc[nH]1'::mol@>qmol_from_smiles('c1cccn1[H]') as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'c1cccn1C'::mol@>qmol_from_smiles('c1cccn1[H]') as match;
++ match 
++-------
++ f
++(1 row)
++
++select 'c1ccc[nH]1'::mol@>mol_from_ctab('query
++  Mrv0541 04021509592D
++
++  6  6  0  0  0  0            999 V2000
++   -0.2652    0.7248    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.9796    1.1373    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.9796    1.9623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.4493    1.9623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.4493    1.1373    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.2652   -0.1002    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  1  0  0  0  0
++  2  3  2  0  0  0  0
++  4  5  2  0  0  0  0
++  1  5  1  0  0  0  0
++  3  4  1  0  0  0  0
++  1  6  1  0  0  0  0
++M  END') as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'c1cccn1C'::mol@>mol_from_ctab('query
++  Mrv0541 04021509592D
++
++  6  6  0  0  0  0            999 V2000
++   -0.2652    0.7248    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.9796    1.1373    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.9796    1.9623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.4493    1.9623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.4493    1.1373    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.2652   -0.1002    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  1  0  0  0  0
++  2  3  2  0  0  0  0
++  4  5  2  0  0  0  0
++  1  5  1  0  0  0  0
++  3  4  1  0  0  0  0
++  1  6  1  0  0  0  0
++M  END') as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'c1ccc[nH]1'::mol@>qmol_from_ctab('query
++  Mrv0541 04021509592D
++
++  6  6  0  0  0  0            999 V2000
++   -0.2652    0.7248    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.9796    1.1373    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.9796    1.9623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.4493    1.9623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.4493    1.1373    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.2652   -0.1002    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  1  0  0  0  0
++  2  3  2  0  0  0  0
++  4  5  2  0  0  0  0
++  1  5  1  0  0  0  0
++  3  4  1  0  0  0  0
++  1  6  1  0  0  0  0
++M  END') as match;
++ match 
++-------
++ t
++(1 row)
++
++select 'c1cccn1C'::mol@>qmol_from_ctab('query
++  Mrv0541 04021509592D
++
++  6  6  0  0  0  0            999 V2000
++   -0.2652    0.7248    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.9796    1.1373    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.9796    1.9623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.4493    1.9623    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.4493    1.1373    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++   -0.2652   -0.1002    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  1  0  0  0  0
++  2  3  2  0  0  0  0
++  4  5  2  0  0  0  0
++  1  5  1  0  0  0  0
++  3  4  1  0  0  0  0
++  1  6  1  0  0  0  0
++M  END') as match;
++ match 
++-------
++ f
++(1 row)
++
++-- mol_adjust_query_properties
++select 'C1CC1OC'::mol @> 'C1CC1O*'::mol;
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1CC1OC'::mol @> mol_adjust_query_properties('C1CC1O*'::mol);
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1CC1OC'::mol @> mol_adjust_query_properties('C1CC1O*'::mol,'{"makeDummiesQueries":false}');
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'CC1CC1OC'::mol @> 'C1CC1O*'::mol;
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'CC1CC1OC'::mol @> mol_adjust_query_properties('C1CC1O*'::mol);
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'CC1CC1OC'::mol @> mol_adjust_query_properties('C1CC1O*'::mol,'{"adjustDegree":false}');
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1CC1C(C)OC'::mol @> mol_adjust_query_properties('C1CC1CO*'::mol);
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1CC1C(C)OC'::mol @> mol_adjust_query_properties('C1CC1CO*'::mol,'{"adjustDegreeFlags":"IGNOREDUMMIES"}');
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1CC1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol);
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1CC1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNORENONE"}');
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1CC1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNOREALL"}');
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1CC1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNORECHAINS"}');
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1CC1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNORERINGS"}');
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1CC1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNORERINGS|IGNORECHAINS"}');
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1C(C)C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol);
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1C(C)C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNORENONE"}');
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1C(C)C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNOREALL"}');
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1C(C)C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNORECHAINS"}');
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1C(C)C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNORERINGS"}');
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1C(C)C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"IGNORERINGS|IGNORECHAINS"}');
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1C(C)C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegreeFlags":"bogus"}');
++ERROR:  bad which string provided 'BOGUS'
++select 'C1C([2H])C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol);
++ ?column? 
++----------
++ f
++(1 row)
++
++select 'C1C([2H])C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegree":false}');
++ ?column? 
++----------
++ t
++(1 row)
++
++select 'C1C([2H])C1CCCC'::mol @> mol_adjust_query_properties('C1CC1CC'::mol,'{"adjustDegree":false,"adjustHeavyDegree":true}');
++ ?column? 
++----------
++ t
++(1 row)
++
++-- CXSmiles
++SELECT mol_to_smiles(mol_from_smiles('C[C@H](F)[C@H](C)[C@@H](C)Br |a:1,o1:4,5|'));
++        mol_to_smiles         
++------------------------------
++ C[C@H](F)[C@H](C)[C@@H](C)Br
++(1 row)
++
++SELECT mol_to_cxsmiles(mol_from_smiles('C[C@H](F)[C@H](C)[C@@H](C)Br |a:1,o1:4,5|'));
++              mol_to_cxsmiles              
++-------------------------------------------
++ C[C@H](F)[C@H](C)[C@@H](C)Br |a:1,o1:4,5|
++(1 row)
++
+--- /dev/null	2019-10-21 09:46:46.351315135 +0200
++++ ./Code/PgSQL/rdkit/expected/props_1.out	2019-11-02 21:02:17.287019119 +0100
+@@ -0,0 +1,479 @@
++SELECT mol_amw('c1ccccc1'::mol) mol_amw;
++ mol_amw 
++---------
++  78.114
++(1 row)
++
++SELECT mol_logp('c1ccccc1'::mol) mol_logp;
++ mol_logp 
++----------
++   1.6866
++(1 row)
++
++SELECT mol_hba('c1ccccc1'::mol) mol_hba;
++ mol_hba 
++---------
++       0
++(1 row)
++
++SELECT mol_hbd('c1ccccc1'::mol) mol_hbd;
++ mol_hbd 
++---------
++       0
++(1 row)
++
++SELECT mol_hba('c1ccncc1'::mol) mol_hba;
++ mol_hba 
++---------
++       1
++(1 row)
++
++SELECT mol_hbd('c1ccncc1'::mol) mol_hbd;
++ mol_hbd 
++---------
++       0
++(1 row)
++
++SELECT mol_hbd('c1ccncc1O'::mol) mol_hbd;
++ mol_hbd 
++---------
++       1
++(1 row)
++
++SELECT mol_hba('c1ccncc1O'::mol) mol_hba;
++ mol_hba 
++---------
++       2
++(1 row)
++
++SELECT mol_logp('c1ccncc1O'::mol) mol_logp;
++ mol_logp 
++----------
++   0.7872
++(1 row)
++
++SELECT mol_chi0n('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 3.8339648
++(1 row)
++
++SELECT mol_chi1n('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 2.1342905
++(1 row)
++
++SELECT mol_chi2n('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 1.3355491
++(1 row)
++
++SELECT mol_chi3n('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 0.7561936
++(1 row)
++
++SELECT mol_chi4n('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 0.4279941
++(1 row)
++
++SELECT mol_chi0v('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 3.8339648
++(1 row)
++
++SELECT mol_chi1v('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 2.1342905
++(1 row)
++
++SELECT mol_chi2v('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 1.3355491
++(1 row)
++
++SELECT mol_chi3v('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 0.7561936
++(1 row)
++
++SELECT mol_chi4v('c1ccccc1O'::mol) v;
++     v     
++-----------
++ 0.4279941
++(1 row)
++
++SELECT mol_kappa1('C12CC2C3CC13'::mol) v;
++    v    
++---------
++ 2.34375
++(1 row)
++
++SELECT mol_kappa2('CC(C)C1CCC(C)CCC1'::mol) v;
++    v     
++----------
++ 4.132653
++(1 row)
++
++SELECT mol_kappa3('CC(C)C1CCC(C)CCC1'::mol) v;
++     v     
++-----------
++ 2.8444445
++(1 row)
++
++SELECT mol_numspiroatoms('C1CCC2(C1)CC1CCC2CC1'::mol) v;
++ v 
++---
++ 1
++(1 row)
++
++SELECT mol_numbridgeheadatoms('C1CCC2(C1)CC1CCC2CC1'::mol) v;
++ v 
++---
++ 2
++(1 row)
++
++SELECT mol_numspiroatoms('CC1(C)CC2(C)CCC1(C)CC2'::mol) v;
++ v 
++---
++ 0
++(1 row)
++
++SELECT mol_numbridgeheadatoms('CC1(C)CC2(C)CCC1(C)CC2'::mol) v;
++ v 
++---
++ 2
++(1 row)
++
++-- Mol formula tests - SQL equivalents of tests in testMolDescriptors.py.
++select mol_formula('[2H]C([3H])O'::mol);
++ mol_formula 
++-------------
++ CH4O
++(1 row)
++
++                                     -- separateIsotopes = true
++select mol_formula('[2H]C([3H])O'::mol, true);
++ mol_formula 
++-------------
++ CH2DTO
++(1 row)
++
++                                           -- abbreviateHIsotopes = false
++select mol_formula('[2H]C([3H])O'::mol, true, false);
++ mol_formula  
++--------------
++ CH2[2H][3H]O
++(1 row)
++
++       --
++select mol_formula('[2H][13CH2]CO'::mol);
++ mol_formula 
++-------------
++ C2H6O
++(1 row)
++
++select mol_formula('[2H][13CH2]CO'::mol, true);
++ mol_formula 
++-------------
++ C[13C]H5DO
++(1 row)
++
++select mol_formula('[2H][13CH2]CO'::mol, true, false);
++  mol_formula  
++---------------
++ C[13C]H5[2H]O
++(1 row)
++
++--
++SELECT mol_numrotatablebonds('CCC'::mol) mol_numrotatablebonds;
++ mol_numrotatablebonds 
++-----------------------
++                     0
++(1 row)
++
++SELECT mol_numrotatablebonds('CCCC'::mol) mol_numrotatablebonds;
++ mol_numrotatablebonds 
++-----------------------
++                     1
++(1 row)
++
++SELECT mol_numrotatablebonds('c1ccccc1c1ccc(CCC)cc1'::mol) mol_numrotatablebonds;
++ mol_numrotatablebonds 
++-----------------------
++                     3
++(1 row)
++
++SELECT mol_numheavyatoms('CCC'::mol) val;
++ val 
++-----
++   3
++(1 row)
++
++SELECT mol_numatoms('CCC'::mol) val;
++ val 
++-----
++  11
++(1 row)
++
++SELECT mol_numheteroatoms('CCC'::mol) val;
++ val 
++-----
++   0
++(1 row)
++
++SELECT mol_numheteroatoms('CCO'::mol) val;
++ val 
++-----
++   1
++(1 row)
++
++SELECT mol_tpsa('CCC'::mol) val;
++ val 
++-----
++   0
++(1 row)
++
++SELECT mol_tpsa('CCO'::mol) val;
++  val  
++-------
++ 20.23
++(1 row)
++
++SELECT mol_numrings('CCC'::mol) val;
++ val 
++-----
++   0
++(1 row)
++
++SELECT mol_numrings('C1CC1'::mol) val;
++ val 
++-----
++   1
++(1 row)
++
++SELECT mol_murckoscaffold('c1ccccc1CCC'::mol) val;
++   val    
++----------
++ c1ccccc1
++(1 row)
++
++SELECT mol_murckoscaffold('CSC(C)=O'::mol) is NULL;
++ ?column? 
++----------
++ t
++(1 row)
++
++SELECT mol_to_svg('CCO'::mol) svg;
++                                                                                                 svg                                                                                                 
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
++ <?xml version='1.0' encoding='iso-8859-1'?>                                                                                                                                                        +
++ <svg version='1.1' baseProfile='full'                                                                                                                                                              +
++               xmlns='http://www.w3.org/2000/svg'                                                                                                                                                   +
++                       xmlns:rdkit='http://www.rdkit.org/xml'                                                                                                                                       +
++                       xmlns:xlink='http://www.w3.org/1999/xlink'                                                                                                                                   +
++                   xml:space='preserve'                                                                                                                                                             +
++ width='250px' height='200px' viewBox='0 0 250 200'>                                                                                                                                                +
++ <!-- END OF HEADER -->                                                                                                                                                                             +
++ <rect style='opacity:1.0;fill:#FFFFFF;stroke:none' width='250' height='200' x='0' y='0'> </rect>                                                                                                   +
++ <path class='bond-0' d='M 11.3636,124.362 L 95.7545,75.6385' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />     +
++ <path class='bond-1' d='M 95.7545,75.6385 L 131.455,96.25' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />       +
++ <path class='bond-1' d='M 131.455,96.25 L 167.155,116.862' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />       +
++ <text x='166.64' y='131.862' style='font-size:15px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#FF0000' ><tspan>OH</tspan></text>+
++ </svg>                                                                                                                                                                                             +
++ 
++(1 row)
++
++SELECT mol_to_svg('CCO'::mol,'legend') svg;
++                                                                                                 svg                                                                                                  
++------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
++ <?xml version='1.0' encoding='iso-8859-1'?>                                                                                                                                                         +
++ <svg version='1.1' baseProfile='full'                                                                                                                                                               +
++               xmlns='http://www.w3.org/2000/svg'                                                                                                                                                    +
++                       xmlns:rdkit='http://www.rdkit.org/xml'                                                                                                                                        +
++                       xmlns:xlink='http://www.w3.org/1999/xlink'                                                                                                                                    +
++                   xml:space='preserve'                                                                                                                                                              +
++ width='250px' height='200px' viewBox='0 0 250 200'>                                                                                                                                                 +
++ <!-- END OF HEADER -->                                                                                                                                                                              +
++ <rect style='opacity:1.0;fill:#FFFFFF;stroke:none' width='250' height='200' x='0' y='0'> </rect>                                                                                                    +
++ <path class='bond-0' d='M 11.3636,124.362 L 95.7545,75.6385' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />      +
++ <path class='bond-1' d='M 95.7545,75.6385 L 131.455,96.25' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />        +
++ <path class='bond-1' d='M 131.455,96.25 L 167.155,116.862' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />        +
++ <text x='166.64' y='131.862' style='font-size:15px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#FF0000' ><tspan>OH</tspan></text> +
++ <text x='103.377' y='194' style='font-size:12px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>legend</tspan></text>+
++ </svg>                                                                                                                                                                                              +
++ 
++(1 row)
++
++SELECT mol_to_svg('CCO'::mol,'legend',250,200,
++  '{"atomLabels":{"1":"foo"},"legendColour":[0.5,0.5,0.5]}') svg;
++                                                                                                  svg                                                                                                  
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
++ <?xml version='1.0' encoding='iso-8859-1'?>                                                                                                                                                          +
++ <svg version='1.1' baseProfile='full'                                                                                                                                                                +
++               xmlns='http://www.w3.org/2000/svg'                                                                                                                                                     +
++                       xmlns:rdkit='http://www.rdkit.org/xml'                                                                                                                                         +
++                       xmlns:xlink='http://www.w3.org/1999/xlink'                                                                                                                                     +
++                   xml:space='preserve'                                                                                                                                                               +
++ width='250px' height='200px' viewBox='0 0 250 200'>                                                                                                                                                  +
++ <!-- END OF HEADER -->                                                                                                                                                                               +
++ <rect style='opacity:1.0;fill:#FFFFFF;stroke:none' width='250' height='200' x='0' y='0'> </rect>                                                                                                     +
++ <path class='bond-0' d='M 11.3636,124.362 L 83.2395,82.864' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />        +
++ <path class='bond-1' d='M 108.269,82.864 L 137.712,99.8628' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />        +
++ <path class='bond-1' d='M 137.712,99.8628 L 167.155,116.862' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />       +
++ <text x='83.2395' y='83.1385' style='font-size:15px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>foo</tspan></text>+
++ <text x='166.64' y='131.862' style='font-size:15px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#FF0000' ><tspan>OH</tspan></text>  +
++ <text x='103.377' y='194' style='font-size:12px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#7F7F7F' ><tspan>legend</tspan></text> +
++ </svg>                                                                                                                                                                                               +
++ 
++(1 row)
++
++-- GitHub Issue 2174 - mol_to_svg() should not change input mol.
++/**
++  Check that mol_to_svg() does not change the_mol.
++  In previous versions, the atom+bond count would
++  change from '10 11' in "before_mol" to '11 12'
++  in "after_mol", due to mol_to_svg()'s call to
++  MolDraw2DUtils::prepareMolForDrawing().
++**/
++with t as (
++  select 'C[C@H]1CC[C@H]2CCCCC12'::mol as the_mol
++)
++select
++    substring(mol_to_ctab(the_mol)::text, 1, 65) as before_mol
++  , substring(mol_to_svg(the_mol)::text, 1, 20) as the_svg
++  , substring(mol_to_ctab(the_mol)::text, 1, 65) as after_mol
++  from t;
++               before_mol                |       the_svg        |                after_mol                
++-----------------------------------------+----------------------+-----------------------------------------
++                                        +| <?xml version='1.0'  |                                        +
++      RDKit          2D                 +|                      |      RDKit          2D                 +
++                                        +|                      |                                        +
++  10 11  0  0  0  0  0  0  0  0999 V2000+|                      |  10 11  0  0  0  0  0  0  0  0999 V2000+
++                                         |                      | 
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol);
++ mol_nm_hash 
++-------------
++ ***1*****1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'AnonymousGraph');
++ mol_nm_hash 
++-------------
++ ***1*****1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'ElementGraph');
++ mol_nm_hash 
++-------------
++ OCC1CCCCN1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'CanonicalSmiles');
++ mol_nm_hash 
++-------------
++ OCc1ccccn1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'MurckoScaffold');
++ mol_nm_hash 
++-------------
++ c1ccncc1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'ExtendedMurcko');
++ mol_nm_hash 
++-------------
++ *c1ccccn1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'MolFormula');
++ mol_nm_hash 
++-------------
++ C6H7NO
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'AtomBondCounts');
++ mol_nm_hash 
++-------------
++ 8,8
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'DegreeVector');
++ mol_nm_hash 
++-------------
++ 0,1,6,1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'Mesomer');
++         mol_nm_hash          
++------------------------------
++ OC[C]1[CH][CH][CH][CH][N]1_0
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'HetAtomTautomer');
++           mol_nm_hash            
++----------------------------------
++ [O]C[C]1[CH][CH][CH][CH][N]1_1_0
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'HetAtomProtomer');
++          mol_nm_hash           
++--------------------------------
++ [O]C[C]1[CH][CH][CH][CH][N]1_1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'RedoxPair');
++        mol_nm_hash         
++----------------------------
++ OC[C]1[CH][CH][CH][CH][N]1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'Regioisomer');
++  mol_nm_hash   
++----------------
++ *C.*O.c1ccncc1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'NetCharge');
++ mol_nm_hash 
++-------------
++ 0
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'SmallWorldIndexBR');
++ mol_nm_hash 
++-------------
++ B8R1
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'SmallWorldIndexBRL');
++ mol_nm_hash 
++-------------
++ B8R1L6
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'ArthorSubstructureOrder');
++          mol_nm_hash           
++--------------------------------
++ 000800080100060002000033000000
++(1 row)
++
++select mol_nm_hash('c1cccnc1CO'::mol,'BogusValue');
++WARNING:  computeNMMolHash: hash BogusValue not recognized, using AnonymousGraph
++ mol_nm_hash 
++-------------
++ ***1*****1
++(1 row)
++
+--- /dev/null	2019-10-21 09:46:46.351315135 +0200
++++ ./Code/PgSQL/rdkit/expected/bfpgist-91_1.out	2019-11-02 21:02:21.102996065 +0100
+@@ -0,0 +1,121 @@
++CREATE INDEX fpidx ON pgbfp USING gist (f);
++CREATE INDEX maccsfpidx ON pgbfp USING gist (maccsf);
++SET rdkit.tanimoto_threshold = 0.5;
++SET rdkit.dice_threshold = 0.6;
++SET enable_indexscan=off;
++SET enable_bitmapscan=off;
++SET enable_seqscan=on;
++SELECT
++    id, tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % f
++ORDER BY sml DESC, id limit 10;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, dice_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) # f
++ORDER BY sml DESC, id limit 10;
++   id   |        sml         
++--------+--------------------
++ 698576 | 0.6049723756906077
++(1 row)
++
++SELECT
++    id, tanimoto_sml(maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), maccsf) AS sml
++FROM
++	pgbfp
++WHERE maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % maccsf
++ORDER BY sml DESC, id limit 10;
++    id    |        sml         
++----------+--------------------
++  2055076 | 0.7407407407407407
++  5281628 |            0.65625
++ 10560368 | 0.5714285714285714
++   755497 | 0.5277777777777778
++   718644 | 0.5263157894736842
++   902176 | 0.5161290322580645
++   687554 |                0.5
++  1380883 |                0.5
++(8 rows)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=off;
++SELECT
++    id, tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % f
++ORDER BY sml DESC, id limit 10;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, dice_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) # f
++ORDER BY sml DESC, id limit 10;
++   id   |        sml         
++--------+--------------------
++ 698576 | 0.6049723756906077
++(1 row)
++
++SELECT
++    id, tanimoto_sml(maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), maccsf) AS sml
++FROM
++	pgbfp
++WHERE maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % maccsf
++ORDER BY sml DESC, id limit 10;
++    id    |        sml         
++----------+--------------------
++  2055076 | 0.7407407407407407
++  5281628 |            0.65625
++ 10560368 | 0.5714285714285714
++   755497 | 0.5277777777777778
++   718644 | 0.5263157894736842
++   902176 | 0.5161290322580645
++   687554 |                0.5
++  1380883 |                0.5
++(8 rows)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=on;
++SELECT
++    id, tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % f
++ORDER BY rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) <%> f,id limit 10;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, tanimoto_sml(maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), maccsf) AS sml
++FROM
++	pgbfp
++WHERE maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % maccsf
++ORDER BY sml DESC, id limit 10;
++    id    |        sml         
++----------+--------------------
++  2055076 | 0.7407407407407407
++  5281628 |            0.65625
++ 10560368 | 0.5714285714285714
++   755497 | 0.5277777777777778
++   718644 | 0.5263157894736842
++   902176 | 0.5161290322580645
++   687554 |                0.5
++  1380883 |                0.5
++(8 rows)
++
++DROP INDEX fpidx;
++DROP INDEX maccsfpidx;
+--- /dev/null	2019-10-21 09:46:46.351315135 +0200
++++ ./Code/PgSQL/rdkit/expected/bfpgin_1.out	2019-11-02 21:02:25.106971846 +0100
+@@ -0,0 +1,111 @@
++CREATE INDEX fpidx ON pgbfp USING gin (f);
++CREATE INDEX maccsfpidx ON pgbfp USING gin (maccsf);
++SET rdkit.tanimoto_threshold = 0.5;
++SET rdkit.dice_threshold = 0.6;
++SET enable_indexscan=off;
++SET enable_bitmapscan=off;
++SET enable_seqscan=on;
++SELECT
++    id, tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % f
++ORDER BY sml DESC, id limit 10;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, dice_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) # f
++ORDER BY sml DESC, id limit 10;
++   id   |        sml         
++--------+--------------------
++ 698576 | 0.6049723756906077
++(1 row)
++
++SELECT
++    id, tanimoto_sml(maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), maccsf) AS sml
++FROM
++	pgbfp
++WHERE maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % maccsf
++ORDER BY sml DESC, id limit 10;
++    id    |        sml         
++----------+--------------------
++  2055076 | 0.7407407407407407
++  5281628 |            0.65625
++ 10560368 | 0.5714285714285714
++   755497 | 0.5277777777777778
++   718644 | 0.5263157894736842
++   902176 | 0.5161290322580645
++   687554 |                0.5
++  1380883 |                0.5
++(8 rows)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=off;
++SELECT
++    id, tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % f
++ORDER BY sml DESC, id limit 10;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, dice_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++	pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) # f
++ORDER BY sml DESC, id limit 10;
++   id   |        sml         
++--------+--------------------
++ 698576 | 0.6049723756906077
++(1 row)
++
++SELECT
++    id, tanimoto_sml(maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), maccsf) AS sml
++FROM
++	pgbfp
++WHERE maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % maccsf
++ORDER BY sml DESC, id limit 10;
++    id    |        sml         
++----------+--------------------
++  2055076 | 0.7407407407407407
++  5281628 |            0.65625
++ 10560368 | 0.5714285714285714
++   755497 | 0.5277777777777778
++   718644 | 0.5263157894736842
++   902176 | 0.5161290322580645
++   687554 |                0.5
++  1380883 |                0.5
++(8 rows)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=on;
++SELECT
++    id, tanimoto_sml(maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), maccsf) AS sml
++FROM
++	pgbfp
++WHERE maccs_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % maccsf
++ORDER BY sml DESC, id limit 10;
++    id    |        sml         
++----------+--------------------
++  2055076 | 0.7407407407407407
++  5281628 |            0.65625
++ 10560368 | 0.5714285714285714
++   755497 | 0.5277777777777778
++   718644 | 0.5263157894736842
++   902176 | 0.5161290322580645
++   687554 |                0.5
++  1380883 |                0.5
++(8 rows)
++
++DROP INDEX fpidx;
++DROP INDEX maccsfpidx;
+--- /dev/null	2019-10-21 09:46:46.351315135 +0200
++++ ./Code/PgSQL/rdkit/expected/sfpgist_1.out	2019-11-02 21:02:29.498945246 +0100
+@@ -0,0 +1,89 @@
++CREATE INDEX fpidx ON pgsfp USING gist (f);
++SET rdkit.tanimoto_threshold = 0.6;
++SET rdkit.dice_threshold = 0.6;
++SET enable_indexscan=off;
++SET enable_bitmapscan=off;
++SET enable_seqscan=on;
++SELECT
++    id, tanimoto_sml(morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1), f) AS sml
++FROM
++	pgsfp
++WHERE morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1) % f
++ORDER BY sml DESC, id;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, dice_sml(morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1), f) AS sml
++FROM
++	pgsfp
++WHERE morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1) # f
++ORDER BY sml DESC, id;
++   id    |        sml         
++---------+--------------------
++  659725 | 0.6857142857142857
++   63248 | 0.6486486486486487
++ 6266272 | 0.6410256410256411
++ 5359275 | 0.6388888888888888
++ 5718138 | 0.6388888888888888
++  917183 | 0.6285714285714286
++  161167 | 0.6216216216216216
++  230488 | 0.6216216216216216
++  328013 | 0.6216216216216216
++  564008 | 0.6190476190476191
++ 2910597 | 0.6153846153846154
++ 3963948 | 0.6153846153846154
++ 5407397 | 0.6153846153846154
++ 3784792 | 0.6136363636363636
++ 3096571 | 0.6097560975609756
++  801655 | 0.6052631578947368
++ 3157044 | 0.6052631578947368
++  807628 |                0.6
++(18 rows)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=off;
++SELECT
++    id, tanimoto_sml(morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1), f) AS sml
++FROM
++	pgsfp
++WHERE morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1) % f
++ORDER BY sml DESC, id;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, dice_sml(morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1), f) AS sml
++FROM
++	pgsfp
++WHERE morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1) # f
++ORDER BY sml DESC, id;
++   id    |        sml         
++---------+--------------------
++  659725 | 0.6857142857142857
++   63248 | 0.6486486486486487
++ 6266272 | 0.6410256410256411
++ 5359275 | 0.6388888888888888
++ 5718138 | 0.6388888888888888
++  917183 | 0.6285714285714286
++  161167 | 0.6216216216216216
++  230488 | 0.6216216216216216
++  328013 | 0.6216216216216216
++  564008 | 0.6190476190476191
++ 2910597 | 0.6153846153846154
++ 3963948 | 0.6153846153846154
++ 5407397 | 0.6153846153846154
++ 3784792 | 0.6136363636363636
++ 3096571 | 0.6097560975609756
++  801655 | 0.6052631578947368
++ 3157044 | 0.6052631578947368
++  807628 |                0.6
++(18 rows)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=on;
++DROP INDEX fpidx;
+--- /dev/null	2019-10-21 09:46:46.351315135 +0200
++++ ./Code/PgSQL/rdkit/expected/fps_1.out	2019-11-02 21:02:37.786894956 +0100
+@@ -0,0 +1,270 @@
++SELECT dice_sml(rdkit_fp('c1ccccc1'::mol),rdkit_fp('c1ccncc1'::mol));
++      dice_sml       
++---------------------
++ 0.37209302325581395
++(1 row)
++
++SELECT tversky_sml(rdkit_fp('c1ccccc1'::mol),rdkit_fp('c1ccncc1'::mol),0.5,0.5);
++     tversky_sml     
++---------------------
++ 0.37209302325581395
++(1 row)
++
++SELECT tanimoto_sml(rdkit_fp('c1ccccc1'::mol),rdkit_fp('c1ccncc1'::mol));
++    tanimoto_sml     
++---------------------
++ 0.22857142857142856
++(1 row)
++
++SELECT tversky_sml(rdkit_fp('c1ccccc1'::mol),rdkit_fp('c1ccncc1'::mol),1.0,1.0);
++     tversky_sml     
++---------------------
++ 0.22857142857142856
++(1 row)
++
++SELECT dice_sml(atompair_fp('c1ccccc1'::mol),atompair_fp('c1ccncc1'::mol));
++      dice_sml      
++--------------------
++ 0.6666666666666666
++(1 row)
++
++SELECT dice_sml(torsion_fp('c1ccccc1'::mol),torsion_fp('c1ccncc1'::mol));
++      dice_sml      
++--------------------
++ 0.3333333333333333
++(1 row)
++
++SELECT dice_sml(morgan_fp('c1ccccc1'::mol,2),morgan_fp('c1ccncc1'::mol,2));
++ dice_sml 
++----------
++      0.5
++(1 row)
++
++SELECT dice_sml(morgan_fp('c1ccccc1'::mol),morgan_fp('c1ccncc1'::mol));
++ dice_sml 
++----------
++      0.5
++(1 row)
++
++SELECT dice_sml(morganbv_fp('c1ccccc1'::mol,2),morganbv_fp('c1ccncc1'::mol,2));
++ dice_sml 
++----------
++      0.5
++(1 row)
++
++SELECT dice_sml(morganbv_fp('c1ccccc1'::mol),morganbv_fp('c1ccncc1'::mol));
++ dice_sml 
++----------
++      0.5
++(1 row)
++
++SELECT dice_sml(featmorgan_fp('c1ccccc1'::mol,2),featmorgan_fp('c1ccncc1'::mol,2));
++ dice_sml 
++----------
++      0.5
++(1 row)
++
++SELECT dice_sml(featmorgan_fp('c1ccccc1'::mol),featmorgan_fp('c1ccncc1'::mol));
++ dice_sml 
++----------
++      0.5
++(1 row)
++
++SELECT dice_sml(featmorganbv_fp('c1ccccc1'::mol,2),featmorganbv_fp('c1ccncc1'::mol,2));
++ dice_sml 
++----------
++      0.5
++(1 row)
++
++SELECT dice_sml(featmorganbv_fp('c1ccccc1'::mol),featmorganbv_fp('c1ccncc1'::mol));
++ dice_sml 
++----------
++      0.5
++(1 row)
++
++SELECT tanimoto_sml(maccs_fp('c1ccccc1'::mol),maccs_fp('c1ccncc1'::mol));
++ tanimoto_sml 
++--------------
++        0.375
++(1 row)
++
++SELECT dice_sml(maccs_fp('c1ccccc1'::mol),maccs_fp('c1ccncc1'::mol));
++      dice_sml      
++--------------------
++ 0.5454545454545454
++(1 row)
++
++SET rdkit.tanimoto_threshold = 0.4;
++SELECT
++    id, tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++pgbfp
++WHERE rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) % f
++ORDER BY sml DESC, id LIMIT 10;
++    id    |         sml         
++----------+---------------------
++   698576 | 0.43366336633663366
++ 16000816 |  0.4232902033271719
++  1959267 |  0.4227504244482173
++   576770 | 0.42231075697211157
++ 16746067 |  0.4204398447606727
++  5770965 |  0.4124783362218371
++ 24747640 | 0.41237113402061853
++ 15945163 |  0.4092465753424658
++  5770966 |  0.4088397790055249
++   690546 | 0.40875912408759124
++(10 rows)
++
++SET rdkit.tanimoto_threshold = 0.5;
++SET rdkit.dice_threshold = 0.5;
++SELECT
++    id, dice_sml(torsion_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++pgtorsfp
++WHERE torsion_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) # f
++ORDER BY sml DESC, id;
++   id    | sml 
++---------+-----
++ 3790017 | 0.5
++(1 row)
++
++SELECT
++    id, dice_sml(atompair_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), f) AS sml
++FROM
++pgpairfp
++WHERE atompair_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol) # f
++ORDER BY sml DESC, id LIMIT 10;
++    id    |        sml         
++----------+--------------------
++   659725 | 0.6366782006920415
++   917183 | 0.5951557093425606
++ 10713707 | 0.5950920245398773
++  3790017 | 0.5885558583106267
++   230488 | 0.5766871165644172
++ 16193886 | 0.5501285347043702
++  3236648 |          0.5390625
++  5359275 | 0.5342019543973942
++  6213987 |  0.532871972318339
++   161167 | 0.5276073619631901
++(10 rows)
++
++select tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), rdkit_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.31539888682745826
++(1 row)
++
++set rdkit.rdkit_fp_size = 512;
++select tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), rdkit_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.47103274559193953
++(1 row)
++
++set rdkit.rdkit_fp_size = 1024;
++select tanimoto_sml(rdkit_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), rdkit_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.31539888682745826
++(1 row)
++
++select tanimoto_sml(layered_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), layered_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++        sml         
++--------------------
++ 0.7249417249417249
++(1 row)
++
++set rdkit.layered_fp_size = 512;
++select tanimoto_sml(layered_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), layered_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++        sml        
++-------------------
++ 0.788235294117647
++(1 row)
++
++set rdkit.layered_fp_size = 1024;
++select tanimoto_sml(layered_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), layered_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++        sml         
++--------------------
++ 0.7249417249417249
++(1 row)
++
++select tanimoto_sml(morganbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), morganbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++  sml  
++-------
++ 0.325
++(1 row)
++
++set rdkit.morgan_fp_size = 512;
++select tanimoto_sml(morganbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), morganbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++  sml  
++-------
++ 0.325
++(1 row)
++
++set rdkit.morgan_fp_size = 1024;
++select tanimoto_sml(morganbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), morganbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++        sml         
++--------------------
++ 0.3170731707317073
++(1 row)
++
++select tanimoto_sml(featmorganbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), featmorganbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.20588235294117646
++(1 row)
++
++set rdkit.featmorgan_fp_size = 512;
++select tanimoto_sml(featmorganbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), featmorganbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.20588235294117646
++(1 row)
++
++set rdkit.featmorgan_fp_size = 1024;
++select tanimoto_sml(featmorganbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), featmorganbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.20588235294117646
++(1 row)
++
++select tanimoto_sml(torsionbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), torsionbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.45454545454545453
++(1 row)
++
++set rdkit.hashed_torsion_fp_size = 512;
++select tanimoto_sml(torsionbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), torsionbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.47619047619047616
++(1 row)
++
++set rdkit.hashed_torsion_fp_size = 1024;
++select tanimoto_sml(torsionbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), torsionbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++         sml         
++---------------------
++ 0.45454545454545453
++(1 row)
++
++select tanimoto_sml(atompairbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), atompairbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++        sml         
++--------------------
++ 0.5619834710743802
++(1 row)
++
++set rdkit.hashed_atompair_fp_size = 512;
++select tanimoto_sml(atompairbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), atompairbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++        sml         
++--------------------
++ 0.5826086956521739
++(1 row)
++
++set rdkit.hashed_atompair_fp_size = 1024;
++select tanimoto_sml(atompairbv_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol), atompairbv_fp('N=C1CC(NC2=CC=CC=C12)C1=CC=CC=C1'::mol)) AS sml;
++        sml         
++--------------------
++ 0.5714285714285714
++(1 row)
++
+--- /dev/null	2019-10-21 09:46:46.351315135 +0200
++++ ./Code/PgSQL/rdkit/expected/reaction_1.out	2019-11-02 21:02:41.322873463 +0100
+@@ -0,0 +1,963 @@
++PREPARE dummy AS SELECT rdkit_version();
++SET rdkit.ignore_reaction_agents=false;
++SET rdkit.agent_FP_bit_ratio=0.2;
++SET rdkit.difference_FP_weight_agents=1;
++SET rdkit.difference_FP_weight_nonagents=10;
++SET rdkit.move_unmmapped_reactants_to_agents=true;
++SET rdkit.threshold_unmapped_reactant_atoms=0.2;
++SET rdkit.init_reaction=true;
++SELECT reaction_from_smiles('c1ccccc1>>c1cccnc1');
++ reaction_from_smiles 
++----------------------
++ c1ccccc1>>c1ccncc1
++(1 row)
++
++SELECT reaction_from_smiles('c1ccccc1>CC(=O)O>c1cccnc1');
++   reaction_from_smiles    
++---------------------------
++ c1ccccc1>CC(=O)O>c1ccncc1
++(1 row)
++
++SELECT reaction_from_smarts('[c1:1][c:2][c:3][c:4]c[c1:5]>CC(=O)O>[c1:1][c:2][c:3][c:4]n[c1:5]');
++                              reaction_from_smarts                               
++---------------------------------------------------------------------------------
++ c([cH:4][cH:3][cH:2][cH2:1])[cH2:5]>CC(=O)O>n([cH:4][cH:3][cH:2][cH2:1])[cH2:5]
++(1 row)
++
++SELECT reaction_from_smarts('C(F)(F)F.[c1:1][c:2][c:3][c:4]c[c1:5]>CC(=O)O>[c1:1][c:2][c:3][c:4]n[c1:5]');
++                                  reaction_from_smarts                                  
++----------------------------------------------------------------------------------------
++ c([cH:4][cH:3][cH:2][cH2:1])[cH2:5]>CC(=O)O.FC(F)F>n([cH:4][cH:3][cH:2][cH2:1])[cH2:5]
++(1 row)
++
++SELECT reaction_from_smarts('c1ccc[n,c]c1>>c1nccnc1');
++ reaction_from_smarts 
++----------------------
++ *1ccccc1>>c1cnccn1
++(1 row)
++
++SELECT reaction_to_smiles(reaction_from_smiles('c1ccccc1>>c1cccnc1'));
++ reaction_to_smiles 
++--------------------
++ c1ccccc1>>c1ccncc1
++(1 row)
++
++SELECT reaction_to_smiles(reaction_from_smarts('c1ccc[n,c]c1>>c1nccnc1'));
++ reaction_to_smiles 
++--------------------
++ *1ccccc1>>c1cnccn1
++(1 row)
++
++SELECT reaction_to_smarts(reaction_from_smarts('c1ccc[n,c]c1>>c1nccnc1'));
++   reaction_to_smarts   
++------------------------
++ c1ccc[n,c]c1>>c1nccnc1
++(1 row)
++
++SELECT reaction_to_smarts('c1cccnc1>>c1nccnc1'::reaction);
++                         reaction_to_smarts                         
++--------------------------------------------------------------------
++ [#6]1:[#6]:[#6]:[#6]:[#7]:[#6]:1>>[#6]1:[#7]:[#6]:[#6]:[#7]:[#6]:1
++(1 row)
++
++SELECT reaction_to_ctab(reaction_from_smiles('c1ccccc1>>c1cccnc1'));
++                           reaction_to_ctab                            
++-----------------------------------------------------------------------
++ $RXN                                                                 +
++                                                                      +
++       RDKit                                                          +
++                                                                      +
++   1  1                                                               +
++ $MOL                                                                 +
++                                                                      +
++      RDKit          2D                                               +
++                                                                      +
++   6  6  0  0  0  0  0  0  0  0999 V2000                              +
++     1.5000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++     0.7500   -1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++    -0.7500   -1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++    -1.5000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++    -0.7500    1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++     0.7500    1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++   1  2  4  0                                                         +
++   2  3  4  0                                                         +
++   3  4  4  0                                                         +
++   4  5  4  0                                                         +
++   5  6  4  0                                                         +
++   6  1  4  0                                                         +
++ M  END                                                               +
++ $MOL                                                                 +
++                                                                      +
++      RDKit          2D                                               +
++                                                                      +
++   6  6  0  0  0  0  0  0  0  0999 V2000                              +
++     1.5000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++     0.7500   -1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++    -0.7500   -1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++    -1.5000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++    -0.7500    1.2990    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0+
++     0.7500    1.2990    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0+
++   1  2  4  0                                                         +
++   2  3  4  0                                                         +
++   3  4  4  0                                                         +
++   4  5  4  0                                                         +
++   5  6  4  0                                                         +
++   6  1  4  0                                                         +
++ M  END                                                               +
++ 
++(1 row)
++
++SELECT reaction_numreactants(reaction_from_smiles('[Cl].c1ccccc1>>c1cccnc1.[OH2]'));
++ reaction_numreactants 
++-----------------------
++                     2
++(1 row)
++
++SELECT reaction_numproducts(reaction_from_smiles('[Cl].c1ccccc1>>c1cccnc1.[OH2]'));
++ reaction_numproducts 
++----------------------
++                    2
++(1 row)
++
++SELECT reaction_numagents(reaction_from_smiles('[Cl].c1ccccc1>CC(=O)O.[Na+]>c1cccnc1.[OH2]'));
++ reaction_numagents 
++--------------------
++                  2
++(1 row)
++
++SELECT reaction_numagents(reaction_from_smarts('C(F)(F)F.[c1:1][c:2][c:3][c:4]c[c1:5]>CC(=O)O>[c1:1][c:2][c:3][c:4]n[c1:5]'));
++ reaction_numagents 
++--------------------
++                  2
++(1 row)
++
++SET rdkit.move_unmmapped_reactants_to_agents=false;
++SELECT reaction_numagents(reaction_from_smarts('C(F)(F)F.[c1:1][c:2][c:3][c:4]c[c1:5]>CC(=O)O>[c1:1][c:2][c:3][c:4]n[c1:5]'));
++ reaction_numagents 
++--------------------
++                  1
++(1 row)
++
++SET rdkit.move_unmmapped_reactants_to_agents=true;
++SET rdkit.threshold_unmapped_reactant_atoms=0.9;
++SELECT reaction_numagents(reaction_from_smarts('C(F)(F)F.[c1:1][c:2][c:3][c:4]c[c1:5]>CC(=O)O>[c1:1][c:2][c:3][c:4]n[c1:5]'));
++ reaction_numagents 
++--------------------
++                  3
++(1 row)
++
++SET rdkit.threshold_unmapped_reactant_atoms=0.2;
++SELECT 'c1ccccc1>>c1cccnc1'::reaction @= 'c1ccccc1>>c1cccnc1'::reaction;
++ ?column? 
++----------
++ t
++(1 row)
++
++SELECT 'c1ccccc1>>c1cccnc1'::reaction @= 'c1ccccc1>>c1cncnc1'::reaction;
++ ?column? 
++----------
++ f
++(1 row)
++
++SELECT reaction_from_ctab('$RXN                                                                 
++                                                                     
++      RDKit                                                          
++                                                                     
++  1  1                                                               
++$MOL                                                                 
++                                                                     
++     RDKit                                                           
++                                                                     
++  6  6  0  0  0  0  0  0  0  0999 V2000                              
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  4  0                                                         
++  2  3  4  0                                                         
++  3  4  4  0                                                         
++  4  5  4  0                                                         
++  5  6  4  0                                                         
++  6  1  4  0                                                         
++M  END                                                               
++$MOL                                                                 
++                                                                     
++     RDKit                                                           
++                                                                     
++  6  6  0  0  0  0  0  0  0  0999 V2000                              
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
++    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
++  1  2  4  0                                                         
++  2  3  4  0                                                         
++  3  4  4  0                                                         
++  4  5  4  0                                                         
++  5  6  4  0                                                         
++  6  1  4  0                                                         
++M  END');
++ reaction_from_ctab 
++--------------------
++ c1ccccc1>>c1ccncc1
++(1 row)
++
++CREATE TABLE tmp (id integer, tmprxn text);
++\copy tmp from 'data/reaction_test_data.out.rsmi';
++select * into pgreactions from (select id,reaction_from_smiles(tmprxn::cstring) rxn from tmp) as r where r is not null;
++SET rdkit.move_unmmapped_reactants_to_agents=false;
++select * into pgreactions_unchanged from (select id,reaction_from_smiles(tmprxn::cstring) rxn from tmp) as r where r is not null;
++DROP table tmp;
++SET rdkit.move_unmmapped_reactants_to_agents=true;
++SELECT count(*) FROM pgreactions;
++ count 
++-------
++  1000
++(1 row)
++
++SELECT count(*) FROM pgreactions_unchanged;
++ count 
++-------
++  1000
++(1 row)
++
++SELECT SUM(reaction_numreactants(rxn)) FROM pgreactions;
++ sum  
++------
++ 1898
++(1 row)
++
++SELECT SUM(reaction_numreactants(rxn)) FROM pgreactions_unchanged;
++ sum  
++------
++ 3517
++(1 row)
++
++SELECT SUM(reaction_numproducts(rxn)) FROM pgreactions;
++ sum  
++------
++ 1157
++(1 row)
++
++SELECT SUM(reaction_numproducts(rxn)) FROM pgreactions_unchanged;
++ sum  
++------
++ 1157
++(1 row)
++
++SELECT SUM(reaction_numagents(rxn)) FROM pgreactions;
++ sum  
++------
++ 2528
++(1 row)
++
++SELECT SUM(reaction_numagents(rxn)) FROM pgreactions_unchanged;
++ sum 
++-----
++ 909
++(1 row)
++
++CREATE INDEX rxnidx ON pgreactions USING gist(rxn);
++SET enable_indexscan=off;
++SET enable_bitmapscan=off;
++SET enable_seqscan=on;
++SELECT count(*) FROM pgreactions WHERE rxn@>'c1ccccc1>>c1ccncc1';
++ count 
++-------
++    47
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'c1cnccc1>>c1ccccc1';
++ count 
++-------
++    50
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1ccccc1>>c1ccncc1'<@rxn;
++ count 
++-------
++    47
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1cnccc1>>c1ccccc1'<@rxn;
++ count 
++-------
++    50
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'c1ccccc1>>';
++ count 
++-------
++   667
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'c1cnccc1>>';
++ count 
++-------
++    83
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1ccccc1>>'<@rxn;
++ count 
++-------
++   667
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1cnccc1>>'<@rxn;
++ count 
++-------
++    83
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'>>c1ccncc1';
++ count 
++-------
++    79
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'>>c1ccccc1';
++ count 
++-------
++   650
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE '>>c1ccncc1'<@rxn;
++ count 
++-------
++    79
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE '>>c1ccccc1'<@rxn;
++ count 
++-------
++   650
++(1 row)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=off;
++SELECT count(*) FROM pgreactions WHERE rxn@>'c1ccccc1>>c1ccncc1';
++ count 
++-------
++    47
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'c1cnccc1>>c1ccccc1';
++ count 
++-------
++    50
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1ccccc1>>c1ccncc1'<@rxn;
++ count 
++-------
++    47
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1cnccc1>>c1ccccc1'<@rxn;
++ count 
++-------
++    50
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'c1ccccc1>>';
++ count 
++-------
++   667
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'c1cnccc1>>';
++ count 
++-------
++    83
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1ccccc1>>'<@rxn;
++ count 
++-------
++   667
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1cnccc1>>'<@rxn;
++ count 
++-------
++    83
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'>>c1ccncc1';
++ count 
++-------
++    79
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn@>'>>c1ccccc1';
++ count 
++-------
++   650
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE '>>c1ccncc1'<@rxn;
++ count 
++-------
++    79
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE '>>c1ccccc1'<@rxn;
++ count 
++-------
++   650
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn?>'c1ccccc1>>c1ccncc1';
++ count 
++-------
++    47
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn?>'c1cnccc1>>c1ccccc1';
++ count 
++-------
++    50
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1ccccc1>>c1ccncc1'?<rxn;
++ count 
++-------
++    47
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1cnccc1>>c1ccccc1'?<rxn;
++ count 
++-------
++    50
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn?>'c1ccccc1>>';
++ count 
++-------
++   667
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn?>'c1cnccc1>>';
++ count 
++-------
++    83
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1ccccc1>>'?<rxn;
++ count 
++-------
++   667
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE 'c1cnccc1>>'?<rxn;
++ count 
++-------
++    83
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn?>'>>c1ccncc1';
++ count 
++-------
++    79
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE rxn?>'>>c1ccccc1';
++ count 
++-------
++   650
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE '>>c1ccncc1'?<rxn;
++ count 
++-------
++    79
++(1 row)
++
++SELECT count(*) FROM pgreactions WHERE '>>c1ccccc1'?<rxn;
++ count 
++-------
++   650
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',1), reaction_difference_fp('c1ccccc1>>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',1), reaction_difference_fp('c1ncccc1>>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.6363636363636364
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_difference_fp('c1ncccc1>[Na+]>c1ncncc1',1));
++   tanimoto_sml    
++-------------------
++ 0.603448275862069
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',2), reaction_difference_fp('c1ccccc1>>c1ccncc1',2));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',2), reaction_difference_fp('c1ncccc1>>c1ncncc1',2));
++ tanimoto_sml 
++--------------
++          0.2
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_difference_fp('c1ncccc1>[Na+]>c1ncncc1',2));
++ tanimoto_sml 
++--------------
++          0.2
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',3), reaction_difference_fp('c1ccccc1>>c1ccncc1',3));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',3), reaction_difference_fp('c1ncccc1>>c1ncncc1',3));
++    tanimoto_sml     
++---------------------
++ 0.45454545454545453
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_difference_fp('c1ncccc1>[Na+]>c1ncncc1',3));
++    tanimoto_sml     
++---------------------
++ 0.44493392070484583
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',1), reaction_structural_bfp('c1ccccc1>>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',1), reaction_structural_bfp('c1ncccc1>>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.6206896551724138
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.5142857142857142
++(1 row)
++
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>>c1ccncc1',3));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ncccc1>>c1ncncc1',3));
++    tanimoto_sml    
++--------------------
++ 0.4090909090909091
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',3));
++    tanimoto_sml    
++--------------------
++ 0.3225806451612903
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',4), reaction_structural_bfp('c1ccccc1>>c1ccncc1',4));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',4), reaction_structural_bfp('c1ncccc1>>c1ncncc1',4));
++    tanimoto_sml     
++---------------------
++ 0.27710843373493976
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',4), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',4));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',4), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',4));
++    tanimoto_sml     
++---------------------
++ 0.23711340206185566
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',5), reaction_structural_bfp('c1ccccc1>>c1ccncc1',5));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',5), reaction_structural_bfp('c1ncccc1>>c1ncncc1',5));
++    tanimoto_sml    
++--------------------
++ 0.7933884297520661
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',5));
++    tanimoto_sml    
++--------------------
++ 0.6049382716049383
++(1 row)
++
++SET rdkit.agent_FP_bit_ratio=0.5;
++SET rdkit.difference_FP_weight_agents=-3;
++SET rdkit.difference_FP_weight_nonagents=7;
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',1), reaction_difference_fp('c1ccccc1>>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',1), reaction_difference_fp('c1ncccc1>>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.6363636363636364
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_difference_fp('c1ncccc1>[Na+]>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.5157894736842106
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',2), reaction_difference_fp('c1ccccc1>>c1ccncc1',2));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',2), reaction_difference_fp('c1ncccc1>>c1ncncc1',2));
++ tanimoto_sml 
++--------------
++          0.2
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_difference_fp('c1ncccc1>[Na+]>c1ncncc1',2));
++ tanimoto_sml 
++--------------
++          0.2
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',3), reaction_difference_fp('c1ccccc1>>c1ccncc1',3));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',3), reaction_difference_fp('c1ncccc1>>c1ncncc1',3));
++    tanimoto_sml     
++---------------------
++ 0.45454545454545453
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_difference_fp('c1ncccc1>[Na+]>c1ncncc1',3));
++    tanimoto_sml     
++---------------------
++ 0.40331491712707185
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',1), reaction_structural_bfp('c1ccccc1>>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',1), reaction_structural_bfp('c1ncccc1>>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.6206896551724138
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.5142857142857142
++(1 row)
++
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>>c1ncncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2));
++--SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',2), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',2));
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>>c1ccncc1',3));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',3), reaction_structural_bfp('c1ncccc1>>c1ncncc1',3));
++    tanimoto_sml     
++---------------------
++ 0.42857142857142855
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',3), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',3));
++    tanimoto_sml    
++--------------------
++ 0.3448275862068966
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',4), reaction_structural_bfp('c1ccccc1>>c1ccncc1',4));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',4), reaction_structural_bfp('c1ncccc1>>c1ncncc1',4));
++    tanimoto_sml    
++--------------------
++ 0.2857142857142857
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',4), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',4));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',4), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',4));
++    tanimoto_sml     
++---------------------
++ 0.24489795918367346
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',5), reaction_structural_bfp('c1ccccc1>>c1ccncc1',5));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',5), reaction_structural_bfp('c1ncccc1>>c1ncncc1',5));
++ tanimoto_sml 
++--------------
++          0.8
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',5));
++    tanimoto_sml    
++--------------------
++ 0.6086956521739131
++(1 row)
++
++SET rdkit.ignore_reaction_agents=true;
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',1), reaction_difference_fp('c1ccccc1>>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>>c1ccncc1',1), reaction_difference_fp('c1ncccc1>>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.6363636363636364
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_difference_fp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',1), reaction_difference_fp('c1ncccc1>[Na+]>c1ncncc1',1));
++    tanimoto_sml    
++--------------------
++ 0.6363636363636364
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',5), reaction_structural_bfp('c1ccccc1>>c1ccncc1',5));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>>c1ccncc1',5), reaction_structural_bfp('c1ncccc1>>c1ncncc1',5));
++ tanimoto_sml 
++--------------
++          0.8
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5), reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5));
++ tanimoto_sml 
++--------------
++            1
++(1 row)
++
++SELECT tanimoto_sml(reaction_structural_bfp('c1ccccc1>CC(=O)O.[Na+]>c1ccncc1',5), reaction_structural_bfp('c1ncccc1>[Na+]>c1ncncc1',5));
++ tanimoto_sml 
++--------------
++          0.8
++(1 row)
++
++SELECT reaction_to_svg('[C:1][O:2].[C:3][C:4]>>[C:1][O:2][C:3][C:4]'::reaction) svg;
++                                                                                                  svg                                                                                                  
++-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
++ <?xml version='1.0' encoding='iso-8859-1'?>                                                                                                                                                          +
++ <svg version='1.1' baseProfile='full'                                                                                                                                                                +
++               xmlns='http://www.w3.org/2000/svg'                                                                                                                                                     +
++                       xmlns:rdkit='http://www.rdkit.org/xml'                                                                                                                                         +
++                       xmlns:xlink='http://www.w3.org/1999/xlink'                                                                                                                                     +
++                   xml:space='preserve'                                                                                                                                                               +
++ width='400px' height='200px' viewBox='0 0 400 200'>                                                                                                                                                  +
++ <!-- END OF HEADER -->                                                                                                                                                                               +
++ <rect style='opacity:1.0;fill:#FFFFFF;stroke:none' width='400' height='200' x='0' y='0'> </rect>                                                                                                     +
++ <path class='bond-0' d='M 47.583,100 L 53.3461,100' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                +
++ <path class='bond-0' d='M 53.3461,100 L 59.1092,100' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />               +
++ <path class='bond-1' d='M 121.036,100 L 132.915,100' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />               +
++ <path class='bond-2' d='M 288.928,98.6943 L 293.434,96.7767' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />       +
++ <path class='bond-2' d='M 293.434,96.7767 L 297.94,94.8591' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />        +
++ <path class='bond-3' d='M 315.069,95.7853 L 320.672,100' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />           +
++ <path class='bond-3' d='M 320.672,100 L 326.276,104.215' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />           +
++ <path class='bond-4' d='M 343.052,105.291 L 352.417,101.306' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />       +
++ <text x='27.9822' y='105.247' style='font-size:10px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>C:1</tspan></text>+
++ <text x='59.1092' y='105.247' style='font-size:10px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#FF0000' ><tspan>O:2</tspan></text>+
++ <text x='101.435' y='105.247' style='font-size:10px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>C:3</tspan></text>+
++ <text x='132.915' y='105.247' style='font-size:10px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>C:4</tspan></text>+
++ <text x='269.327' y='108.111' style='font-size:10px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>C:1</tspan></text>+
++ <text x='297.94' y='95.7853' style='font-size:10px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#FF0000' ><tspan>O:2</tspan></text> +
++ <text x='323.451' y='114.708' style='font-size:10px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>C:3</tspan></text>+
++ <text x='352.417' y='102.382' style='font-size:10px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>C:4</tspan></text>+
++ <text x='81.8359' y='112' style='font-size:24px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>+</tspan></text>      +
++ <path d='M 163.702,100 L 247.647,100' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                              +
++ <path d='M 247.647,100 L 244.012,97.9014' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                          +
++ <path d='M 247.647,100 L 244.012,102.099' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                          +
++ </svg>                                                                                                                                                                                               +
++ 
++(1 row)
++
++SELECT reaction_to_svg('[C:1][O:2].[C:3][C:4]>>[C:1][O:2][C:3][C:4]'::reaction, true) svg;
++                                                                                                 svg                                                                                                 
++-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
++ <?xml version='1.0' encoding='iso-8859-1'?>                                                                                                                                                        +
++ <svg version='1.1' baseProfile='full'                                                                                                                                                              +
++               xmlns='http://www.w3.org/2000/svg'                                                                                                                                                   +
++                       xmlns:rdkit='http://www.rdkit.org/xml'                                                                                                                                       +
++                       xmlns:xlink='http://www.w3.org/1999/xlink'                                                                                                                                   +
++                   xml:space='preserve'                                                                                                                                                             +
++ width='400px' height='200px' viewBox='0 0 400 200'>                                                                                                                                                +
++ <!-- END OF HEADER -->                                                                                                                                                                             +
++ <rect style='opacity:1.0;fill:#FFFFFF;stroke:none' width='400' height='200' x='0' y='0'> </rect>                                                                                                   +
++ <path d='M 27.1278,100 L 60.6752,100' style='fill:none;fill-rule:evenodd;stroke:#FFFFAA;stroke-width:14px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                           +
++ <path d='M 105.405,100 L 138.952,100' style='fill:none;fill-rule:evenodd;stroke:#FFCC99;stroke-width:14px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                           +
++ <path d='M 284.324,103.053 L 315.193,89.9173' style='fill:none;fill-rule:evenodd;stroke:#FFFFAA;stroke-width:14px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                   +
++ <path d='M 342.003,110.083 L 372.872,96.9472' style='fill:none;fill-rule:evenodd;stroke:#FFCC99;stroke-width:14px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                   +
++ <ellipse cx='27.1278' cy='100' rx='8.94597' ry='8.94597' style='fill:#FFFFAA;fill-rule:evenodd;stroke:#FFFFAA;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />      +
++ <ellipse cx='60.6752' cy='100' rx='8.94597' ry='8.94597' style='fill:#FFFFAA;fill-rule:evenodd;stroke:#FFFFAA;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />      +
++ <ellipse cx='105.405' cy='100' rx='8.94597' ry='8.94597' style='fill:#FFCC99;fill-rule:evenodd;stroke:#FFCC99;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />      +
++ <ellipse cx='138.952' cy='100' rx='8.94597' ry='8.94597' style='fill:#FFCC99;fill-rule:evenodd;stroke:#FFCC99;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />      +
++ <ellipse cx='284.324' cy='103.053' rx='8.94597' ry='8.94597' style='fill:#FFFFAA;fill-rule:evenodd;stroke:#FFFFAA;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />  +
++ <ellipse cx='315.193' cy='89.9173' rx='8.94597' ry='8.94597' style='fill:#FFFFAA;fill-rule:evenodd;stroke:#FFFFAA;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />  +
++ <ellipse cx='342.003' cy='110.083' rx='8.94597' ry='8.94597' style='fill:#FFCC99;fill-rule:evenodd;stroke:#FFCC99;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />  +
++ <ellipse cx='372.872' cy='96.9472' rx='8.94597' ry='8.94597' style='fill:#FFCC99;fill-rule:evenodd;stroke:#FFCC99;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />  +
++ <path class='bond-0' d='M 27.1278,100 L 41.2905,100' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />             +
++ <path class='bond-0' d='M 41.2905,100 L 55.4531,100' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />             +
++ <path class='bond-1' d='M 105.405,100 L 138.952,100' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />             +
++ <path class='bond-2' d='M 284.324,103.053 L 297.148,97.5961' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />     +
++ <path class='bond-2' d='M 297.148,97.5961 L 309.971,92.1394' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />     +
++ <path class='bond-3' d='M 320.415,93.8451 L 331.209,101.964' style='fill:none;fill-rule:evenodd;stroke:#FF0000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />     +
++ <path class='bond-3' d='M 331.209,101.964 L 342.003,110.083' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />     +
++ <path class='bond-4' d='M 342.003,110.083 L 372.872,96.9472' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />     +
++ <text x='55.4531' y='105.591' style='font-size:11px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#FF0000' ><tspan>O</tspan></text>+
++ <text x='309.971' y='95.5085' style='font-size:11px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#FF0000' ><tspan>O</tspan></text>+
++ <text x='74.6271' y='112' style='font-size:23px;font-style:normal;font-weight:normal;fill-opacity:1;stroke:none;font-family:sans-serif;text-anchor:start;fill:#000000' ><tspan>+</tspan></text>    +
++ <path d='M 161.317,100 L 250.777,100' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                            +
++ <path d='M 250.777,100 L 246.903,97.7635' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                        +
++ <path d='M 250.777,100 L 246.903,102.236' style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1' />                        +
++ </svg>                                                                                                                                                                                             +
++ 
++(1 row)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=on;
++DROP INDEX rxnidx;
+--- /dev/null	2019-10-21 09:46:46.351315135 +0200
++++ ./Code/PgSQL/rdkit/expected/slfpgist_1.out	2019-11-02 21:02:33.390921646 +0100
+@@ -0,0 +1,89 @@
++CREATE INDEX fpidx ON pgsfp USING gist (f gist_sfp_low_ops);
++SET rdkit.tanimoto_threshold = 0.6;
++SET rdkit.dice_threshold = 0.6;
++SET enable_indexscan=off;
++SET enable_bitmapscan=off;
++SET enable_seqscan=on;
++SELECT
++    id, tanimoto_sml(morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1), f) AS sml
++FROM
++	pgsfp
++WHERE morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1) % f
++ORDER BY sml DESC, id;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, dice_sml(morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1), f) AS sml
++FROM
++	pgsfp
++WHERE morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1) # f
++ORDER BY sml DESC, id;
++   id    |        sml         
++---------+--------------------
++  659725 | 0.6857142857142857
++   63248 | 0.6486486486486487
++ 6266272 | 0.6410256410256411
++ 5359275 | 0.6388888888888888
++ 5718138 | 0.6388888888888888
++  917183 | 0.6285714285714286
++  161167 | 0.6216216216216216
++  230488 | 0.6216216216216216
++  328013 | 0.6216216216216216
++  564008 | 0.6190476190476191
++ 2910597 | 0.6153846153846154
++ 3963948 | 0.6153846153846154
++ 5407397 | 0.6153846153846154
++ 3784792 | 0.6136363636363636
++ 3096571 | 0.6097560975609756
++  801655 | 0.6052631578947368
++ 3157044 | 0.6052631578947368
++  807628 |                0.6
++(18 rows)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=off;
++SELECT
++    id, tanimoto_sml(morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1), f) AS sml
++FROM
++	pgsfp
++WHERE morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1) % f
++ORDER BY sml DESC, id;
++ id | sml 
++----+-----
++(0 rows)
++
++SELECT
++    id, dice_sml(morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1), f) AS sml
++FROM
++	pgsfp
++WHERE morgan_fp('O=C1CC(OC2=CC=CC=C12)C1=CC=CC=C1'::mol, 1) # f
++ORDER BY sml DESC, id;
++   id    |        sml         
++---------+--------------------
++  659725 | 0.6857142857142857
++   63248 | 0.6486486486486487
++ 6266272 | 0.6410256410256411
++ 5359275 | 0.6388888888888888
++ 5718138 | 0.6388888888888888
++  917183 | 0.6285714285714286
++  161167 | 0.6216216216216216
++  230488 | 0.6216216216216216
++  328013 | 0.6216216216216216
++  564008 | 0.6190476190476191
++ 2910597 | 0.6153846153846154
++ 3963948 | 0.6153846153846154
++ 5407397 | 0.6153846153846154
++ 3784792 | 0.6136363636363636
++ 3096571 | 0.6097560975609756
++  801655 | 0.6052631578947368
++ 3157044 | 0.6052631578947368
++  807628 |                0.6
++(18 rows)
++
++SET enable_indexscan=on;
++SET enable_bitmapscan=on;
++SET enable_seqscan=on;
++DROP INDEX fpidx;
