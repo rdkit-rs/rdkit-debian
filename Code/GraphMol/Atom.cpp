@@ -22,12 +22,21 @@
 #include <RDGeneral/Dict.h>
 
 namespace RDKit {
-namespace {
+
 // Determine whether or not a molecule is to the left of Carbon
 bool isEarlyAtom(int atomicNum) {
-  return (4 - PeriodicTable::getTable()->getNouterElecs(atomicNum)) > 0;
+  int eshift = 4 - PeriodicTable::getTable()->getNouterElecs(atomicNum);
+  if (eshift > 0) {
+    return true;
+  } else if (eshift < 0) {
+    return false;
+  } else {
+    // we make an arbitrary decision that Ge, Sn, and Pb
+    // are treated like early elements (part of github #2606)
+    return atomicNum > 14;
+  }
 }
-}  // namespace
+
 Atom::Atom() : RDProps() {
   d_atomicNum = 0;
   initAtom();
@@ -43,10 +52,11 @@ Atom::Atom(const std::string &what) : RDProps() {
   initAtom();
 };
 
-Atom::Atom(const Atom &other) : RDProps(other) {
+void Atom::initFromOther(const Atom &other) {
+  RDProps::operator=(other);
   // NOTE: we do *not* copy ownership!
-  d_atomicNum = other.d_atomicNum;
   dp_mol = nullptr;
+  d_atomicNum = other.d_atomicNum;
   d_index = 0;
   d_formalCharge = other.d_formalCharge;
   df_noImplicit = other.df_noImplicit;
@@ -65,6 +75,15 @@ Atom::Atom(const Atom &other) : RDProps(other) {
     dp_monomerInfo = nullptr;
   }
 }
+
+Atom::Atom(const Atom &other) : RDProps() { initFromOther(other); }
+
+Atom &Atom::operator=(const Atom &other) {
+  if (this == &other) return *this;
+  initFromOther(other);
+  return *this;
+}
+
 void Atom::initAtom() {
   df_isAromatic = false;
   df_noImplicit = false;
@@ -258,7 +277,7 @@ int Atom::calcExplicitValence(bool strict) {
              << effectiveValence << ", is greater than permitted";
       std::string msg = errout.str();
       BOOST_LOG(rdErrorLog) << msg << std::endl;
-      throw MolSanitizeException(msg);
+      throw AtomValenceException(msg, getIdx());
     }
   }
   d_explicitValence = res;
@@ -372,7 +391,7 @@ int Atom::calcImplicitValence(bool strict) {
                << " not equal to any accepted valence\n";
         std::string msg = errout.str();
         BOOST_LOG(rdErrorLog) << msg << std::endl;
-        throw MolSanitizeException(msg);
+        throw AtomValenceException(msg, getIdx());
       }
       res = 0;
     }
@@ -397,7 +416,7 @@ int Atom::calcImplicitValence(bool strict) {
                << " greater than permitted";
         std::string msg = errout.str();
         BOOST_LOG(rdErrorLog) << msg << std::endl;
-        throw MolSanitizeException(msg);
+        throw AtomValenceException(msg, getIdx());
       } else {
         res = 0;
       }

@@ -28,7 +28,9 @@ namespace RDPickers {
  *    if (i > j) : distMat[i*(i-1)/2 + j]
  *    if (j < i) : distMat[j*(j-1)/2 + i]
  */
-RDKIT_SIMDIVPICKERS_EXPORT double getDistFromLTM(const double *distMat, unsigned int i, unsigned int j);
+RDKIT_SIMDIVPICKERS_EXPORT double getDistFromLTM(const double *distMat,
+                                                 unsigned int i,
+                                                 unsigned int j);
 
 /*! \brief Abstract base class to do perform item picking (typically molecules)
  *using a
@@ -71,6 +73,20 @@ class RDKIT_SIMDIVPICKERS_EXPORT DistPicker {
   virtual RDKit::INT_VECT pick(const double *distMat, unsigned int poolSize,
                                unsigned int pickSize) const = 0;
 };
+
+namespace {
+class RDKIT_SIMDIVPICKERS_EXPORT distmatFunctor {
+ public:
+  distmatFunctor(const double *distMat) : dp_distMat(distMat){};
+  double operator()(unsigned int i, unsigned int j) {
+    return getDistFromLTM(this->dp_distMat, i, j);
+  }
+
+ private:
+  const double *dp_distMat;
 };
+}  // namespace
+
+};  // namespace RDPickers
 
 #endif

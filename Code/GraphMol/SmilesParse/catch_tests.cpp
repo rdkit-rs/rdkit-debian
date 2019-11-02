@@ -15,6 +15,7 @@
 
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/QueryAtom.h>
+#include <GraphMol/QueryBond.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <GraphMol/SmilesParse/SmartsWrite.h>
@@ -269,10 +270,13 @@ TEST_CASE("github #2257: writing cxsmiles", "[smiles,cxsmiles]") {
   }
 
   SECTION("enhanced stereo 3") {
-    auto mol = "C[C@@H]1N[C@H](C)[C@@H]([C@H](C)[C@@H]1C)C1[C@@H](C)O[C@@H](C)[C@@H](C)[C@H]1C |a:5,o1:1,8,o2:14,16,&1:11,18,&2:3,6,r|"_smiles;
+    auto mol =
+        "C[C@@H]1N[C@H](C)[C@@H]([C@H](C)[C@@H]1C)C1[C@@H](C)O[C@@H](C)[C@@H](C)[C@H]1C |a:5,o1:1,8,o2:14,16,&1:11,18,&2:3,6,r|"_smiles;
     REQUIRE(mol);
     auto smi = MolToCXSmiles(*mol);
-    CHECK(smi == "C[C@@H]1N[C@H](C)[C@H](C2[C@@H](C)O[C@@H](C)[C@@H](C)[C@H]2C)[C@H](C)[C@@H]1C |a:5,o1:1,18,o2:10,12,&1:3,16,&2:7,14|");
+    CHECK(smi ==
+          "C[C@@H]1N[C@H](C)[C@H](C2[C@@H](C)O[C@@H](C)[C@@H](C)[C@H]2C)[C@H]("
+          "C)[C@@H]1C |a:5,o1:1,18,o2:10,12,&1:3,16,&2:7,14|");
   }
 
   SECTION("enhanced stereo 4") {
@@ -280,6 +284,13 @@ TEST_CASE("github #2257: writing cxsmiles", "[smiles,cxsmiles]") {
     REQUIRE(mol);
     auto smi = MolToCXSmiles(*mol);
     CHECK(smi == "C[C@@H]1CCO[C@H](C)C1 |a:1,5|");
+  }
+
+  SECTION("enhanced stereo with other properties") {
+    auto mol = "CC[C@H](C)O |atomProp:3.p2.v2,o1:2|"_smiles;
+    REQUIRE(mol);
+    auto smi = MolToCXSmiles(*mol);
+    CHECK(smi == "CC[C@H](C)O |atomProp:3.p2.v2,o1:2|");
   }
 
   SECTION("mol fragments1") {
@@ -418,5 +429,126 @@ TEST_CASE("dative ring closures", "[bug, smiles]") {
     REQUIRE(m1->getBondBetweenAtoms(0, 1));
     CHECK(m1->getBondBetweenAtoms(0, 1)->getBondType() == Bond::DATIVE);
     CHECK(m1->getBondBetweenAtoms(0, 1)->getBeginAtomIdx() == 0);
+  }
+}
+
+TEST_CASE("github#2450: getAtomSmarts() fails for free atoms", "[bug]") {
+  SECTION("original report") {
+    std::unique_ptr<QueryAtom> qat(new QueryAtom());
+    qat->setQuery(makeAtomNumQuery(6));
+    auto smarts = SmartsWrite::GetAtomSmarts(qat.get());
+    CHECK(smarts == "[#6]");
+  }
+  SECTION("query bonds") {
+    std::unique_ptr<QueryBond> qbnd(new QueryBond(Bond::AROMATIC));
+    auto smarts = SmartsWrite::GetBondSmarts(qbnd.get());
+    CHECK(smarts == ":");
+  }
+  SECTION("SMILES works too") {
+    std::unique_ptr<Bond> bnd(new Bond(Bond::AROMATIC));
+    auto smiles = SmilesWrite::GetBondSmiles(bnd.get());
+    CHECK(smiles == ":");
+  }
+}
+
+TEST_CASE("MolFragmentToSmarts", "[Smarts]") {
+  SECTION("BasicFragment") {
+    auto m = "CCCCCN"_smiles;
+    std::vector<int> indices = {3, 4, 5};
+    const auto smarts = MolFragmentToSmarts(*m, indices);
+    CHECK(smarts == "[#6]-[#6]-[#7]");
+  }
+  SECTION("FragmentWithParity1") {
+    auto m = "C[C@H](F)CCCN"_smiles;
+    std::vector<int> indices = {0, 1, 2, 3};
+    const auto smarts = MolFragmentToSmarts(*m, indices);
+    CHECK(smarts == "[#6]-[#6@H](-[#9])-[#6]");
+  }
+  SECTION("FragmentWithParity2") {
+    auto m = "C[C@](F)(Cl)CCCN"_smiles;
+    std::vector<int> indices = {0, 1, 2, 4};
+    const auto smarts = MolFragmentToSmarts(*m, indices);
+    CHECK(smarts == "[#6]-[#6@@](-[#9])-[#6]");
+  }
+  SECTION("FragmentLosingParity") {
+    auto m = "C[C@H](F)CCCN"_smiles;
+    std::vector<int> indices = {0, 1, 2};
+    const auto smarts = MolFragmentToSmarts(*m, indices);
+    CHECK(smarts == "[#6]-[#6@H]-[#9]");
+  }
+  SECTION("FragmentWithSpecifiedBonds") {
+    auto m = "C1CC1O"_smiles;
+    std::vector<int> atomIndices = {0, 1, 2};
+    std::vector<int> bondIndices = {0};
+    const auto smarts = MolFragmentToSmarts(*m, atomIndices, &bondIndices);
+    CHECK(smarts == "[#6]-[#6].[#6]");
+  }
+  SECTION("SmartsFragmentFromQueryMol") {
+    auto m = "CCCC[C,N]N"_smarts;
+    std::vector<int> indices = {3, 4, 5};
+    const auto smarts = MolFragmentToSmarts(*m, indices);
+    CHECK(smarts == "C[C,N]N");
+  }
+}
+
+TEST_CASE("github #2667: MolToCXSmiles generates error for empty molecule",
+          "[bug,cxsmiles]") {
+  SECTION("basics") {
+    auto mol = ""_smiles;
+    REQUIRE(mol);
+    auto smi = MolToCXSmiles(*mol);
+    CHECK(smi == "");
+  }
+}
+
+TEST_CASE("github #2604: support range-based charge queries from SMARTS",
+          "[ranges,smarts]") {
+  SECTION("positive") {
+    auto query = "[N+{0-1}]"_smarts;
+    REQUIRE(query);
+    {
+      auto m1 = "CN"_smiles;
+      REQUIRE(m1);
+      CHECK(SubstructMatch(*m1, *query).size() == 1);
+    }
+    {
+      auto m1 = "C[NH3+]"_smiles;
+      REQUIRE(m1);
+      CHECK(SubstructMatch(*m1, *query).size() == 1);
+    }
+    {
+      auto m1 = "C[NH4+2]"_smiles;
+      REQUIRE(m1);
+      CHECK(SubstructMatch(*m1, *query).empty());
+    }
+    {
+      auto m1 = "C[NH-]"_smiles;
+      REQUIRE(m1);
+      CHECK(SubstructMatch(*m1, *query).empty());
+    }
+  }
+  SECTION("negative") {
+    auto query = "[N-{0-1}]"_smarts;
+    REQUIRE(query);
+    {
+      auto m1 = "CN"_smiles;
+      REQUIRE(m1);
+      CHECK(SubstructMatch(*m1, *query).size() == 1);
+    }
+    {
+      auto m1 = "C[NH-]"_smiles;
+      REQUIRE(m1);
+      CHECK(SubstructMatch(*m1, *query).size() == 1);
+    }
+    {
+      auto m1 = "C[N-2]"_smiles;
+      REQUIRE(m1);
+      CHECK(SubstructMatch(*m1, *query).empty());
+    }
+    {
+      auto m1 = "C[NH3+]"_smiles;
+      REQUIRE(m1);
+      CHECK(SubstructMatch(*m1, *query).empty());
+    }
   }
 }

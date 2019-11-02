@@ -24,19 +24,6 @@
 
 namespace RDPickers {
 
-namespace {
-class RDKIT_SIMDIVPICKERS_EXPORT distmatFunctor {
- public:
-  distmatFunctor(const double *distMat) : dp_distMat(distMat){};
-  double operator()(unsigned int i, unsigned int j) {
-    return getDistFromLTM(this->dp_distMat, i, j);
-  }
-
- private:
-  const double *dp_distMat;
-};
-}  // namespace
-
 /*! \brief Implements the MaxMin algorithm for picking a subset of item from a
  *pool
  *
@@ -67,7 +54,7 @@ class RDKIT_SIMDIVPICKERS_EXPORT MaxMinPicker : public DistPicker {
    *              poolSize*(poolSize-1)
    *   \param pickSize - the number items to pick from pool (<= poolSize)
    *   \param firstPicks - (optional)the first items in the pick list
-   *   \param seed - (optional) seed for the random number generator. 
+   *   \param seed - (optional) seed for the random number generator.
    *                 If this is <0 the generator will be seeded with a
    *                 random number.
    */
@@ -272,7 +259,7 @@ RDKit::INT_VECT MaxMinPicker::lazyPick(T &func, unsigned int poolSize,
     } while (*prev != 0);
 
     // if the current distance is closer then threshold, we're done
-    if (threshold >= 0.0 && maxOFmin < threshold) break;
+    if (maxOFmin <= threshold && threshold >= 0.0) break;
     tmpThreshold = maxOFmin;
     // now add the new pick to picks and remove it from the pool
     *pick_prev = pinfo[pick].next;

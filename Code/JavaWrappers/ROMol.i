@@ -60,6 +60,7 @@
 #include <GraphMol/MolAlign/O3AAlignMolecules.h>
 #include <GraphMol/MolDraw2D/MolDraw2DSVG.h>
 #include <GraphMol/PartialCharges/GasteigerCharges.h>
+#include <GraphMol/new_canon.h>
 #include <sstream>
 %}
 
@@ -107,6 +108,10 @@
 %ignore SubstructMatch;
 %include <GraphMol/Substruct/SubstructMatch.h>
 
+%ignore RDKit::MolPickler;
+%include <GraphMol/MolPickler.h>
+
+
 
 %newobject removeHs;
 %newobject addHs;
@@ -115,6 +120,8 @@
 %newobject replaceSidechains;
 %newobject deleteSubstructs;
 %newobject getAtoms;
+%newobject getAtomNeighbors;
+%newobject getAtomBonds;
 
 %{
 #ifdef BUILD_COORDGEN_SUPPORT
@@ -180,6 +187,13 @@ void setPreferCoordGen(bool);
   }
   std::string MolToHELM() {
     return RDKit::MolToHELM(*($self));
+  }
+
+  std::string MolToXYZBlock(int confId=-1) {
+    return RDKit::MolToXYZBlock(*($self), confId);
+  }
+  void MolToXYZFile(std::string fName, int confId=-1) {
+    RDKit::MolToXYZFile(*($self), fName, confId);
   }
 
   bool hasSubstructMatch(RDKit::ROMol &query,bool useChirality=false){
@@ -320,6 +334,20 @@ void setPreferCoordGen(bool);
 
   }
 
+  void generateDepictionMatching2DStructure(RDKit::ROMol &reference,
+                                          int confId=-1,
+                                           bool acceptFailure=false, bool forceRDKit=false) {
+    RDDepict::generateDepictionMatching2DStructure(*($self),reference,confId,nullptr,
+            acceptFailure,forceRDKit);
+  }
+  void generateDepictionMatching2DStructure(RDKit::ROMol &reference,
+                                          int confId,
+                                          RDKit::ROMol referencePattern,
+                                          bool acceptFailure=false, bool forceRDKit=false) {
+    RDDepict::generateDepictionMatching2DStructure(*($self),reference,confId,
+           &referencePattern,acceptFailure,forceRDKit);
+  }
+
   /* From FindRings.cpp, MolOps.h */
   int findSSSR(RDKit::VECT_INT_VECT &res) {
     return RDKit::MolOps::findSSSR(*($self), res);
@@ -378,6 +406,22 @@ void setPreferCoordGen(bool);
     return atoms;
   }
 
+  std::vector<RDKit::Atom*> *getAtomNeighbors(RDKit::Atom *at) {
+    std::vector<RDKit::Atom*> *atoms = new std::vector<RDKit::Atom*>;
+    for(const auto &nbri : boost::make_iterator_range(($self)->getAtomNeighbors(at))){
+      atoms->push_back((*($self))[nbri]);
+    }
+    return atoms;
+  }
+
+  std::vector<RDKit::Bond*> *getAtomBonds(RDKit::Atom *at) {
+    std::vector<RDKit::Bond*> *bonds = new std::vector<RDKit::Bond*>;
+    for(const auto &nbri : boost::make_iterator_range(($self)->getAtomBonds(at))){
+      bonds->push_back((*($self))[nbri]);
+    }
+    return bonds;
+  }
+
   /* From MolPickler.h */
   std::vector<int> ToBinary(){
     std::string sres;
@@ -390,7 +434,13 @@ void setPreferCoordGen(bool);
     std::string sres;
     sres.resize(pkl.size());
     std::copy(pkl.begin(),pkl.end(),sres.begin());
-    RDKit::ROMol *res=new RDKit::ROMol(sres);
+    RDKit::ROMol *res;
+    try {
+      res = new RDKit::ROMol(sres);
+    } catch (const RDKit::MolPicklerException &e) {
+      res = nullptr;
+      throw;
+    }
     return RDKit::ROMOL_SPTR(res);
   }
 
@@ -455,6 +505,13 @@ void setPreferCoordGen(bool);
                                std::vector<double> &charges,
                                int nIter=12,bool throwOnParamFailure=false){
     RDKit::computeGasteigerCharges(*mol,charges,nIter,throwOnParamFailure);
+  }
+
+  /* From new_canon.h*/
+  void rankMolAtoms(UINT_VECT &ranks,
+                  bool breakTies = true, bool includeChirality = true,
+                  bool includeIsotopes = true){
+	RDKit::Canon::rankMolAtoms(*($self), ranks, breakTies, includeChirality, includeIsotopes);
   }
 }
 

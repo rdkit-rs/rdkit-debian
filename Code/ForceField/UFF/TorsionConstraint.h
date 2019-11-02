@@ -19,7 +19,8 @@ namespace ForceFields {
 namespace UFF {
 
 //! A dihedral angle range constraint modelled after a TorsionContrib
-class RDKIT_FORCEFIELD_EXPORT TorsionConstraintContrib : public ForceFieldContrib {
+class RDKIT_FORCEFIELD_EXPORT TorsionConstraintContrib
+    : public ForceFieldContrib {
  public:
   TorsionConstraintContrib()
       : d_at1Idx(-1), d_at2Idx(-1), d_at3Idx(-1), d_at4Idx(-1){};
@@ -54,12 +55,16 @@ class RDKIT_FORCEFIELD_EXPORT TorsionConstraintContrib : public ForceFieldContri
   };
 
  private:
+  void setParameters(ForceField *owner, unsigned int idx1,
+    unsigned int idx2, unsigned int idx3, unsigned int idx4,
+    double minDihedralDeg, double maxDihedralDeg, double forceConst);
+  double computeDihedralTerm(double dihedral) const;
   int d_at1Idx, d_at2Idx, d_at3Idx,
       d_at4Idx;  //!< indices of atoms forming the dihedral angle
   double d_minDihedralDeg,
       d_maxDihedralDeg;    //!< rest amplitudes of the dihedral angle
   double d_forceConstant;  //!< force constant of the angle constraint
 };
-}
-}
+}  // namespace UFF
+}  // namespace ForceFields
 #endif

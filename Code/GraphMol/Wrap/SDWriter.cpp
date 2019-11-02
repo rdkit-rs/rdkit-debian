@@ -26,7 +26,7 @@ using boost_adaptbx::python::streambuf;
 namespace RDKit {
 SDWriter *getSDWriter(python::object &fileobj) {
   // FIX: minor leak here
-  auto *sb = new streambuf(fileobj);
+  auto *sb = new streambuf(fileobj, 't');
   auto *ost = new streambuf::ostream(*sb);
   return new SDWriter(ost, true);
 }
@@ -63,9 +63,9 @@ struct sdwriter_wrap {
 \n\
     2) writing to a file-like object: \n\n\
        >>> import gzip\n\
-       >>> outf=gzip.open('out.sdf.gz','w+')\n\
+       >>> outf=gzip.open('out.sdf.gz','wt+')\n\
        >>> writer = SDWriter(outf)\n\
-       >>> for mol in list_of_mols:\n \
+       >>> for mol in list_of_mols:\n\
        ...   writer.write(mol)\n\
        >>> writer.close()\n\
        >>> outf.close()\n\

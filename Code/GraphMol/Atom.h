@@ -103,6 +103,7 @@ class RDKIT_GRAPHMOL_EXPORT Atom : public RDProps {
   // PeriodicTable)
   explicit Atom(const std::string &what);
   Atom(const Atom &other);
+  Atom &operator=(const Atom &other);
   virtual ~Atom();
 
   //! makes a copy of this Atom and returns a pointer to it.
@@ -119,7 +120,10 @@ class RDKIT_GRAPHMOL_EXPORT Atom : public RDProps {
   //! returns our symbol (determined by our atomic number)
   std::string getSymbol() const;
 
-  //! returns a reference to the ROMol that owns this Atom
+  //! returns whether or not this instance belongs to a molecule
+  bool hasOwningMol() const { return dp_mol != nullptr; };
+
+  //! returns a reference to the ROMol that owns this instance
   ROMol &getOwningMol() const {
     PRECONDITION(dp_mol, "no owner");
     return *dp_mol;
@@ -402,6 +406,7 @@ class RDKIT_GRAPHMOL_EXPORT Atom : public RDProps {
   ROMol *dp_mol;
   AtomMonomerInfo *dp_monomerInfo;
   void initAtom();
+  void initFromOther(const Atom &other);
 };
 
 //! Set the atom's MDL integer RLabel
@@ -422,10 +427,16 @@ RDKIT_GRAPHMOL_EXPORT std::string getAtomValue(const Atom *atom);
 
 //! Sets the supplemental label that will follow the atom when writing
 //   smiles strings.
-RDKIT_GRAPHMOL_EXPORT void setSupplementalSmilesLabel(Atom *atom, const std::string &label);
+RDKIT_GRAPHMOL_EXPORT void setSupplementalSmilesLabel(Atom *atom,
+                                                      const std::string &label);
 RDKIT_GRAPHMOL_EXPORT std::string getSupplementalSmilesLabel(const Atom *atom);
-};
+};  // namespace RDKit
 //! allows Atom objects to be dumped to streams
-RDKIT_GRAPHMOL_EXPORT std::ostream &operator<<(std::ostream &target, const RDKit::Atom &at);
+RDKIT_GRAPHMOL_EXPORT std::ostream &operator<<(std::ostream &target,
+                                               const RDKit::Atom &at);
 
+namespace RDKit {
+//! returns whether or not the atom is to the left of C
+RDKIT_GRAPHMOL_EXPORT bool isEarlyAtom(int atomicNum);
+}  // namespace RDKit
 #endif

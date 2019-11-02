@@ -31,7 +31,7 @@ void testPass() {
   BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdInfoLog) << "Testing patterns which should parse." << std::endl;
   string smis[] = {
-#if 1
+#if 0
     "C",
     "CC",
     "C-C",
@@ -95,13 +95,17 @@ void testPass() {
     "[z1]",
     "[Z]",
     "[Z1]",
-#endif
     "[D{1-3}]",  // cactvs range queries
     "[D{-3}]",
     "[D{1-}]",
     "[z{1-3}]",
     "[Z{1-3}]",
     "[2H,13C]",  // github #1719
+    "[+{0-3}]",
+#endif
+    "[-{0-3}]",
+    "[-{0-3},C]",
+    "[-{0-3},D{1-3}]",  // github #2709
     "EOS"
   };
   while (smis[i] != "EOS") {
@@ -2524,7 +2528,7 @@ void testGithub1756() {
     m->updatePropertyCache(false);
     auto sma = MolToSmarts(*m);
     // std::cerr << sma << std::endl;
-    TEST_ASSERT(sma == "C-[C@&*&H0](-Cl)-F");  // FIX: this seems odd...
+    TEST_ASSERT(sma == "C-[C@&H0](-Cl)-F");  // FIX: this seems odd...
   }
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
@@ -2671,11 +2675,122 @@ void testGithub2142() {
 
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
+
+void testGithub2565() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog)
+      << "Testing Github #2565: Chirality reversed on SMARTS generation."
+      << std::endl;
+
+  std::vector<std::string> smiles(
+      {R"(O=C1C[C@]([H])1F)", R"(Cl[C@@H]1CCC1=O)",
+       R"(N1CCN=C1[C@H]1CCCc2ccccc21)", R"(C[C@@H](Cl)[C@H]1CC[C@@H](Cl)CC1)",
+       R"(Fc1cn([C@@H]2CCCO2)c(=O)[nH]c1=O)",
+       R"([C@@]1(C)(C(C)(C)C)O[C@@H](CN)[C@H](C[NH3+])O1)",
+
+       // these are Ok
+       R"(O=C1C[C@](Cl)1F)", R"(Br[C@@H](Cl)F)"});
+
+  for (const auto &smi : smiles) {
+    const std::unique_ptr<ROMol> mol(SmilesToMol(smi));
+    const std::string smarts = MolToSmarts(*mol, true);
+    const std::unique_ptr<ROMol> query(SmartsToMol(smarts));
+
+    bool uniquify = true;
+    bool recursionPossible = true;
+    bool useChirality = true;
+    std::vector<MatchVectType> matches;
+    TEST_ASSERT(SubstructMatch(*mol, *query, matches, uniquify,
+                               recursionPossible, useChirality));
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testSmartsStereoBonds() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog)
+      << "Testing stereo bond labels in mols parsed from SMARTS" << std::endl;
+  {
+    const auto mol = R"(C/C=C/C)"_smarts;
+    const Bond *bnd = mol->getBondWithIdx(1);
+    TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+    TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+  }
+  {
+    const auto mol = R"(C/C(F)=C(Cl)\C)"_smarts;
+    const Bond *bnd = mol->getBondWithIdx(2);
+    TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 5}));
+    TEST_ASSERT(bnd->getStereo() == Bond::STEREOCIS);
+  }
+  {
+    const auto mol = R"(F/C=C/C=C/C)"_smarts;
+    {
+      const Bond *bnd = mol->getBondWithIdx(1);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+    {
+      const Bond *bnd = mol->getBondWithIdx(3);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({2, 5}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+  }
+  {
+    const auto mol = R"(F\C=C/C=C/C)"_smarts;
+    {
+      const Bond *bnd = mol->getBondWithIdx(1);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOCIS);
+    }
+    {
+      const Bond *bnd = mol->getBondWithIdx(3);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({2, 5}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+  }
+  {
+    const auto mol = R"(F\C=C\C=C/C)"_smarts;
+    {
+      const Bond *bnd = mol->getBondWithIdx(1);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+    {
+      const Bond *bnd = mol->getBondWithIdx(3);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({2, 5}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOCIS);
+    }
+  }
+  {
+    const auto mol = R"(F/C=C/C=CC)"_smarts;
+    {
+      const Bond *bnd = mol->getBondWithIdx(1);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+    {
+      const Bond *bnd = mol->getBondWithIdx(3);
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREONONE);
+    }
+  }
+  {
+    // A weird way of writing C/C=C/O:
+    const auto mol = R"([#6](=[#6]/[#8])\[#6])"_smarts;
+
+    const Bond *bnd = mol->getBondWithIdx(1);
+
+    TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({3, 2}));
+    TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
   RDLog::InitLogs();
-#if 1
   testPass();
   testFail();
   testMatches();
@@ -2722,8 +2837,9 @@ int main(int argc, char *argv[]) {
   testGithub1906();
   testGithub1988();
   testGithub1985();
-#endif
   testGithub2142();
+  testGithub2565();
+  testSmartsStereoBonds();
 
   return 0;
 }

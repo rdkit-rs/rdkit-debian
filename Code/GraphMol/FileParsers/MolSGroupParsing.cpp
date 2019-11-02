@@ -446,7 +446,7 @@ void ParseSGroupV2000SCDSEDLine(IDX_TO_SGROUP_MAP &sGroupMap,
 
   if (lastDataSGroup != 0 && lastDataSGroup != sgIdx) {
     std::ostringstream errout;
-    errout << "Found a Data Field not matching the the SGroup of the last Data "
+    errout << "Found a Data Field not matching the SGroup of the last Data "
               "Field at line "
            << line;
     throw FileParseException(errout.str());
@@ -905,7 +905,7 @@ void ParseV3000SGroupsBlock(std::istream *inStream, unsigned int &line,
       sgroup.setProp<unsigned int>("ID", externalId);
     }
 
-    while (!lineStream.eof()) {
+    while (!lineStream.eof() && !lineStream.fail()) {
       char spacer;
       std::string label;
 
@@ -928,7 +928,7 @@ void ParseV3000SGroupsBlock(std::istream *inStream, unsigned int &line,
     // Process defaults
     lineStream.clear();
     lineStream.str(defaultString);
-    while (!lineStream.eof()) {
+    while (!lineStream.eof() && !lineStream.fail()) {
       char spacer;
       std::string label;
 

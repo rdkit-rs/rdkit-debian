@@ -227,6 +227,17 @@ std::string getAtomSmartsSimple(const QueryAtom *qatom,
       res << abs(val);
     }
     needParen = true;
+  } else if (descrip == "AtomNegativeFormalCharge") {
+    int val = query->getVal();
+    if (val < 0) {
+      res << "+";
+    } else {
+      res << "-";
+    }
+    if (abs(val) != 1) {
+      res << abs(val);
+    }
+    needParen = true;
   } else if (descrip == "AtomHybridization") {
     res << "^";
     switch (query->getVal()) {
@@ -254,9 +265,6 @@ std::string getAtomSmartsSimple(const QueryAtom *qatom,
     needParen = true;
   } else if (descrip == "AtomIsotope") {
     res << query->getVal() << "*";
-    needParen = true;
-  } else if (descrip == "AtomHasRingBond") {
-    res << "x";
     needParen = true;
   } else if (descrip == "AtomRingBondCount") {
     res << "x";
@@ -302,7 +310,8 @@ std::string getAtomSmartsSimple(const QueryAtom *qatom,
   }
 
   // handle atomic stereochemistry
-  if (qatom->getOwningMol().hasProp(common_properties::_doIsoSmiles)) {
+  if (qatom->hasOwningMol() &&
+      qatom->getOwningMol().hasProp(common_properties::_doIsoSmiles)) {
     if (qatom->getChiralTag() != Atom::CHI_UNSPECIFIED &&
         !qatom->hasProp(_qatomHasStereoSet) &&
         !qatom->hasProp(common_properties::_brokenChirality)) {
@@ -402,10 +411,11 @@ std::string getBondSmartsSimple(const Bond *bond,
     bool reverseDative =
         (atomToLeftIdx >= 0 &&
          bond->getBeginAtomIdx() == static_cast<unsigned int>(atomToLeftIdx));
-    res += getBasicBondRepr(
-        static_cast<Bond::BondType>(bquery->getVal()), bond->getBondDir(),
-        bond->getOwningMol().hasProp(common_properties::_doIsoSmiles),
-        reverseDative);
+    bool doIsoSmiles =
+        !bond->hasOwningMol() ||
+        bond->getOwningMol().hasProp(common_properties::_doIsoSmiles);
+    res += getBasicBondRepr(static_cast<Bond::BondType>(bquery->getVal()),
+                            bond->getBondDir(), doIsoSmiles, reverseDative);
   } else {
     std::stringstream msg;
     msg << "Canot write smarts for this query bond type : " << descrip;
@@ -626,7 +636,7 @@ std::string _recurseBondSmarts(const Bond *bond,
   }
 
   // ok if we have a negation and we have to change the underlying logic,
-  // since we propogated the negation i.e NOT (A OR B) = (NOT (A)) AND
+  // since we propagated the negation i.e NOT (A OR B) = (NOT (A)) AND
   // (NOT(B))
   if (negate) {
     if (descrip == "BondOr") {
@@ -640,9 +650,10 @@ std::string _recurseBondSmarts(const Bond *bond,
   return res;
 }
 
-std::string FragmentSmartsConstruct(ROMol &mol, unsigned int atomIdx,
-                                    std::vector<Canon::AtomColors> &colors,
-                                    UINT_VECT &ranks) {
+std::string FragmentSmartsConstruct(
+    ROMol &mol, unsigned int atomIdx, std::vector<Canon::AtomColors> &colors,
+    UINT_VECT &ranks, bool doIsomericSmiles,
+    const boost::dynamic_bitset<> *bondsInPlay = nullptr) {
   Canon::MolStack molStack;
   molStack.reserve(mol.getNumAtoms() + mol.getNumBonds());
   std::stringstream res;
@@ -651,13 +662,32 @@ std::string FragmentSmartsConstruct(ROMol &mol, unsigned int atomIdx,
   // thinks we already called findSSSR - to do some atom ranking
   // but for smarts we are going to ignore that part. We will artificially
   // set the "SSSR" property to an empty property
-  VECT_INT_VECT rings;
   mol.getRingInfo()->reset();
   mol.getRingInfo()->initialize();
   for (auto &atom : mol.atoms()) {
     atom->updatePropertyCache(false);
   }
-  Canon::canonicalizeFragment(mol, atomIdx, colors, ranks, molStack);
+
+  // Another dirty trick to avoid reordering of lead chiral atoms in
+  // canonicalizeFragment: since we are writing SMARTS, there won't be a
+  // reordering on parsing.
+  // The trick is as easy as choosing the first non-chiral atom we can find as
+  // root of the string. This should not be a problem, since SMARTS do not get
+  // canonicalized.
+  if (molStack.empty()) {
+    for (unsigned i = 0; i < mol.getNumAtoms(); ++i) {
+      const Atom *atom = mol.getAtomWithIdx(i);
+      if (colors[i] == Canon::WHITE_NODE &&
+          atom->getChiralTag() != Atom::CHI_TETRAHEDRAL_CCW &&
+          atom->getChiralTag() != Atom::CHI_TETRAHEDRAL_CW) {
+        atomIdx = i;
+        break;
+      }
+    }
+  }
+
+  Canon::canonicalizeFragment(mol, atomIdx, colors, ranks, molStack,
+                              bondsInPlay, nullptr, doIsomericSmiles);
 
   // now clear the "SSSR" property
   mol.getRingInfo()->reset();
@@ -715,7 +745,8 @@ std::string getNonQueryAtomSmarts(const QueryAtom *qatom) {
     res << qatom->getSymbol();
   }
 
-  if (qatom->getOwningMol().hasProp(common_properties::_doIsoSmiles)) {
+  if (qatom->hasOwningMol() &&
+      qatom->getOwningMol().hasProp(common_properties::_doIsoSmiles)) {
     if (qatom->getChiralTag() != Atom::CHI_UNSPECIFIED &&
         !qatom->hasProp(_qatomHasStereoSet) &&
         !qatom->hasProp(common_properties::_brokenChirality)) {
@@ -774,12 +805,56 @@ std::string getNonQueryBondSmarts(const QueryBond *qbond, int atomToLeftIdx) {
     bool reverseDative =
         (atomToLeftIdx >= 0 &&
          qbond->getBeginAtomIdx() == static_cast<unsigned int>(atomToLeftIdx));
-    res = getBasicBondRepr(
-        qbond->getBondType(), qbond->getBondDir(),
-        qbond->getOwningMol().hasProp(common_properties::_doIsoSmiles),
-        reverseDative);
+    bool doIsoSmiles =
+        !qbond->hasOwningMol() ||
+        qbond->getOwningMol().hasProp(common_properties::_doIsoSmiles);
+    res = getBasicBondRepr(qbond->getBondType(), qbond->getBondDir(),
+                           doIsoSmiles, reverseDative);
   }
 
+  return res;
+}
+
+std::string molToSmarts(const ROMol &inmol, bool doIsomericSmiles,
+                        std::vector<AtomColors> &&colors,
+                        const boost::dynamic_bitset<> *bondsInPlay = nullptr) {
+  ROMol mol(inmol);
+  const unsigned int nAtoms = mol.getNumAtoms();
+  UINT_VECT ranks;
+  ranks.reserve(nAtoms);
+  // For smiles writing we would be canonicalizing but we will not do that here.
+  // We will simply use the atom indices as the rank
+  for (const auto &atom : mol.atoms()) {
+    ranks.push_back(atom->getIdx());
+  }
+
+  if (doIsomericSmiles) {
+    mol.setProp(common_properties::_doIsoSmiles, 1);
+  }
+
+  std::string res;
+  auto colorIt = std::find(colors.begin(), colors.end(), Canon::WHITE_NODE);
+  while (colorIt != colors.end()) {
+    unsigned int nextAtomIdx = 0;
+    unsigned int nextRank;
+    std::string subSmi;
+    nextRank = nAtoms + 1;
+    for (unsigned int i = 0; i < nAtoms; ++i) {
+      if (colors[i] == Canon::WHITE_NODE && ranks[i] < nextRank) {
+        nextRank = ranks[i];
+        nextAtomIdx = i;
+      }
+    }
+
+    subSmi = FragmentSmartsConstruct(mol, nextAtomIdx, colors, ranks,
+                                     doIsomericSmiles, bondsInPlay);
+    res += subSmi;
+
+    colorIt = std::find(colors.begin(), colors.end(), Canon::WHITE_NODE);
+    if (colorIt != colors.end()) {
+      res += ".";
+    }
+  }
   return res;
 }
 
@@ -881,56 +956,48 @@ std::string GetBondSmarts(const QueryBond *bond, int atomToLeftIdx) {
   // BOOST_LOG(rdInfoLog) << "\t  query:" << descrip << " " << res << std::endl;
   return res;
 }
+
 }  // end of namespace SmartsWrite
 
-std::string MolToSmarts(ROMol &inmol, bool doIsomericSmiles) {
-  std::string res;
-  unsigned int nAtoms = inmol.getNumAtoms();
+std::string MolToSmarts(const ROMol &mol, bool doIsomericSmarts) {
+  const unsigned int nAtoms = mol.getNumAtoms();
   if (!nAtoms) return "";
 
-  ROMol mol(inmol);
-  UINT_VECT ranks;
-  ranks.resize(nAtoms);
-  // For smiles writing we would be canonicalizing but we will not do that here.
-  // We will simple use the atom indices as the rank
-  for (ROMol::AtomIterator atIt = mol.beginAtoms(); atIt != mol.endAtoms();
-       atIt++) {
-    ranks.push_back((*atIt)->getIdx());
-  }
-
-  // clean up the chirality on any atom that is marked as chiral,
-  // but that should not be:
-  if (doIsomericSmiles) {
-    mol.setProp(common_properties::_doIsoSmiles, 1);
-  }
-
-  std::vector<AtomColors> colors;
-  colors.resize(nAtoms);
-  std::vector<AtomColors>::iterator colorIt;
-  for (colorIt = colors.begin(); colorIt != colors.end(); colorIt++)
-    *colorIt = Canon::WHITE_NODE;
-
-  colorIt = std::find(colors.begin(), colors.end(), Canon::WHITE_NODE);
-  while (colorIt != colors.end()) {
-    unsigned int nextAtomIdx = 0;
-    unsigned int nextRank;
-    std::string subSmi;
-    nextRank = nAtoms + 1;
-    for (unsigned int i = 0; i < nAtoms; i++) {
-      if (colors[i] == Canon::WHITE_NODE && ranks[i] < nextRank) {
-        nextRank = ranks[i];
-        nextAtomIdx = i;
-      }
-    }
-
-    subSmi = FragmentSmartsConstruct(mol, nextAtomIdx, colors, ranks);
-    res += subSmi;
-
-    colorIt = std::find(colors.begin(), colors.end(), Canon::WHITE_NODE);
-    if (colorIt != colors.end()) {
-      res += ".";
-    }
-  }
-  return res;
+  std::vector<AtomColors> colors(nAtoms, Canon::WHITE_NODE);
+  return molToSmarts(mol, doIsomericSmarts, std::move(colors));
 }
+
+std::string MolFragmentToSmarts(const ROMol &mol,
+                                const std::vector<int> &atomsToUse,
+                                const std::vector<int> *bondsToUse,
+                                bool doIsomericSmarts) {
+  PRECONDITION(!atomsToUse.empty(), "no atoms provided");
+  PRECONDITION(!bondsToUse || !bondsToUse->empty(), "no bonds provided");
+
+  const unsigned int nAtoms = mol.getNumAtoms();
+  if (!nAtoms) {
+    return "";
+  }
+
+  std::unique_ptr<boost::dynamic_bitset<>> bondsInPlay(nullptr);
+  if (bondsToUse != nullptr) {
+    bondsInPlay.reset(new boost::dynamic_bitset<>(mol.getNumBonds(), 0));
+    for (int bidx : *bondsToUse) {
+      bondsInPlay->set(bidx);
+    }
+  }
+
+  // Mark all atoms except the ones in atomIndices as already processed.
+  // white: unprocessed
+  // grey: partial
+  // black: complete
+  std::vector<AtomColors> colors(nAtoms, Canon::BLACK_NODE);
+  for (const auto &idx : atomsToUse) {
+    colors[idx] = Canon::WHITE_NODE;
+  }
+
+  return molToSmarts(mol, doIsomericSmarts, std::move(colors),
+                     bondsInPlay.get());
+}
+
 }  // namespace RDKit

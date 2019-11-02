@@ -244,7 +244,7 @@ class Matrix {
   Multiply a Matrix A with a second Matrix B
   so the result is C = A*B
 
-  \param A  the the first Matrix used in the multiplication
+  \param A  the first Matrix used in the multiplication
   \param B  the Matrix by which to multiply
   \param C  Matrix to use for the results
 
@@ -324,7 +324,7 @@ Vector<TYPE> &multiply(const Matrix<TYPE> &A, const Vector<TYPE> &x,
 };
 
 typedef Matrix<double> DoubleMatrix;
-};
+};  // namespace RDNumeric
 
 //! ostream operator for Matrix's
 template <class TYPE>
