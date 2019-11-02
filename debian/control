@@ -160,10 +160,10 @@ Description: Collection of cheminformatics and machine-learning software (develo
  .
  This package contains the header files.
 
-Package: postgresql-11-rdkit
+Package: postgresql-12-rdkit
 Architecture: any
 Section: database
-Depends: ${misc:Depends}, ${shlibs:Depends}, postgresql-11
+Depends: ${misc:Depends}, ${shlibs:Depends}, postgresql-12
 Suggests:
 Description: Cheminformatics and machine-learning software (PostgreSQL Cartridge)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
@@ -192,4 +192,3 @@ Description: Cheminformatics and machine-learning software (PostgreSQL Cartridge
  binary format.
  .
  This package contains the PostgreSQL extension.
-
