@@ -153,6 +153,9 @@ static inline int queryAtomIsotope(Atom const *at) {
 static inline int queryAtomFormalCharge(Atom const *at) {
   return static_cast<int>(at->getFormalCharge());
 };
+static inline int queryAtomNegativeFormalCharge(Atom const *at) {
+  return static_cast<int>(-1 * at->getFormalCharge());
+};
 static inline int queryAtomHybridization(Atom const *at) {
   return at->getHybridization();
 };
@@ -460,6 +463,16 @@ T *makeAtomFormalChargeQuery(int what, const std::string &descr) {
 }
 //! \overload
 RDKIT_GRAPHMOL_EXPORT ATOM_EQUALS_QUERY *makeAtomFormalChargeQuery(int what);
+
+//! returns a Query for matching negative formal charges (i.e. a query val of 1
+//! matches a formal charge of -1)
+template <class T>
+T *makeAtomNegativeFormalChargeQuery(int what, const std::string &descr) {
+  return makeAtomSimpleQuery<T>(what, queryAtomNegativeFormalCharge, descr);
+}
+//! \overload
+RDKIT_GRAPHMOL_EXPORT ATOM_EQUALS_QUERY *makeAtomNegativeFormalChargeQuery(
+    int what);
 
 //! returns a Query for matching hybridization
 template <class T>
@@ -933,15 +946,20 @@ class HasPropWithValueQuery<TargetPtr, ExplicitBitVect>
 
  public:
   HasPropWithValueQuery()
-      : Queries::EqualityQuery<int, TargetPtr, true>(), propname(), val(), tol(0.0) {
+      : Queries::EqualityQuery<int, TargetPtr, true>(),
+        propname(),
+        val(),
+        tol(0.0) {
     this->setDescription("HasPropWithValue");
     this->setDataFunc(0);
   };
-  
+
   explicit HasPropWithValueQuery(const std::string &prop,
-                                 const ExplicitBitVect &v,
-                                 float tol = 0.0)
-      : Queries::EqualityQuery<int, TargetPtr, true>(), propname(prop), val(v), tol(tol) {
+                                 const ExplicitBitVect &v, float tol = 0.0)
+      : Queries::EqualityQuery<int, TargetPtr, true>(),
+        propname(prop),
+        val(v),
+        tol(tol) {
     this->setDescription("HasPropWithValue");
     this->setDataFunc(0);
   };
@@ -950,12 +968,13 @@ class HasPropWithValueQuery<TargetPtr, ExplicitBitVect>
     bool res = what->hasProp(propname);
     if (res) {
       try {
-        const ExplicitBitVect &bv = what->template getProp<const ExplicitBitVect&>(propname);
+        const ExplicitBitVect &bv =
+            what->template getProp<const ExplicitBitVect &>(propname);
         const double tani = TanimotoSimilarity(val, bv);
         res = (1.0 - tani) <= tol;
-      } catch (KeyErrorException) {
+      } catch (KeyErrorException &) {
         res = false;
-      } catch (boost::bad_any_cast) {
+      } catch (boost::bad_any_cast &) {
         res = false;
       }
 #ifdef __GNUC__
@@ -982,9 +1001,8 @@ class HasPropWithValueQuery<TargetPtr, ExplicitBitVect>
   //! returns a copy of this query
   Queries::Query<int, TargetPtr, true> *copy() const {
     HasPropWithValueQuery<TargetPtr, ExplicitBitVect> *res =
-        new HasPropWithValueQuery<TargetPtr, ExplicitBitVect>(this->propname,
-                                                              this->val,
-                                                              this->tol);
+        new HasPropWithValueQuery<TargetPtr, ExplicitBitVect>(
+            this->propname, this->val, this->tol);
     res->setNegation(this->getNegation());
     res->d_description = this->d_description;
     return res;
@@ -999,9 +1017,10 @@ Queries::EqualityQuery<int, const Target *, true> *makePropQuery(
 
 template <class Target>
 Queries::EqualityQuery<int, const Target *, true> *makePropQuery(
-    const std::string &propname, const ExplicitBitVect &val, float tolerance=0.0) {
-  return new HasPropWithValueQuery<const Target *, ExplicitBitVect>(propname, val,
-                                                                    tolerance);
+    const std::string &propname, const ExplicitBitVect &val,
+    float tolerance = 0.0) {
+  return new HasPropWithValueQuery<const Target *, ExplicitBitVect>(
+      propname, val, tolerance);
 }
 
 RDKIT_GRAPHMOL_EXPORT bool isComplexQuery(const Bond *b);

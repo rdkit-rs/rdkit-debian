@@ -15,6 +15,8 @@
 #include <map>
 #include <Geometry/point.h>
 #include <GraphMol/ROMol.h>
+#include <boost/shared_ptr.hpp>
+#include <DistGeom/BoundsMatrix.h>
 
 namespace RDKit {
 namespace DGeomHelpers {
@@ -116,6 +118,8 @@ struct RDKIT_DISTGEOMHELPERS_EXPORT EmbedParameters {
   double pruneRmsThresh;
   bool onlyHeavyAtomsForRMS;
   unsigned int ETversion;
+  boost::shared_ptr<const DistGeom::BoundsMatrix> boundsMat;
+  bool embedFragmentsSeparately;
   EmbedParameters()
       : maxIterations(0),
         numThreads(1),
@@ -135,7 +139,9 @@ struct RDKIT_DISTGEOMHELPERS_EXPORT EmbedParameters {
         basinThresh(5.0),
         pruneRmsThresh(-1.0),
         onlyHeavyAtomsForRMS(false),
-        ETversion(1){};
+        ETversion(1),
+        boundsMat(nullptr),
+        embedFragmentsSeparately(true){};
   EmbedParameters(unsigned int maxIterations, int numThreads, int randomSeed,
                   bool clearConfs, bool useRandomCoords, double boxSizeMult,
                   bool randNegEig, unsigned int numZeroFail,
@@ -144,7 +150,9 @@ struct RDKIT_DISTGEOMHELPERS_EXPORT EmbedParameters {
                   bool enforceChirality, bool useExpTorsionAnglePrefs,
                   bool useBasicKnowledge, bool verbose, double basinThresh,
                   double pruneRmsThresh, bool onlyHeavyAtomsForRMS,
-                  unsigned int ETversion = 1)
+                  unsigned int ETversion = 1,
+                  const DistGeom::BoundsMatrix *boundsMat = nullptr,
+                  bool embedFragmentsSeparately = true)
       : maxIterations(maxIterations),
         numThreads(numThreads),
         randomSeed(randomSeed),
@@ -163,12 +171,15 @@ struct RDKIT_DISTGEOMHELPERS_EXPORT EmbedParameters {
         basinThresh(basinThresh),
         pruneRmsThresh(pruneRmsThresh),
         onlyHeavyAtomsForRMS(onlyHeavyAtomsForRMS),
-        ETversion(ETversion){};
+        ETversion(ETversion),
+        boundsMat(boundsMat),
+        embedFragmentsSeparately(embedFragmentsSeparately){};
 };
 
 //*! Embed multiple conformations for a molecule
-RDKIT_DISTGEOMHELPERS_EXPORT void EmbedMultipleConfs(ROMol &mol, INT_VECT &res, unsigned int numConfs,
-                        const EmbedParameters &params);
+RDKIT_DISTGEOMHELPERS_EXPORT void EmbedMultipleConfs(
+    ROMol &mol, INT_VECT &res, unsigned int numConfs,
+    const EmbedParameters &params);
 inline INT_VECT EmbedMultipleConfs(ROMol &mol, unsigned int numConfs,
                                    const EmbedParameters &params) {
   INT_VECT res;
@@ -400,7 +411,7 @@ RDKIT_DISTGEOMHELPERS_EXPORT extern const EmbedParameters ETDG;
 RDKIT_DISTGEOMHELPERS_EXPORT extern const EmbedParameters ETKDG;
 //! Parameters corresponding to Sereina Riniker's ETKDG approach - version 2
 RDKIT_DISTGEOMHELPERS_EXPORT extern const EmbedParameters ETKDGv2;
-}
-}
+}  // namespace DGeomHelpers
+}  // namespace RDKit
 
 #endif

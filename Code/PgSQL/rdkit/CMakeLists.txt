@@ -115,6 +115,9 @@ set(pgRDKitLibList "${pgRDKitLibList}"
     "FileParsers;SmilesParse;Fingerprints;Subgraphs;Descriptors;"
     "PartialCharges;SubstructMatch;GraphMol;EigenSolvers;DataStructs;Depictor;"
     "RDGeometryLib;RDGeneral")
+if(RDK_USE_URF)
+  set(pgRDKitLibList "${pgRDKitLibList};${RDK_URF_LIBS}")
+endif(RDK_USE_URF)
 foreach(pgRDKitLib ${pgRDKitLibList})
   set(pgRDKitLibs "${pgRDKitLibs}${pgRDKitLib}${pgRDKitLibSuffix};")
 endforeach()

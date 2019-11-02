@@ -351,6 +351,7 @@ void addRecursiveQuery(ROMol &mol, const ROMol &query, unsigned int atomIdx,
     oAt->expandQuery(q, Queries::COMPOSITE_AND);
   }
 }
+
 MolOps::SanitizeFlags sanitizeMol(ROMol &mol, boost::uint64_t sanitizeOps,
                                   bool catchErrors) {
   RWMol &wmol = static_cast<RWMol &>(mol);
@@ -766,6 +767,16 @@ ROMol *adjustQueryPropertiesHelper(const ROMol &mol, python::object pyparams) {
   return MolOps::adjustQueryProperties(mol, &params);
 }
 
+python::tuple detectChemistryProblemsHelper(const ROMol &mol,
+                                            unsigned int sanitizeOps) {
+  auto probs = MolOps::detectChemistryProblems(mol, sanitizeOps);
+  python::list res;
+  for (const auto &exc_ptr : probs) {
+    res.append(boost::shared_ptr<MolSanitizeException>(exc_ptr->copy()));
+  }
+  return python::tuple(res);
+}
+
 ROMol *replaceCoreHelper(const ROMol &mol, const ROMol &core,
                          python::object match, bool replaceDummies,
                          bool labelByIndex, bool requireDummyMatch = false) {
@@ -813,6 +824,14 @@ ROMol *replaceCoreHelper(const ROMol &mol, const ROMol &core,
                      requireDummyMatch);
 }
 
+void setDoubleBondNeighborDirectionsHelper(ROMol &mol, python::object confObj) {
+  Conformer *conf = nullptr;
+  if (confObj) {
+    conf = python::extract<Conformer *>(confObj);
+  }
+  MolOps::setDoubleBondNeighborDirections(mol, conf);
+}
+
 struct molops_wrapper {
   static void wrap() {
     std::string docString;
@@ -835,7 +854,7 @@ struct molops_wrapper {
     // ------------------------------------------------------------------------
     docString =
         "Assign stereochemistry to bonds based on coordinates and a conformer.\n\
-        DEPRECATED: Please use the version that takes a conformer ID instead.\n\
+        DEPRECATED\n\
         \n\
   ARGUMENTS:\n\
   \n\
@@ -846,8 +865,7 @@ struct molops_wrapper {
                 (python::arg("mol"), python::arg("conformer")),
                 docString.c_str());
     docString =
-        "Assign stereochemistry to bonds based on coordinates.\n\
-        \n\
+        "DEPRECATED, use SetDoubleBondNeighborDirections() instead\n\
   ARGUMENTS:\n\
   \n\
     - mol: the molecule to be modified\n\
@@ -855,6 +873,29 @@ struct molops_wrapper {
 \n";
     python::def("DetectBondStereochemistry", MolOps::detectBondStereochemistry,
                 (python::arg("mol"), python::arg("confId") = -1),
+                docString.c_str());
+
+    docString =
+        "Uses the stereo info on double bonds to set the directions of neighboring single bonds\n\
+        \n\
+  ARGUMENTS:\n\
+  \n\
+    - mol: the molecule to be modified\n\
+\n";
+    python::def("SetDoubleBondNeighborDirections",
+                setDoubleBondNeighborDirectionsHelper,
+                (python::arg("mol"), python::arg("conf") = python::object()),
+                docString.c_str());
+
+    docString =
+        "Uses the directions of neighboring bonds to set cis/trans stereo on double bonds.\n\
+        \n\
+  ARGUMENTS:\n\
+  \n\
+    - mol: the molecule to be modified\n\
+\n";
+    python::def("SetBondStereoFromDirections",
+                MolOps::setBondStereoFromDirections, (python::arg("mol")),
                 docString.c_str());
 
     // ------------------------------------------------------------------------
@@ -869,12 +910,12 @@ struct molops_wrapper {
 \n\
     - mol: the molecule to be modified\n\
     - sanitizeOps: (optional) sanitization operations to be carried out\n\
-                   these should be constructed by or'ing together the\n\
-                   operations in rdkit.Chem.SanitizeFlags\n\
+      these should be constructed by or'ing together the\n\
+      operations in rdkit.Chem.SanitizeFlags\n\
     - catchErrors: (optional) if provided, instead of raising an exception\n\
-                   when sanitization fails (the default behavior), the \n\
-                   first operation that failed (as defined in rdkit.Chem.SanitizeFlags)\n\
-                   is returned. Zero is returned on success.\n\
+      when sanitization fails (the default behavior), the \n\
+      first operation that failed (as defined in rdkit.Chem.SanitizeFlags)\n\
+      is returned. Zero is returned on success.\n\
 \n";
     python::def(
         "SanitizeMol", sanitizeMol,
@@ -922,7 +963,10 @@ struct molops_wrapper {
   RETURNS: Nothing\n\
 \n";
     python::def("FastFindRings", MolOps::fastFindRings, docString.c_str());
-
+#ifdef RDK_USE_URF
+    python::def("FindRingFamilies", MolOps::findRingFamilies,
+                "generate Unique Ring Families");
+#endif
     // ------------------------------------------------------------------------
     docString =
         "Adds hydrogens to the graph of a molecule.\n\
@@ -1640,7 +1684,7 @@ struct molops_wrapper {
     - mol: the molecule to use\n\
     - confId: the conformer id to use, -1 for the default \n\
     - replaceExistingTags: if True, existing stereochemistry information will be cleared \n\
-                           before running the calculation. \n\
+    before running the calculation. \n\
 \n";
     python::def("AssignAtomChiralTagsFromStructure",
                 MolOps::assignChiralTypesFrom3D,
@@ -1700,9 +1744,9 @@ struct molops_wrapper {
       containing the bits each atom sets.\n\
       Defaults to empty.\n\
 \n\
-   - bitInfo: (optional) an empty dict. If provided, the result will contain a dict \n\
-     with bits as keys and corresponding bond paths as values.\n\
-     Defaults to empty.\n\
+    - bitInfo: (optional) an empty dict. If provided, the result will contain a dict \n\
+      with bits as keys and corresponding bond paths as values.\n\
+      Defaults to empty.\n\
 \n\
   RETURNS: a DataStructs.ExplicitBitVect with _fpSize_ bits\n\
 \n\
@@ -1770,9 +1814,9 @@ ARGUMENTS:\n\
           containing the bits each atom sets.\n\
           Defaults to empty.\n\
     \n\
-       - bitInfo: (optional) an empty dict. If provided, the result will contain a dict \n\
-         with bits as keys and corresponding bond paths as values.\n\
-         Defaults to empty.\n\
+        - bitInfo: (optional) an empty dict. If provided, the result will contain a dict \n\
+          with bits as keys and corresponding bond paths as values.\n\
+          Defaults to empty.\n\
      \n\
      \n";
 
@@ -1814,16 +1858,16 @@ ARGUMENTS:\n\
       Defaults to 2048.\n\
 \n\
     - atomCounts: (optional) \n\
-        if provided, this should be a list at least as long as the number of atoms\n\
-        in the molecule. It will be used to provide the count of the number \n\
-        of paths that set bits each atom is involved in.\n\
-        NOTE: the list is not zeroed out here.\n\
+      if provided, this should be a list at least as long as the number of atoms\n\
+      in the molecule. It will be used to provide the count of the number \n\
+      of paths that set bits each atom is involved in.\n\
+      NOTE: the list is not zeroed out here.\n\
 \n\
     - setOnlyBits: (optional) \n\
-        if provided, only bits that are set in this bit vector will be set\n\
-        in the result. This is essentially the same as doing:\n\
+      if provided, only bits that are set in this bit vector will be set\n\
+      in the result. This is essentially the same as doing:\n\
            res &= setOnlyBits\n\
-        but also has an impact on the atomCounts (if being used)\n\
+      but also has an impact on the atomCounts (if being used)\n\
 \n\
     - branchedPaths: (optional) if set both branched and unbranched paths will be\n\
       used in the fingerprint.\n\
@@ -1950,10 +1994,10 @@ Calling:\n\
     - replaceDummies: toggles replacement of atoms that match dummies in the query\n\
 \n\
     - labelByIndex: toggles labeling the attachment point dummy atoms with \n\
-                    the index of the core atom they're attached to.\n\
+      the index of the core atom they're attached to.\n\
 \n\
     - requireDummyMatch: if the molecule has side chains that attach at points not\n\
-                         flagged with a dummy, it will be rejected (None is returned)\n\
+      flagged with a dummy, it will be rejected (None is returned)\n\
 \n\
   RETURNS: a new molecule with the core removed\n\
 \n\
@@ -1965,13 +2009,12 @@ EXAMPLES:\n\n\
     >>> mol = MolFromSmiles('C1ONNCC1')\n\
     >>> core = MolFromSmiles('NN')\n\
 \n\
-    Note: Using isomericSmiles is necessary to see the labels.\n\n\
-    >>> MolToSmiles(ReplaceCore(mol, core, mol.GetSubstructMatch(core)), isomericSmiles=True)\n\
+    >>> MolToSmiles(ReplaceCore(mol, core, mol.GetSubstructMatch(core)))\n\
     '[1*]OCCC[2*]'\n\
 \n\
     Since NN is symmetric, we should actually get two matches here if we don't\n\
     uniquify the matches.\n\n\
-    >>> [MolToSmiles(ReplaceCore(mol, core, match), isomericSmiles=True)\n\
+    >>> [MolToSmiles(ReplaceCore(mol, core, match))\n\
     ...     for match in mol.GetSubstructMatches(core, uniquify=False)]\n\
     ['[1*]OCCC[2*]', '[1*]CCCO[2*]']\n\
 \n\
@@ -1996,10 +2039,10 @@ EXAMPLES:\n\n\
     - replaceDummies: toggles replacement of atoms that match dummies in the query\n\
 \n\
     - labelByIndex: toggles labeling the attachment point dummy atoms with \n\
-                    the index of the core atom they're attached to.\n\
+      the index of the core atom they're attached to.\n\
 \n\
     - requireDummyMatch: if the molecule has side chains that attach at points not\n\
-                         flagged with a dummy, it will be rejected (None is returned)\n\
+      flagged with a dummy, it will be rejected (None is returned)\n\
 \n\
     - useChirality: use chirality matching in the coreQuery\n\
 \n\
@@ -2088,14 +2131,14 @@ EXAMPLES:\n\n\
       - mol            - the molecule to be modified\n\
       - bondIndices    - indices of the bonds to be broken\n\
       - addDummies  - toggles addition of dummy atoms to indicate where \n\
-          bonds were broken\n\
+        bonds were broken\n\
       - dummyLabels - used to provide the labels to be used for the dummies.\n\
-          the first element in each pair is the label for the dummy\n\
-          that replaces the bond's beginAtom, the second is for the \n\
-          dummy that replaces the bond's endAtom. If not provided, the\n\
-          dummies are labeled with atom indices.\n\
+        the first element in each pair is the label for the dummy\n\
+        that replaces the bond's beginAtom, the second is for the \n\
+        dummy that replaces the bond's endAtom. If not provided, the\n\
+        dummies are labeled with atom indices.\n\
       - bondTypes - used to provide the bond type to use between the\n\
-          fragments and the dummy atoms. If not provided, defaults to single. \n\
+        fragments and the dummy atoms. If not provided, defaults to single. \n\
       - cutsPerAtom - used to return the number of cuts made at each atom. \n\
 \n\
   RETURNS:\n\
@@ -2150,8 +2193,8 @@ EXAMPLES:\n\n\
     - mol: the molecule to be modified\n\
 \n\
     - newOrder: the new ordering the atoms (should be numAtoms long)\n\
-         for example: if newOrder is [3,2,0,1], then atom 3 in the original \n\
-         molecule will be atom 0 in the new one\n\
+      for example: if newOrder is [3,2,0,1], then atom 3 in the original \n\
+      molecule will be atom 0 in the new one\n\
 \n\
 \n";
     python::def("RenumberAtoms", renumberAtomsHelper,
@@ -2184,37 +2227,38 @@ EXAMPLES:\n\n\
 \n\
 Attributes:\n\
   - adjustDegree: \n\
-      modified atoms have an explicit-degree query added based on their degree in the query \n\
+    modified atoms have an explicit-degree query added based on their degree in the query \n\
   - adjustHeavyDegree: \n\
-      modified atoms have a heavy-atom-degree query added based on their degree in the query \n\
+    modified atoms have a heavy-atom-degree query added based on their degree in the query \n\
   - adjustDegreeFlags: \n\
-      controls which atoms have a degree query added \n\
+    controls which atoms have a degree query added \n\
   - adjustRingCount: \n\
-      modified atoms have a ring-count query added based on their ring count in the query \n\
+    modified atoms have a ring-count query added based on their ring count in the query \n\
   - adjustRingCountFlags: \n\
-      controls which atoms have a ring-count query added \n\
+    controls which atoms have a ring-count query added \n\
   - makeDummiesQueries: \n\
-      dummy atoms that do not have a specified isotope are converted to any-atom queries \n\
+    dummy atoms that do not have a specified isotope are converted to any-atom queries \n\
   - aromatizeIfPossible: \n\
-      attempts aromaticity perception on the molecule \n\
+    attempts aromaticity perception on the molecule \n\
   - makeBondsGeneric: \n\
-      convert bonds to generic (any) bonds \n\
+    convert bonds to generic (any) bonds \n\
   - makeBondsGenericFlags: \n\
-      controls which bonds are made generic \n\
+    controls which bonds are made generic \n\
   - makeAtomsGeneric: \n\
-      convert atoms to generic (any) atoms \n\
+    convert atoms to generic (any) atoms \n\
   - makeAtomsGenericFlags: \n\
-      controls which atoms are made generic \n\
+    controls which atoms are made generic \n\
   - adjustRingChain: \n\
-      modified atoms have a ring-chain query added based on whether or not they are in a ring \n\
+    modified atoms have a ring-chain query added based on whether or not they are in a ring \n\
   - adjustRingChainFlags: \n\
-      controls which atoms have a ring-chain query added \n\
+    controls which atoms have a ring-chain query added \n\
 \n\
 A note on the flags controlling which atoms/bonds are modified: \n\
    These generally limit the set of atoms/bonds to be modified.\n\
-   For example if ADJUST_RINGSONLY is set, then only atoms in rings will be modified.\n\
-       ADJUST_IGNORENONE causes all atoms to be modified\n\
-       ADJUST_SETALL sets all of the ADJUST flags\n\
+   For example:\n\
+       - ADJUST_IGNORERINGS atoms/bonds in rings will not be modified.\n\
+       - ADJUST_IGNORENONE causes all atoms/bonds to be modified\n\
+       - ADJUST_IGNOREALL no atoms/bonds will be modified\n\
    Some of the options obviously make no sense for bonds\n\
 ";
     python::class_<MolOps::AdjustQueryParameters>("AdjustQueryParameters",
@@ -2255,6 +2299,11 @@ A note on the flags controlling which atoms/bonds are modified: \n\
                 (python::arg("mol"), python::arg("params") = python::object()),
                 docString.c_str(),
                 python::return_value_policy<python::manage_new_object>());
+    docString = "checks for chemistry problems";
+    python::def(
+        "DetectChemistryProblems", detectChemistryProblemsHelper,
+        (python::arg("mol"), python::arg("sanitizeOps") = MolOps::SANITIZE_ALL),
+        docString.c_str());
   };
 };
 }  // namespace RDKit

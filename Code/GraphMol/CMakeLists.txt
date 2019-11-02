@@ -10,10 +10,14 @@ rdkit_library(GraphMol
               Renumber.cpp AdjustQuery.cpp Resonance.cpp StereoGroup.cpp
               new_canon.cpp SubstanceGroup.cpp
               SHARED
-              LINK_LIBRARIES RDGeometryLib RDGeneral
-                 ${RDKit_THREAD_LIBS})
+              LINK_LIBRARIES RDGeometryLib RDGeneral  
+                 ${RDKit_THREAD_LIBS} )
 
 target_link_libraries(GraphMol PUBLIC ${RDKit_THREAD_LIBS})
+
+if(RDK_USE_URF)
+  target_link_libraries(GraphMol PUBLIC ${RDK_URF_LIBS})
+endif()
 
 rdkit_headers(Atom.h
               atomic_data.h
@@ -77,7 +81,6 @@ add_subdirectory(MolHash)
 add_subdirectory(MMPA)
 add_subdirectory(StructChecker)
 
-
 add_subdirectory(ReducedGraphs)
 add_subdirectory(Trajectory)
 
@@ -96,7 +99,9 @@ if(RDK_BUILD_SLN_SUPPORT AND NOT CMAKE_COMPILER_IS_CLANG)
   endif()
 endif()
 
+if(RDK_BUILD_PYTHON_WRAPPERS)
 add_subdirectory(Wrap)
+endif()
 
 add_subdirectory(MolStandardize)
 
@@ -110,9 +115,6 @@ rdkit_test(graphmolqueryTest querytest.cpp LINK_LIBRARIES SubstructMatch SmilesP
 rdkit_test(graphmolMolOpsTest molopstest.cpp
            LINK_LIBRARIES SubstructMatch FileParsers
 	   SmilesParse GraphMol RDGeometryLib RDGeneral)
-
-rdkit_test(graphmoltestCanon testCanon.cpp
-           LINK_LIBRARIES SubstructMatch SmilesParse GraphMol RDGeometryLib RDGeneral)
 
 rdkit_test(graphmoltestChirality testChirality.cpp
            LINK_LIBRARIES SmilesParse FileParsers

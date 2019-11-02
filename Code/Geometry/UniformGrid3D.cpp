@@ -24,7 +24,17 @@ namespace RDGeom {
 unsigned int ci_GRIDPICKLE_VERSION = 0x1;
 
 UniformGrid3D::UniformGrid3D(const UniformGrid3D &other) : Grid3D(other) {
-  PRECONDITION(other.dp_storage, "cannot copy an unintialized grid");
+  PRECONDITION(other.dp_storage, "cannot copy an uninitialized grid");
+  auto *data = new RDKit::DiscreteValueVect(*other.dp_storage);
+  initGrid(other.d_numX * other.d_spacing, other.d_numY * other.d_spacing,
+           other.d_numZ * other.d_spacing, other.d_spacing,
+           other.dp_storage->getValueType(), other.d_offSet, data);
+}
+
+UniformGrid3D &UniformGrid3D::operator=(const UniformGrid3D &other) {
+  if (&other == this) return *this;
+  PRECONDITION(other.dp_storage, "cannot copy an uninitialized grid");
+  delete dp_storage;
   auto *data = new RDKit::DiscreteValueVect(*other.dp_storage);
   initGrid(other.d_numX * other.d_spacing, other.d_numY * other.d_spacing,
            other.d_numZ * other.d_spacing, other.d_spacing,
@@ -144,6 +154,7 @@ Point3D UniformGrid3D::getGridPointLoc(unsigned int pointId) const {
   }
   Point3D res;
   res.x = (pointId % d_numX) * d_spacing;
+  // the rounding here is intentional, we want the coordinates of a grid point
   res.y = ((pointId % (d_numX * d_numY)) / d_numX) * d_spacing;
   res.z = (pointId / (d_numX * d_numY)) * d_spacing;
   res += d_offSet;  // d_origin;
@@ -195,7 +206,7 @@ void UniformGrid3D::setSphereOccupancy(const Point3D &center, double radius,
     nLayers = maxNumLayers;
     valStep = (maxVal + 1) / nLayers;
   }
-  double bgRad = radius / d_spacing;  // base radius in grid coords
+  double bgRad = radius / d_spacing;        // base radius in grid coords
   double gStepSize = stepSize / d_spacing;  // step size in grid coords
   double gRadius =
       bgRad + nLayers * gStepSize;  // largest radius in grid coords
@@ -263,8 +274,8 @@ void UniformGrid3D::setSphereOccupancy(const Point3D &center, double radius,
 }
 
 UniformGrid3D &UniformGrid3D::operator|=(const UniformGrid3D &other) {
-  PRECONDITION(dp_storage, "unintialized grid");
-  PRECONDITION(other.dp_storage, "unintialized grid");
+  PRECONDITION(dp_storage, "uninitialized grid");
+  PRECONDITION(other.dp_storage, "uninitialized grid");
   PRECONDITION(compareParams(other), "incompatible grids");
 
   // EFF: we're probably doing too much copying here:
@@ -276,8 +287,8 @@ UniformGrid3D &UniformGrid3D::operator|=(const UniformGrid3D &other) {
 }
 
 UniformGrid3D &UniformGrid3D::operator&=(const UniformGrid3D &other) {
-  PRECONDITION(dp_storage, "unintialized grid");
-  PRECONDITION(other.dp_storage, "unintialized grid");
+  PRECONDITION(dp_storage, "uninitialized grid");
+  PRECONDITION(other.dp_storage, "uninitialized grid");
   PRECONDITION(compareParams(other), "incompatible grids");
 
   // EFF: we're probably doing too much copying here:
@@ -289,8 +300,8 @@ UniformGrid3D &UniformGrid3D::operator&=(const UniformGrid3D &other) {
 }
 
 UniformGrid3D &UniformGrid3D::operator+=(const UniformGrid3D &other) {
-  PRECONDITION(dp_storage, "unintialized grid");
-  PRECONDITION(other.dp_storage, "unintialized grid");
+  PRECONDITION(dp_storage, "uninitialized grid");
+  PRECONDITION(other.dp_storage, "uninitialized grid");
   PRECONDITION(compareParams(other), "incompatible grids");
 
   // EFF: we're probably doing too much copying here:
@@ -299,8 +310,8 @@ UniformGrid3D &UniformGrid3D::operator+=(const UniformGrid3D &other) {
 }
 
 UniformGrid3D &UniformGrid3D::operator-=(const UniformGrid3D &other) {
-  PRECONDITION(dp_storage, "unintialized grid");
-  PRECONDITION(other.dp_storage, "unintialized grid");
+  PRECONDITION(dp_storage, "uninitialized grid");
+  PRECONDITION(other.dp_storage, "uninitialized grid");
   PRECONDITION(compareParams(other), "incompatible grids");
 
   // EFF: we're probably doing too much copying here:
@@ -414,4 +425,4 @@ void writeGridToFile(const UniformGrid3D &grid, const std::string &filename) {
   writeGridToStream(grid, *oStrm);
   delete ofStrm;
 }
-}
+}  // namespace RDGeom

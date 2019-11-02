@@ -169,17 +169,17 @@ class RDKIT_DATASTRUCTS_EXPORT FPBReader {
            to be done
 
   */
-  std::vector<std::pair<double, unsigned int> > getTanimotoNeighbors(
+  std::vector<std::pair<double, unsigned int>> getTanimotoNeighbors(
       const std::uint8_t *bv, double threshold = 0.7,
       bool usePopcountScreen = true) const;
   //! \overload
-  std::vector<std::pair<double, unsigned int> > getTanimotoNeighbors(
+  std::vector<std::pair<double, unsigned int>> getTanimotoNeighbors(
       boost::shared_array<std::uint8_t> bv, double threshold = 0.7,
       bool usePopcountScreen = true) const {
     return getTanimotoNeighbors(bv.get(), threshold, usePopcountScreen);
   };
   //! \overload
-  std::vector<std::pair<double, unsigned int> > getTanimotoNeighbors(
+  std::vector<std::pair<double, unsigned int>> getTanimotoNeighbors(
       const ExplicitBitVect &ebv, double threshold = 0.7,
       bool usePopcountScreen = true) const;
 
@@ -218,17 +218,17 @@ class RDKIT_DATASTRUCTS_EXPORT FPBReader {
            to be done
 
   */
-  std::vector<std::pair<double, unsigned int> > getTverskyNeighbors(
+  std::vector<std::pair<double, unsigned int>> getTverskyNeighbors(
       const std::uint8_t *bv, double ca, double cb, double threshold = 0.7,
       bool usePopcountScreen = true) const;
   //! \overload
-  std::vector<std::pair<double, unsigned int> > getTverskyNeighbors(
+  std::vector<std::pair<double, unsigned int>> getTverskyNeighbors(
       boost::shared_array<std::uint8_t> bv, double ca, double cb,
       double threshold = 0.7, bool usePopcountScreen = true) const {
     return getTverskyNeighbors(bv.get(), ca, cb, threshold, usePopcountScreen);
   };
   //! \overload
-  std::vector<std::pair<double, unsigned int> > getTverskyNeighbors(
+  std::vector<std::pair<double, unsigned int>> getTverskyNeighbors(
       const ExplicitBitVect &ebv, double ca, double cb, double threshold = 0.7,
       bool usePopcountScreen = true) const;
 
@@ -264,9 +264,10 @@ class RDKIT_DATASTRUCTS_EXPORT FPBReader {
   void _initFromFilename(const char *fname, bool lazyRead) {
     std::istream *tmpStream = static_cast<std::istream *>(
         new std::ifstream(fname, std::ios_base::binary));
-    if (!tmpStream || (!(*tmpStream)) || (tmpStream->bad())) {
+    if (!(*tmpStream) || (tmpStream->bad())) {
       std::ostringstream errout;
       errout << "Bad input file " << fname;
+      delete tmpStream;
       throw BadFileException(errout.str());
     }
     dp_istrm = tmpStream;
@@ -276,5 +277,5 @@ class RDKIT_DATASTRUCTS_EXPORT FPBReader {
     df_lazyRead = lazyRead;
   }
 };
-}
+}  // namespace RDKit
 #endif

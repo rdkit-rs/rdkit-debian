@@ -8,8 +8,8 @@
 //  of the RDKit source tree.
 //
 #include <RDGeneral/export.h>
-#ifndef _RD_FILEPARSEEXCEPTION_H
-#define _RD_FILEPARSEEXCEPTION_H
+#ifndef RD_FILEPARSEEXCEPTION_H
+#define RD_FILEPARSEEXCEPTION_H
 
 #include <string>
 #include <stdexcept>
@@ -31,6 +31,6 @@ class FileParseException : public std::runtime_error {
  private:
   std::string _msg;
 };
-}
+}  // namespace RDKit
 
 #endif

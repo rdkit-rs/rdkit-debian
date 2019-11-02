@@ -242,15 +242,18 @@ class RDKIT_RDGEOMETRYLIB_EXPORT Point3D : public Point {
 // plane of the first three points (pt1, pt2, pt3) and the plane of the
 // last three points (pt2, pt3, pt4)
 // the computed angle is between 0 and PI
-RDKIT_RDGEOMETRYLIB_EXPORT double computeDihedralAngle(const Point3D &pt1, const Point3D &pt2,
-                            const Point3D &pt3, const Point3D &pt4);
+RDKIT_RDGEOMETRYLIB_EXPORT double computeDihedralAngle(const Point3D &pt1,
+                                                       const Point3D &pt2,
+                                                       const Point3D &pt3,
+                                                       const Point3D &pt4);
 
 // given a  set of four pts in 3D compute the signed dihedral angle between the
 // plane of the first three points (pt1, pt2, pt3) and the plane of the
 // last three points (pt2, pt3, pt4)
 // the computed angle is between -PI and PI
-RDKIT_RDGEOMETRYLIB_EXPORT double computeSignedDihedralAngle(const Point3D &pt1, const Point3D &pt2,
-                                  const Point3D &pt3, const Point3D &pt4);
+RDKIT_RDGEOMETRYLIB_EXPORT double computeSignedDihedralAngle(
+    const Point3D &pt1, const Point3D &pt2, const Point3D &pt3,
+    const Point3D &pt4);
 
 class RDKIT_RDGEOMETRYLIB_EXPORT Point2D : public Point {
  public:
@@ -258,10 +261,11 @@ class RDKIT_RDGEOMETRYLIB_EXPORT Point2D : public Point {
 
   Point2D() : x(0.0), y(0.0){};
   Point2D(double xv, double yv) : x(xv), y(yv){};
-
   ~Point2D(){};
 
   Point2D(const Point2D &other) : Point(other), x(other.x), y(other.y) {}
+  //! construct from a Point3D (ignoring the z coordinate)
+  Point2D(const Point3D &p3d) : Point(p3d), x(p3d.x), y(p3d.y){};
 
   virtual Point *copy() const { return new Point2D(*this); }
 
@@ -382,7 +386,7 @@ class RDKIT_RDGEOMETRYLIB_EXPORT Point2D : public Point {
 
 class RDKIT_RDGEOMETRYLIB_EXPORT PointND : public Point {
  public:
-  typedef boost::shared_ptr<RDNumeric::Vector<double> > VECT_SH_PTR;
+  typedef boost::shared_ptr<RDNumeric::Vector<double>> VECT_SH_PTR;
 
   PointND(unsigned int dim) {
     RDNumeric::Vector<double> *nvec = new RDNumeric::Vector<double>(dim, 0.0);
@@ -430,6 +434,8 @@ class RDKIT_RDGEOMETRYLIB_EXPORT PointND : public Point {
   unsigned int dimension() const { return dp_storage.get()->size(); }
 
   PointND &operator=(const PointND &other) {
+    if (this == &other) return *this;
+
     RDNumeric::Vector<double> *nvec =
         new RDNumeric::Vector<double>(*other.getStorage());
     dp_storage.reset(nvec);
@@ -513,22 +519,35 @@ typedef std::map<int, Point2D> INT_POINT2D_MAP;
 typedef INT_POINT2D_MAP::iterator INT_POINT2D_MAP_I;
 typedef INT_POINT2D_MAP::const_iterator INT_POINT2D_MAP_CI;
 
-RDKIT_RDGEOMETRYLIB_EXPORT std::ostream &operator<<(std::ostream &target, const RDGeom::Point &pt);
+RDKIT_RDGEOMETRYLIB_EXPORT std::ostream &operator<<(std::ostream &target,
+                                                    const RDGeom::Point &pt);
 
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point3D operator+(const RDGeom::Point3D &p1, const RDGeom::Point3D &p2);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point3D operator-(const RDGeom::Point3D &p1, const RDGeom::Point3D &p2);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point3D operator*(const RDGeom::Point3D &p1, double v);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point3D operator/(const RDGeom::Point3D &p1, double v);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point3D operator+(const RDGeom::Point3D &p1,
+                                                     const RDGeom::Point3D &p2);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point3D operator-(const RDGeom::Point3D &p1,
+                                                     const RDGeom::Point3D &p2);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point3D operator*(const RDGeom::Point3D &p1,
+                                                     double v);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point3D operator/(const RDGeom::Point3D &p1,
+                                                     double v);
 
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point2D operator+(const RDGeom::Point2D &p1, const RDGeom::Point2D &p2);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point2D operator-(const RDGeom::Point2D &p1, const RDGeom::Point2D &p2);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point2D operator*(const RDGeom::Point2D &p1, double v);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point2D operator/(const RDGeom::Point2D &p1, double v);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point2D operator+(const RDGeom::Point2D &p1,
+                                                     const RDGeom::Point2D &p2);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point2D operator-(const RDGeom::Point2D &p1,
+                                                     const RDGeom::Point2D &p2);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point2D operator*(const RDGeom::Point2D &p1,
+                                                     double v);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::Point2D operator/(const RDGeom::Point2D &p1,
+                                                     double v);
 
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::PointND operator+(const RDGeom::PointND &p1, const RDGeom::PointND &p2);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::PointND operator-(const RDGeom::PointND &p1, const RDGeom::PointND &p2);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::PointND operator*(const RDGeom::PointND &p1, double v);
-RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::PointND operator/(const RDGeom::PointND &p1, double v);
-}
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::PointND operator+(const RDGeom::PointND &p1,
+                                                     const RDGeom::PointND &p2);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::PointND operator-(const RDGeom::PointND &p1,
+                                                     const RDGeom::PointND &p2);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::PointND operator*(const RDGeom::PointND &p1,
+                                                     double v);
+RDKIT_RDGEOMETRYLIB_EXPORT RDGeom::PointND operator/(const RDGeom::PointND &p1,
+                                                     double v);
+}  // namespace RDGeom
 
 #endif

@@ -228,7 +228,7 @@ void test3() {
   smi = "C(C1C2C3C41)(C2C35)C45";  // cubane
   // smi = "C1(C2C3C4C5C6C72)C3C4C5C6C71"; // from Figureras paper
   // smi = "C17C5C4C3C2C1C6C2C3C4C5C67";
-  // we cannot use the sanitzation code, because that finds *symmetric*
+  // we cannot use the sanitization code, because that finds *symmetric*
   // rings, which will break this case:
   m = SmilesToMol(smi, 0, 0);
   int bfs = MolOps::findSSSR(*m);
@@ -253,6 +253,35 @@ void test3() {
   BOOST_LOG(rdInfoLog) << smi << "\n";
 
   delete m;
+
+  // Figueras figure 4:
+  //  * The third ring is bigger, and shouldn't be accessed in symmetrizeSSSR
+  smi = "C12CC(CC2)CC1";
+  m = SmilesToMol(smi, 0, 0);
+  bfs = MolOps::findSSSR(*m);
+  TEST_ASSERT(bfs == 2);
+  bfrs.resize(0);
+  bfs = MolOps::symmetrizeSSSR(*m, bfrs);
+  TEST_ASSERT(bfs == 2);
+  delete m;
+
+
+  // Counterexamples in ring perception figure 4:
+  //  * The native Figueras algorithm cannot work on this molecule, it will
+  //    fail after finding one ring. Naive modified Figueras finds a 6 membered
+  //    ring, which is wrong.
+  smi = "C123C4C5C6(C3)C7C1C8C2C4C5C6C78";
+  m = SmilesToMol(smi, 0, 0);
+  bfs = MolOps::findSSSR(*m);
+  TEST_ASSERT(bfs == 7);
+  bfrs.resize(0);
+  bfs = MolOps::symmetrizeSSSR(*m, bfrs);
+  TEST_ASSERT(bfs == 8);
+  for (auto bring : bfrs) {
+    TEST_ASSERT(bring.size() < 6);
+  }
+  delete m;
+
 
   smi = "C1CC2C1CCC2";
   m = SmilesToMol(smi);
@@ -7550,6 +7579,58 @@ void testGithub1990() {
   }
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
 }
+#ifdef RDK_USE_URF
+void testRingFamilies() {
+  BOOST_LOG(rdInfoLog)
+      << "-----------------------\n Testing ring family calculation. "
+      << std::endl;
+  {
+    std::string smiles = "C(C1C2C3C41)(C2C35)C45";  // cubane
+    ROMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 8);
+    TEST_ASSERT(!m->getRingInfo()->areRingFamiliesInitialized());
+    MolOps::findRingFamilies(*m);
+    TEST_ASSERT(m->getRingInfo()->isInitialized());
+    TEST_ASSERT(m->getRingInfo()->areRingFamiliesInitialized());
+    int numURF = RDL_getNofURF(m->getRingInfo()->dp_urfData.get());
+    int numRC = RDL_getNofRC(m->getRingInfo()->dp_urfData.get());
+    TEST_ASSERT(numRC == 6);
+    TEST_ASSERT(numURF == 6);
+
+    int numRings = m->getRingInfo()->numRingFamilies();
+    TEST_ASSERT(numRings == 6);
+    numRings = m->getRingInfo()->numRings();
+    TEST_ASSERT(numRings == 6);
+
+
+    delete m;
+  }
+  {
+    std::string smiles = "C1CC2CCC1CC1CCC(CC1)CC1CCC(CC1)CC1CCC(CC1)C2";
+    ROMol *m = SmilesToMol(smiles);
+    TEST_ASSERT(m);
+    TEST_ASSERT(m->getNumAtoms() == 28);
+    TEST_ASSERT(!m->getRingInfo()->areRingFamiliesInitialized());
+    MolOps::findRingFamilies(*m);
+    TEST_ASSERT(m->getRingInfo()->isInitialized());
+    TEST_ASSERT(m->getRingInfo()->areRingFamiliesInitialized());
+    int numURF = RDL_getNofURF(m->getRingInfo()->dp_urfData.get());
+    int numRC = RDL_getNofRC(m->getRingInfo()->dp_urfData.get());
+    // std::cerr << " URF, RC " << numURF << " " << numRC << std::endl;
+    TEST_ASSERT(numURF == 5);
+    TEST_ASSERT(numRC == 20);
+    int numRings = m->getRingInfo()->numRings();
+    // std::cerr << "num rings: " << numRings << std::endl;
+    TEST_ASSERT(numRings == 14);
+    TEST_ASSERT(m->getRingInfo()->numRingFamilies() == 5);
+    delete m;
+  }
+  BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
+}
+#else
+void testRingFamilies() {}
+#endif
 
 int main() {
   RDLog::InitLogs();
@@ -7661,7 +7742,9 @@ int main() {
   testGithub1936();
   testGithub1928();
   testGithub1990();
-#endif
   testPotentialStereoBonds();
+#endif
+  testRingFamilies();
+
   return 0;
 }

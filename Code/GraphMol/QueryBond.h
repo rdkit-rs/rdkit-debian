@@ -70,7 +70,10 @@ class RDKIT_GRAPHMOL_EXPORT QueryBond : public Bond {
 
   //! expands our current query
   /*!
-    \param what          the Queries::Query to be added
+    \param what          the Queries::Query to be added. The ownership of
+                         the query is passed to the current object, where it
+                         might be deleted, so that the pointer should not be
+                         used again in the calling code.
     \param how           the operator to be used in the expansion
     \param maintainOrder (optional) flags whether the relative order of
                          the queries needs to be maintained, if this is
@@ -104,7 +107,7 @@ inline std::string qhelper(Bond::QUERYBOND_QUERY *q, unsigned int depth) {
   }
   return res;
 }
-}  // end of detail namespace
+}  // namespace detail
 inline std::string describeQuery(const Bond *bond) {
   PRECONDITION(bond, "bad bond");
   std::string res = "";
@@ -113,6 +116,6 @@ inline std::string describeQuery(const Bond *bond) {
   }
   return res;
 }
-};
+};  // namespace RDKit
 
 #endif

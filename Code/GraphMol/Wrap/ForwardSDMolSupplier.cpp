@@ -34,7 +34,7 @@ class LocalForwardSDMolSupplier : public RDKit::ForwardSDMolSupplier {
   LocalForwardSDMolSupplier(python::object &input, bool sanitize, bool removeHs,
                             bool strictParsing) {
     // FIX: minor leak here
-    auto *sb = new streambuf(input);
+    auto *sb = new streambuf(input,'b');
     dp_inStream = new streambuf::istream(*sb);
     df_owner = true;
     df_sanitize = sanitize;
@@ -90,7 +90,7 @@ std::string fsdMolSupplierClassDoc =
     2) we can also read from compressed files: \n\n\
        >>> import gzip\n\
        >>> suppl = ForwardSDMolSupplier(gzip.open('in.sdf.gz'))\n\
-       >>> for mol in suppl:\n \
+       >>> for mol in suppl:\n\
        ...   if mol is not None: print mol.GetNumAtoms()\n\
 \n\
   Properties in the SD file are used to set properties on each molecule.\n\
@@ -115,12 +115,15 @@ struct forwardsdmolsup_wrap {
              python::arg("removeHs") = true,
              python::arg("strictParsing") = true)))
         .def(NEXT_METHOD,
-             (ROMol * (*)(LocalForwardSDMolSupplier *)) & MolSupplNext,
+             (ROMol * (*)(LocalForwardSDMolSupplier *)) & MolForwardSupplNext,
              "Returns the next molecule in the file.  Raises _StopIteration_ "
              "on EOF.\n",
              python::return_value_policy<python::manage_new_object>())
         .def("atEnd", &ForwardSDMolSupplier::atEnd,
              "Returns whether or not we have hit EOF.\n")
+        .def("GetEOFHitOnRead", &ForwardSDMolSupplier::getEOFHitOnRead,
+             "Returns whether or EOF was hit while parsing the previous "
+             "entry.\n")
         .def("__iter__", &FwdMolSupplIter,
              python::return_internal_reference<1>())
         .def("GetProcessPropertyLists",

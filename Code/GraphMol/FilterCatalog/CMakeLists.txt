@@ -28,6 +28,7 @@ rdkit_library(FilterCatalog
               Filters.cpp
               FilterCatalog.cpp
               FilterCatalogEntry.cpp
+	      FilterCatalogRunner.cpp
               FilterMatchers.cpp
               FunctionalGroupHierarchy.cpp
               LINK_LIBRARIES Subgraphs SubstructMatch SmilesParse
@@ -40,7 +41,9 @@ rdkit_headers(FilterCatalogEntry.h
               FunctionalGroupHierarchy.h
               DEST GraphMol/FilterCatalog)
 
+if(RDK_BUILD_PYTHON_WRAPPERS)
 add_subdirectory(Wrap)
+endif()
 
 rdkit_test(filterCatalogTest filtercatalogtest.cpp
            LINK_LIBRARIES FilterCatalog

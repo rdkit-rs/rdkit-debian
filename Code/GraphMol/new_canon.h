@@ -98,9 +98,7 @@ class RDKIT_GRAPHMOL_EXPORT canon_atom {
         nbrIds(NULL),
         p_symbol(NULL){};
 
-  ~canon_atom() {
-      free(nbrIds);
-  }
+  ~canon_atom() { free(nbrIds); }
 };
 
 RDKIT_GRAPHMOL_EXPORT void updateAtomNeighborIndex(
@@ -148,10 +146,10 @@ class RDKIT_GRAPHMOL_EXPORT SpecialChiralityAtomCompareFunctor {
       return 0;
     }
 
-    if ((dp_atomsInPlay && (*dp_atomsInPlay)[i]) || !dp_atomsInPlay) {
+    if (!dp_atomsInPlay || (*dp_atomsInPlay)[i]) {
       updateAtomNeighborIndex(dp_atoms, dp_atoms[i].bonds);
     }
-    if ((dp_atomsInPlay && (*dp_atomsInPlay)[j]) || !dp_atomsInPlay) {
+    if (!dp_atomsInPlay || (*dp_atomsInPlay)[j]) {
       updateAtomNeighborIndex(dp_atoms, dp_atoms[j].bonds);
     }
     for (unsigned int ii = 0;
@@ -163,10 +161,10 @@ class RDKIT_GRAPHMOL_EXPORT SpecialChiralityAtomCompareFunctor {
 
     std::vector<std::pair<unsigned int, unsigned int>> swapsi;
     std::vector<std::pair<unsigned int, unsigned int>> swapsj;
-    if ((dp_atomsInPlay && (*dp_atomsInPlay)[i]) || !dp_atomsInPlay) {
+    if (!dp_atomsInPlay || (*dp_atomsInPlay)[i]) {
       updateAtomNeighborNumSwaps(dp_atoms, dp_atoms[i].bonds, i, swapsi);
     }
-    if ((dp_atomsInPlay && (*dp_atomsInPlay)[j]) || !dp_atomsInPlay) {
+    if (!dp_atomsInPlay || (*dp_atomsInPlay)[j]) {
       updateAtomNeighborNumSwaps(dp_atoms, dp_atoms[j].bonds, j, swapsj);
     }
     for (unsigned int ii = 0; ii < swapsi.size() && ii < swapsj.size(); ++ii) {
@@ -216,10 +214,10 @@ class RDKIT_GRAPHMOL_EXPORT SpecialSymmetryAtomCompareFunctor {
       return 1;
     }
 
-    if ((dp_atomsInPlay && (*dp_atomsInPlay)[i]) || !dp_atomsInPlay) {
+    if (!dp_atomsInPlay || (*dp_atomsInPlay)[i]) {
       updateAtomNeighborIndex(dp_atoms, dp_atoms[i].bonds);
     }
-    if ((dp_atomsInPlay && (*dp_atomsInPlay)[j]) || !dp_atomsInPlay) {
+    if (!dp_atomsInPlay || (*dp_atomsInPlay)[j]) {
       updateAtomNeighborIndex(dp_atoms, dp_atoms[j].bonds);
     }
     for (unsigned int ii = 0;
@@ -415,10 +413,10 @@ class RDKIT_GRAPHMOL_EXPORT AtomCompareFunctor {
     }
 
     if (df_useNbrs) {
-      if ((dp_atomsInPlay && (*dp_atomsInPlay)[i]) || !dp_atomsInPlay) {
+      if (!dp_atomsInPlay || (*dp_atomsInPlay)[i]) {
         updateAtomNeighborIndex(dp_atoms, dp_atoms[i].bonds);
       }
-      if ((dp_atomsInPlay && (*dp_atomsInPlay)[j]) || !dp_atomsInPlay) {
+      if (!dp_atomsInPlay || (*dp_atomsInPlay)[j]) {
         updateAtomNeighborIndex(dp_atoms, dp_atoms[j].bonds);
       }
 

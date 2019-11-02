@@ -383,6 +383,48 @@ void sanitizeMol(RWMol &mol, unsigned int &operationThatFailed,
   operationThatFailed = 0;
 }
 
+std::vector<std::unique_ptr<MolSanitizeException>> detectChemistryProblems(
+    const ROMol &imol, unsigned int sanitizeOps) {
+  RWMol mol(imol);
+  std::vector<std::unique_ptr<MolSanitizeException>> res;
+
+  // clear out any cached properties
+  mol.clearComputedProps();
+
+  int operation;
+  operation = SANITIZE_CLEANUP;
+  if (sanitizeOps & operation) {
+    // clean up things like nitro groups
+    cleanUp(mol);
+  }
+
+  // update computed properties on atoms and bonds:
+  operation = SANITIZE_PROPERTIES;
+  if (sanitizeOps & operation) {
+    for (auto &atom : mol.atoms()) {
+      try {
+        bool strict = true;
+        atom->updatePropertyCache(strict);
+      } catch (const MolSanitizeException &e) {
+        res.emplace_back(e.copy());
+      }
+    }
+  } else {
+    mol.updatePropertyCache(false);
+  }
+
+  // kekulizations
+  operation = SANITIZE_KEKULIZE;
+  if (sanitizeOps & operation) {
+    try {
+      Kekulize(mol);
+    } catch (const MolSanitizeException &e) {
+      res.emplace_back(e.copy());
+    }
+  }
+  return res;
+}
+
 std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
                                     INT_VECT *frags,
                                     VECT_INT_VECT *fragsMolAtomMapping,
@@ -500,13 +542,11 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
           aids.push_back(ids[j]);
         }
         INT_VECT bids;
-        INT_VECT_CI lastRai;
-        for (INT_VECT_CI rai = aids.begin(); rai != aids.end(); rai++) {
-          if (rai != aids.begin()) {
-            const Bond *bnd = tmp->getBondBetweenAtoms(*rai, *lastRai);
-            if (!bnd) throw ValueErrorException("expected bond not found");
-            bids.push_back(bnd->getIdx());
-          }
+        INT_VECT_CI lastRai = aids.begin();
+        for (INT_VECT_CI rai = aids.begin() + 1; rai != aids.end(); ++rai) {
+          const Bond *bnd = tmp->getBondBetweenAtoms(*rai, *lastRai);
+          if (!bnd) throw ValueErrorException("expected bond not found");
+          bids.push_back(bnd->getIdx());
           lastRai = rai;
         }
         const Bond *bnd = tmp->getBondBetweenAtoms(*lastRai, *(aids.begin()));
@@ -647,15 +687,20 @@ std::map<T, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
   }
   return res;
 }
-template RDKIT_GRAPHMOL_EXPORT std::map<std::string, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
-    const ROMol &mol, std::string (*query)(const ROMol &, const Atom *),
-    bool sanitizeFrags, const std::vector<std::string> *, bool);
-template RDKIT_GRAPHMOL_EXPORT std::map<int, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
-    const ROMol &mol, int (*query)(const ROMol &, const Atom *),
-    bool sanitizeFrags, const std::vector<int> *, bool);
-template RDKIT_GRAPHMOL_EXPORT std::map<unsigned int, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
-    const ROMol &mol, unsigned int (*query)(const ROMol &, const Atom *),
-    bool sanitizeFrags, const std::vector<unsigned int> *, bool);
+template RDKIT_GRAPHMOL_EXPORT std::map<std::string, boost::shared_ptr<ROMol>>
+getMolFragsWithQuery(const ROMol &mol,
+                     std::string (*query)(const ROMol &, const Atom *),
+                     bool sanitizeFrags, const std::vector<std::string> *,
+                     bool);
+template RDKIT_GRAPHMOL_EXPORT std::map<int, boost::shared_ptr<ROMol>>
+getMolFragsWithQuery(const ROMol &mol,
+                     int (*query)(const ROMol &, const Atom *),
+                     bool sanitizeFrags, const std::vector<int> *, bool);
+template RDKIT_GRAPHMOL_EXPORT std::map<unsigned int, boost::shared_ptr<ROMol>>
+getMolFragsWithQuery(const ROMol &mol,
+                     unsigned int (*query)(const ROMol &, const Atom *),
+                     bool sanitizeFrags, const std::vector<unsigned int> *,
+                     bool);
 
 #if 0
     void findSpanningTree(const ROMol &mol,INT_VECT &mst){
