@@ -11,6 +11,21 @@ rdkit (201909.1-1) UNRELEASED; urgency=medium
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 23 Jul 2019 12:33:10 -0300
 
+rdkit (201903.1-2) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Daniel Leidert ]
+  * Add CI support
+  * Use salsa-ci.yml as CI config and fix gbp.conf
+  * Trigger rebuild
+
+  [ Andrius Merkys ]
+  * Removing build-dependency on no longer existing texlive-generic-extra
+    (Closes: #933210)
+
+ -- Andrius Merkys <merkys@debian.org>  Tue, 20 Aug 2019 01:11:38 -0400
+
 rdkit (201903.1-1) unstable; urgency=medium
 
   * New upstream release.

@@ -31,7 +31,6 @@ Build-Depends: bison,
                python3-sphinx,
                rapidjson-dev,
                texlive-fonts-recommended,
-               texlive-generic-extra,
                texlive-latex-base,
                texlive-latex-extra,
                texlive-latex-recommended
