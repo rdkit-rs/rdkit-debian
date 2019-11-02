@@ -105,4 +105,4 @@
 +
 +%.bc : %.cpp
 +	$(COMPILE.cxx.bc) -o $@ $<
-+	opt-7 -module-summary -f $@ -o $@
++	opt-9 -module-summary -f $@ -o $@

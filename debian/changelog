@@ -1,7 +1,11 @@
 rdkit (201909.1-1) UNRELEASED; urgency=medium
 
+  [ Debichem Team ]
   * New upstream release.
+
+  [ Michael Banck ]
   * debian/control: Update extension to postgresql-12-rdkit.
+  * debian/patches/postgres_Makefile_fixes.patch: Updated for llvm9.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 23 Jul 2019 12:33:10 -0300
 
