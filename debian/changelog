@@ -1,8 +1,10 @@
-rdkit (201909.1-2) UNRELEASED; urgency=medium
+rdkit (201909.1-2) unstable; urgency=medium
 
-  * 
+  * Team upload.
+  * Building without URF support as it tries to download unpackaged software
+    (Closes: #950141).
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 03 Nov 2019 07:05:59 +0100
+ -- Andrius Merkys <merkys@debian.org>  Wed, 29 Jan 2020 11:08:40 -0500
 
 rdkit (201909.1-1) unstable; urgency=medium
 
