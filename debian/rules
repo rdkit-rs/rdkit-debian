@@ -27,7 +27,8 @@ export DEBTMP := $(CURDIR)/debian/tmp
 DH_AUTO_CONFIGURE_OPTS := -DCMAKE_BUILD_TYPE=None -DCMAKE_SKIP_RPATH=ON \
                           -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=OFF \
                           -DRDK_BUILD_THREADSAFE_SSS=ON -DRDK_BUILD_PYTHON_WRAPPERS=ON \
-                          -DRDK_OPTIMIZE_NATIVE=OFF -DCMAKE_INSTALL_PREFIX=/usr
+                          -DRDK_OPTIMIZE_NATIVE=OFF -DRDK_USE_URF=OFF \
+                          -DCMAKE_INSTALL_PREFIX=/usr
 
 include /usr/share/postgresql-common/pgxs_debian_control.mk
 
