@@ -1,3 +1,10 @@
+rdkit (201909.1-3) UNRELEASED; urgency=medium
+
+  * Team upload.
+  * Fixing FTBFS with llvm-10 (Closes: #955669).
+
+ -- Andrius Merkys <merkys@debian.org>  Sat, 04 Apr 2020 00:56:05 -0400
+
 rdkit (201909.1-2) unstable; urgency=medium
 
   * Team upload.
