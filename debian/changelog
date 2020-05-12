@@ -1,3 +1,11 @@
+rdkit (201909.1-4) unstable; urgency=medium
+
+  * Team upload.
+  * Replacing libschroedinger-coordgenlibs-dev with libcoordgen-dev.
+  * No need to patch Code/cmake/Modules/Findcoordgen.cmake anymore.
+
+ -- Andrius Merkys <merkys@debian.org>  Tue, 12 May 2020 06:21:19 -0400
+
 rdkit (201909.1-3) unstable; urgency=medium
 
   * Team upload.
