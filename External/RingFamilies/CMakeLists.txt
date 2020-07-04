@@ -23,13 +23,21 @@ set(urflib_INCLUDE_DIRS ${URFLIB_DIR}
     CACHE STRING "RingDecomposerLib Include Dir" FORCE)
 file(GLOB URFSOURCES "${URFLIB_DIR}/*.c")
 
+if((MSVC AND RDK_INSTALL_DLLS_MSVC) OR ((NOT MSVC) AND WIN32))
+    add_definitions("-DRDKIT_URFLIB_BUILD")
+    set (ringdecomposerlib_h ${URFLIB_DIR}/RingDecomposerLib.h)
+    file(READ ${ringdecomposerlib_h} ringdecomposerlib_h_data)
+    if (NOT "${ringdecomposerlib_h_data}" MATCHES "RDKIT_URFLIB_BUILD")
+        string(REGEX REPLACE "([ ]*)(#define[ ]+RDL_API[ ]+__declspec)(\\([ ]*dllexport[ ]*\\))" "\\1#ifdef RDKIT_URFLIB_BUILD\n\\1\\2\\3\n\\1#else\n\\1\\2(dllimport)\n\\1#endif" ringdecomposerlib_h_data "${ringdecomposerlib_h_data}")
+        file(WRITE ${ringdecomposerlib_h} "${ringdecomposerlib_h_data}")
+    endif()
+endif()
 rdkit_library(RingDecomposerLib ${URFSOURCES} SHARED)
 install(TARGETS RingDecomposerLib DESTINATION ${RDKit_LibDir})
 rdkit_headers(${URFLIB_DIR}/RingDecomposerLib.h DEST "")
 
 
-rdkit_library(URFLib URF.cpp SHARED LINK_LIBRARIES RingDecomposerLib )
-set(RDK_URF_LIBS URFLib RingDecomposerLib
+set(RDK_URF_LIBS RingDecomposerLib
     CACHE STRING "the libraries for the URF calculation" FORCE)
 
 endif(RDK_USE_URF)

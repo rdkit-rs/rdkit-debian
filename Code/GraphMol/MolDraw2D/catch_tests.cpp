@@ -14,9 +14,16 @@
 #include <GraphMol/RDKitBase.h>
 
 #include <GraphMol/SmilesParse/SmilesParse.h>
+#include <GraphMol/FileParsers/FileParsers.h>
 #include <GraphMol/MolDraw2D/MolDraw2D.h>
 #include <GraphMol/MolDraw2D/MolDraw2DSVG.h>
 #include <GraphMol/MolDraw2D/MolDraw2DUtils.h>
+#include <boost/algorithm/string/split.hpp>
+
+#ifdef RDK_BUILD_CAIRO_SUPPORT
+#include <cairo.h>
+#include "MolDraw2DCairo.h"
+#endif
 
 using namespace RDKit;
 
@@ -67,7 +74,7 @@ TEST_CASE("contour data", "[drawing, conrec]") {
     MolDraw2DUtils::prepareMolForDrawing(*m1);
 
     const size_t gridSz = 100;
-    double *grid = new double[gridSz * gridSz];
+    auto *grid = new double[gridSz * gridSz];
     std::vector<double> xps(gridSz);
     std::vector<double> yps(gridSz);
 
@@ -87,14 +94,18 @@ TEST_CASE("contour data", "[drawing, conrec]") {
       xps[ix] = px;
       for (size_t iy = 0; iy < gridSz; ++iy) {
         auto py = y1 + iy * dy;
-        if (ix == 0) yps[iy] = py;
+        if (ix == 0) {
+          yps[iy] = py;
+        }
         RDGeom::Point2D loc(px, py);
         double val = 0.0;
         for (size_t ia = 0; ia < conf.getNumAtoms(); ++ia) {
           auto dv = loc - RDGeom::Point2D(conf.getAtomPos(ia).x,
                                           conf.getAtomPos(ia).y);
           auto r = dv.length();
-          if (r > 0.1) val += 1 / r;
+          if (r > 0.1) {
+            val += 1 / r;
+          }
         }
         maxV = std::max(val, maxV);
         grid[ix * gridSz + iy] = val;
@@ -224,8 +235,8 @@ TEST_CASE("dative bonds", "[drawing, organometallics]") {
     outs << text;
     outs.flush();
 
-    CHECK(text.find("<path class='bond-0' d='M 56.766,102.447 L 50.8587,100 "
-                    "L 56.766,97.5531") != std::string::npos);
+    CHECK(text.find("<path class='bond-0' d='M 55.1495,101.204"
+                    " L 52.2436,100 L 55.1495,98.7964") != std::string::npos);
   }
   SECTION("more complex") {
     auto m1 = "N->1[C@@H]2CCCC[C@H]2N->[Pt]11OC(=O)C(=O)O1"_smiles;
@@ -239,9 +250,27 @@ TEST_CASE("dative bonds", "[drawing, organometallics]") {
     outs << text;
     outs.flush();
 
-    CHECK(text.find("<path class='bond-7' d='M 95.8183,93.981 "
-                    "L 94.3351,94.8899 L 94.7412,93.1984") !=
+    CHECK(text.find("<path class='bond-7' d='M 92.9861,93.568"
+                    " L 92.2758,94.0033 L 92.4703,93.1932") !=
           std::string::npos);
+  }
+  SECTION("test colours") {
+    // the dative bonds point the wrong way, but the point is to test
+    // if the tip of the arrow is blue.
+    auto m1 = "[Cu++]->1->2.N1CCN2"_smiles;
+    REQUIRE(m1);
+    MolDraw2DSVG drawer(200, 200);
+    MolDraw2DUtils::prepareMolForDrawing(*m1);
+    drawer.drawMolecule(*m1);
+    drawer.finishDrawing();
+    std::string text = drawer.getDrawingText();
+    std::ofstream outs("testDativeBonds_3.svg");
+    outs << text;
+    outs.flush();
+
+    CHECK(text.find("<path class='bond-2' d='M 61.7343,143.825"
+                    " L 89.7427,152.925' style='fill:none;"
+                    "fill-rule:evenodd;stroke:#0000FF") != std::string::npos);
   }
 }
 
@@ -272,7 +301,7 @@ TEST_CASE("copying drawing options", "[drawing]") {
       MolDraw2DUtils::prepareAndDrawMolecule(drawer, *m1);
       drawer.finishDrawing();
       std::string text = drawer.getDrawingText();
-      CHECK(text.find("fill:#0000FF' ><tspan>NH") != std::string::npos);
+      CHECK(text.find("fill:#0000FF' ><tspan>HN") != std::string::npos);
     }
     {
       MolDraw2DSVG drawer(200, 200);
@@ -280,8 +309,8 @@ TEST_CASE("copying drawing options", "[drawing]") {
       MolDraw2DUtils::prepareAndDrawMolecule(drawer, *m1);
       drawer.finishDrawing();
       std::string text = drawer.getDrawingText();
-      CHECK(text.find("fill:#0000FF' ><tspan>NH") == std::string::npos);
-      CHECK(text.find("fill:#000000' ><tspan>NH") != std::string::npos);
+      CHECK(text.find("fill:#0000FF' ><tspan>HN") == std::string::npos);
+      CHECK(text.find("fill:#000000' ><tspan>HN") != std::string::npos);
     }
   }
   SECTION("test") {
@@ -293,8 +322,214 @@ TEST_CASE("copying drawing options", "[drawing]") {
       MolDraw2DUtils::prepareAndDrawMolecule(drawer, *m1);
       drawer.finishDrawing();
       std::string text = drawer.getDrawingText();
-      CHECK(text.find("fill:#0000FF' ><tspan>NH") == std::string::npos);
-      CHECK(text.find("fill:#000000' ><tspan>NH") != std::string::npos);
+      CHECK(text.find("fill:#0000FF' ><tspan>HN") == std::string::npos);
+      CHECK(text.find("fill:#000000' ><tspan>HN") != std::string::npos);
     }
+  }
+}
+
+TEST_CASE("bad DrawMolecules() when molecules are not kekulized",
+          "[drawing,bug]") {
+  auto m1 = "CCN(CC)CCn1nc2c3ccccc3sc3c(CNS(C)(=O)=O)ccc1c32"_smiles;
+  REQUIRE(m1);
+  SECTION("foundations") {
+    MolDraw2DSVG drawer(500, 200, 250, 200);
+    drawer.drawOptions().prepareMolsBeforeDrawing = false;
+    RWMol dm1(*m1);
+    RWMol dm2(*m1);
+    bool kekulize = false;
+    MolDraw2DUtils::prepareMolForDrawing(dm1, kekulize);
+    kekulize = true;
+    MolDraw2DUtils::prepareMolForDrawing(dm2, kekulize);
+    MOL_PTR_VECT ms{&dm1, &dm2};
+    drawer.drawMolecule(dm1);
+    drawer.finishDrawing();
+    std::string text = drawer.getDrawingText();
+    std::ofstream outs("testKekulizationProblems_1.svg");
+    outs << text;
+    outs.flush();
+
+    // this is a very crude test - really we just need to look at the SVG - but
+    // it's better than nothing.
+    CHECK(text.find(
+              "<path class='bond-18' d='M 169.076,79.056 L 191.285,69.2653' "
+              "style='fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:"
+              "2px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;"
+              "stroke-dasharray:6,6' />") == std::string::npos);
+  }
+}
+TEST_CASE("draw atom/bond indices", "[drawing]") {
+  auto m1 = "C[C@H](F)N"_smiles;
+  REQUIRE(m1);
+  SECTION("foundations") {
+    {
+      MolDraw2DSVG drawer(250, 200);
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      std::string text = drawer.getDrawingText();
+      std::ofstream outs("testAtomBondIndices_1.svg");
+      outs << text;
+      outs.flush();
+      CHECK(text.find("<tspan>1</tspan>") == std::string::npos);
+      CHECK(text.find("<tspan>1,(S)</tspan>") == std::string::npos);
+    }
+    {
+      MolDraw2DSVG drawer(250, 200);
+      drawer.drawOptions().addAtomIndices = true;
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      std::string text = drawer.getDrawingText();
+      std::ofstream outs("testAtomBondIndices_2.svg");
+      outs << text;
+      outs.flush();
+      CHECK(text.find("<tspan>1</tspan>") != std::string::npos);
+      // it only appears once though:
+      CHECK(text.find("<tspan>1</tspan>", text.find("<tspan>1</tspan>") + 1) ==
+            std::string::npos);
+      CHECK(text.find("1,(S)") == std::string::npos);
+    }
+    {
+      MolDraw2DSVG drawer(250, 200);
+      drawer.drawOptions().addBondIndices = true;
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      std::string text = drawer.getDrawingText();
+      std::ofstream outs("testAtomBondIndices_3.svg");
+      outs << text;
+      outs.flush();
+      CHECK(text.find("<tspan>1</tspan>") != std::string::npos);
+      // it only appears once though:
+      CHECK(text.find("<tspan>1</tspan>", text.find("<tspan>1</tspan>") + 1) ==
+            std::string::npos);
+    }
+    {
+      MolDraw2DSVG drawer(250, 200);
+      drawer.drawOptions().addAtomIndices = true;
+      drawer.drawOptions().addBondIndices = true;
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      std::string text = drawer.getDrawingText();
+      std::ofstream outs("testAtomBondIndices_4.svg");
+      outs << text;
+      outs.flush();
+      CHECK(text.find("<tspan>1</tspan>") != std::string::npos);
+      // it appears twice:
+      CHECK(text.find("<tspan>1</tspan>", text.find("<tspan>1</tspan>") + 1) !=
+            std::string::npos);
+    }
+    {
+      MolDraw2DSVG drawer(250, 200);
+      m1->getAtomWithIdx(2)->setProp(common_properties::atomNote, "foo");
+      drawer.drawOptions().addAtomIndices = true;
+      drawer.drawOptions().addStereoAnnotation = true;
+      drawer.drawMolecule(*m1);
+      m1->getAtomWithIdx(2)->clearProp(common_properties::atomNote);
+      drawer.finishDrawing();
+      std::string text = drawer.getDrawingText();
+      std::ofstream outs("testAtomBondIndices_5.svg");
+      outs << text;
+      outs.flush();
+      CHECK(text.find("<tspan>1,(S)</tspan>") != std::string::npos);
+      CHECK(text.find("<tspan>2,foo</tspan>") != std::string::npos);
+      CHECK(text.find("<tspan>1</tspan>") == std::string::npos);
+    }
+  }
+}
+
+TEST_CASE("Github #3226: Lines in wedge bonds being drawn too closely together",
+          "[drawing]") {
+  auto m1 =
+      "C[C@H](C1=C(C=CC(=C1Cl)F)Cl)OC2=C(N=CC(=C2)C3=CN(N=C3)C4CCNCC4)N"_smiles;
+  REQUIRE(m1);
+  SECTION("larger SVG") {
+    {
+      MolDraw2DSVG drawer(450, 400);
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      std::string text = drawer.getDrawingText();
+      std::ofstream outs("testGithub3226_1.svg");
+      outs << text;
+      outs.flush();
+      std::vector<std::string> tkns;
+      boost::algorithm::find_all(tkns, text, "bond-0");
+      CHECK(tkns.size() == 6);
+    }
+  }
+#ifdef RDK_BUILD_CAIRO_SUPPORT
+  SECTION("larger PNG") {
+    {
+      MolDraw2DCairo drawer(450, 400);
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      drawer.writeDrawingText("testGithub3226_1.png");
+    }
+  }
+#endif
+  SECTION("smaller SVG") {
+    {
+      MolDraw2DSVG drawer(200, 150);
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      std::string text = drawer.getDrawingText();
+      std::ofstream outs("testGithub3226_2.svg");
+      outs << text;
+      outs.flush();
+      std::vector<std::string> tkns;
+      boost::algorithm::find_all(tkns, text, "bond-0");
+      CHECK(tkns.size() == 3);
+    }
+  }
+#ifdef RDK_BUILD_CAIRO_SUPPORT
+  SECTION("smaller PNG") {
+    {
+      MolDraw2DCairo drawer(200, 150);
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      drawer.writeDrawingText("testGithub3226_2.png");
+    }
+  }
+#endif
+  SECTION("middle SVG") {
+    {
+      MolDraw2DSVG drawer(250, 200);
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      std::string text = drawer.getDrawingText();
+      std::ofstream outs("testGithub3226_3.svg");
+      outs << text;
+      outs.flush();
+      std::vector<std::string> tkns;
+      boost::algorithm::find_all(tkns, text, "bond-0");
+      CHECK(tkns.size() == 3);
+    }
+  }
+#ifdef RDK_BUILD_CAIRO_SUPPORT
+  SECTION("middle PNG") {
+    {
+      MolDraw2DCairo drawer(250, 200);
+      drawer.drawMolecule(*m1);
+      drawer.finishDrawing();
+      drawer.writeDrawingText("testGithub3226_3.png");
+    }
+  }
+#endif
+}
+
+TEST_CASE("github #3258: ", "[drawing][bug]") {
+  auto m1 = "CCN"_smiles;
+  REQUIRE(m1);
+  SECTION("foundations") {
+    MolDraw2DSVG drawer(500, 200, 250, 200);
+    drawer.drawOptions().addAtomIndices = true;
+    drawer.drawOptions().addBondIndices = true;
+    RWMol dm1(*m1);
+    RWMol dm2(*m1);
+    MOL_PTR_VECT ms{&dm1, &dm2};
+    drawer.drawMolecules(ms);
+    drawer.finishDrawing();
+    std::string text = drawer.getDrawingText();
+    CHECK(text.find(">,</text>") == std::string::npos);
+    CHECK(!dm1.hasProp("_atomIndicesAdded"));
+    CHECK(!dm1.hasProp("_bondIndicesAdded"));
   }
 }

@@ -26,6 +26,7 @@ namespace {
  void yyErrorCleanup(std::vector<RDKit::RWMol *> *molList){
   for(std::vector<RDKit::RWMol *>::iterator iter=molList->begin();
       iter != molList->end(); ++iter){
+     SmilesParseOps::CleanupAfterParseError(*iter);
      delete *iter;
   }
   molList->clear();
@@ -271,7 +272,7 @@ mol: atomd {
 | mol branch {
   RWMol *m1_p = (*molList)[$$],*m2_p=(*molList)[$2];
   // FIX: handle generic bonds here
-  SmilesParseOps::AddFragToMol(m1_p,m2_p,Bond::UNSPECIFIED,Bond::NONE,false,true);
+  SmilesParseOps::AddFragToMol(m1_p,m2_p,Bond::UNSPECIFIED,Bond::NONE);
   delete m2_p;
   int sz = molList->size();
   if ( sz==$2+1) {

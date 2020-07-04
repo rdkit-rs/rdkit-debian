@@ -38,6 +38,7 @@
 #include <atomic>
 #include <GraphMol/Substruct/SubstructMatch.h>
 
+
 namespace RDKit {
 
 bool SubstructLibraryCanSerialize() {
@@ -64,8 +65,9 @@ struct Bits {
         useQueryQueryMatches(useQueryQueryMatches) {
     if (fps) {
       queryBits = fps->makeFingerprint(m);
-    } else
+    } else {
       queryBits = nullptr;
+    }
   }
 
   bool check(unsigned int idx) const {
@@ -87,31 +89,63 @@ unsigned int SubstructLibrary::addMol(const ROMol &m) {
 }
 
 namespace {
+//  Return true if the pattern contains a ring query
+bool query_needs_rings(const ROMol &in_query) {
+  for (auto &atom: in_query.atoms()) {
+    if(atom->hasQuery()) {
+      if (describeQuery(atom).find("Ring") != std::string::npos) {
+	return true;
+      }
+    }
+  }
+  for (auto &bond: in_query.bonds()) {
+    if(bond->hasQuery()) {
+      if (describeQuery(bond).find("Ring") != std::string::npos) {
+	return true;
+      }
+    }
+  }
+  return false;
+}
 
 // end is exclusive here
 void SubSearcher(const ROMol &in_query, const Bits &bits,
                  const MolHolderBase &mols, std::vector<unsigned int> &idxs,
                  unsigned int start, unsigned int end, unsigned int numThreads,
-                 std::atomic<int> &counter, const int maxResults) {
+                 std::atomic<int> &counter, const int maxResults, const bool needs_rings) {
   ROMol query(in_query);
   MatchVectType matchVect;
   for (unsigned int idx = start;
        idx < end && (maxResults == -1 || counter < maxResults);
        idx += numThreads) {
-    if (!bits.check(idx)) continue;
+    if (!bits.check(idx)) {
+      continue;
+    }
     // need shared_ptr as it (may) control the lifespan of the
     //  returned molecule!
     const boost::shared_ptr<ROMol> &m = mols.getMol(idx);
-    const ROMol *mol = m.get();
+    ROMol *mol = m.get();
+    if (needs_rings && (!mol->getRingInfo() || !mol->getRingInfo()->isInitialized())) {
+      // I have no idea what happens when symmetrizeSSSR gets called
+      //  on the same molecule twice in two threads.
+      //  This most likely WILL NOT HAPPEN since only one molholder
+      //  likely needs ring info.
+      MolOps::symmetrizeSSSR(*mol);
+    }
+    
     if (SubstructMatch(*mol, query, matchVect, bits.recursionPossible,
                        bits.useChirality, bits.useQueryQueryMatches)) {
       // this is squishy when updating the counter.  While incrementing is
       // atomic
       // several substructure runs can update the counter beyond the maxResults
       //  This okay: if we get one or two extra, we can fix it on the way out
-      if (maxResults != -1 && counter >= maxResults) break;
+      if (maxResults != -1 && counter >= maxResults) {
+        break;
+      }
       idxs.push_back(idx);
-      if (maxResults != -1) counter++;
+      if (maxResults != -1) {
+        counter++;
+      }
     }
   }
 }
@@ -120,15 +154,24 @@ void SubSearcher(const ROMol &in_query, const Bits &bits,
 void SubSearchMatchCounter(const ROMol &in_query, const Bits &bits,
                            const MolHolderBase &mols, unsigned int start,
                            unsigned int end, int numThreads,
-                           std::atomic<int> &counter) {
+                           std::atomic<int> &counter, bool needs_rings) {
   ROMol query(in_query);
   MatchVectType matchVect;
   for (unsigned int idx = start; idx < end; idx += numThreads) {
-    if (!bits.check(idx)) continue;
+    if (!bits.check(idx)) {
+      continue;
+    }
     // need shared_ptr as it (may) controls the lifespan of the
     //  returned molecule!
     const boost::shared_ptr<ROMol> &m = mols.getMol(idx);
-    const ROMol *mol = m.get();
+    ROMol *mol = m.get();
+    if (needs_rings && (!mol->getRingInfo() || !mol->getRingInfo()->isInitialized())) {
+      // I have no idea what happens when symmetrizeSSSR gets called
+      //  on the same molecule twice in two threads.
+      //  This most likely WILL NOT HAPPEN since only one molholder
+      //  likely needs ring info.
+      MolOps::symmetrizeSSSR(*mol);
+    }    
     if (SubstructMatch(*mol, query, matchVect, bits.recursionPossible,
                        bits.useChirality, bits.useQueryQueryMatches)) {
       counter++;
@@ -143,18 +186,18 @@ std::vector<unsigned int> internalGetMatches(
     int maxResults = 1000) {
   PRECONDITION(startIdx < mols.size(), "startIdx out of bounds");
   PRECONDITION(endIdx > startIdx, "endIdx > startIdx");
-  if (numThreads == -1)
-    numThreads = (int)getNumThreadsToUse(numThreads);
-  else
-    numThreads = std::min(numThreads, (int)getNumThreadsToUse(numThreads));
+  numThreads = (int)getNumThreadsToUse(numThreads);
 
   endIdx = std::min(mols.size(), endIdx);
-  if (endIdx < static_cast<unsigned int>(numThreads)) numThreads = endIdx;
+  if (endIdx < static_cast<unsigned int>(numThreads)) {
+    numThreads = endIdx;
+  }
 
   std::vector<std::future<void>> thread_group;
   std::atomic<int> counter(0);
   std::vector<std::vector<unsigned int>> internal_results(numThreads);
 
+  bool needs_rings = query_needs_rings(query);
   Bits bits(fps, query, recursionPossible, useChirality, useQueryQueryMatches);
 
   for (int thread_group_idx = 0; thread_group_idx < numThreads;
@@ -164,7 +207,7 @@ std::vector<unsigned int> internalGetMatches(
         std::async(std::launch::async, SubSearcher, std::ref(query), bits,
                    std::ref(mols), std::ref(internal_results[thread_group_idx]),
                    startIdx + thread_group_idx, endIdx, numThreads,
-                   std::ref(counter), maxResults));
+                   std::ref(counter), maxResults, needs_rings));
   }
   for (auto &fut : thread_group) {
     fut.get();
@@ -179,8 +222,9 @@ std::vector<unsigned int> internalGetMatches(
   }
 
   // this is so we don't really have to do locking on the atomic counter...
-  if (maxResults != -1 && rdcast<int>(results.size()) > maxResults)
+  if (maxResults != -1 && rdcast<int>(results.size()) > maxResults) {
     results.resize(maxResults);
+  }
 
   return results;
 }
@@ -195,16 +239,16 @@ int internalMatchCounter(const ROMol &query, MolHolderBase &mols,
 
   endIdx = std::min(mols.size(), endIdx);
 
-  if (numThreads == -1)
-    numThreads = (int)getNumThreadsToUse(numThreads);
-  else
-    numThreads = std::min(numThreads, (int)getNumThreadsToUse(numThreads));
+  numThreads = (int)getNumThreadsToUse(numThreads);
 
-  if (endIdx < static_cast<unsigned int>(numThreads)) numThreads = endIdx;
+  if (endIdx < static_cast<unsigned int>(numThreads)) {
+    numThreads = endIdx;
+  }
 
   std::vector<std::future<void>> thread_group;
   std::atomic<int> counter(0);
-
+  bool needs_rings = query_needs_rings(query);
+  
   Bits bits(fps, query, recursionPossible, useChirality, useQueryQueryMatches);
   for (int thread_group_idx = 0; thread_group_idx < numThreads;
        ++thread_group_idx) {
@@ -212,7 +256,7 @@ int internalMatchCounter(const ROMol &query, MolHolderBase &mols,
     thread_group.emplace_back(
         std::async(std::launch::async, SubSearchMatchCounter, std::ref(query),
                    bits, std::ref(mols), startIdx + thread_group_idx, endIdx,
-                   numThreads, std::ref(counter)));
+                   numThreads, std::ref(counter), needs_rings));
   }
   for (auto &thread : thread_group) {
     thread.get();

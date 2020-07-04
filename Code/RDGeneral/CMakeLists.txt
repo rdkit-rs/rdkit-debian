@@ -8,7 +8,7 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/RDConfig.h.cmake
 
 add_definitions(-DRDKIT_RDGENERAL_BUILD)
 rdkit_library(RDGeneral
-              Invariant.cpp types.cpp utils.cpp RDLog.cpp Dict.cpp
+              Invariant.cpp types.cpp utils.cpp RDLog.cpp 
               LocaleSwitcher.cpp versions.cpp SHARED
               LINK_LIBRARIES ${RDKit_THREAD_LIBS})
 
@@ -61,9 +61,10 @@ rdkit_headers(Exceptions.h
               export.h
               test.h
               DEST RDGeneral)
+
 if (NOT RDK_INSTALL_INTREE)
-  install(DIRECTORY hash DESTINATION ${RDKit_HdrDir}/RDGeneral/hash
-        PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY hash DESTINATION ${RDKit_HdrDir}/RDGeneral)
 endif (NOT RDK_INSTALL_INTREE)
+
 rdkit_test(testDict testDict.cpp LINK_LIBRARIES RDGeneral)
 rdkit_test(testRDValue testRDValue.cpp LINK_LIBRARIES RDGeneral)

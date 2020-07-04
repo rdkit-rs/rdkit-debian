@@ -25,6 +25,7 @@
 #include <GraphMol/ForceFieldHelpers/CrystalFF/TorsionPreferences.h>
 #include <GraphMol/ForceFieldHelpers/CrystalFF/TorsionAngleM6.h>
 #include <boost/dynamic_bitset.hpp>
+#include <ForceField/MMFF/Nonbonded.h>
 
 namespace DistGeom {
 const double EIGVAL_TOL = 0.001;
@@ -258,10 +259,11 @@ ForceFields::ForceField *construct3DForceField(
     int j = etkdgDetails.expTorsionAtoms[t][1];
     int k = etkdgDetails.expTorsionAtoms[t][2];
     int l = etkdgDetails.expTorsionAtoms[t][3];
-    if (i < j)
+    if (i < j) {
       atomPairs[i * N + j] = 1;
-    else
+    } else {
       atomPairs[j * N + i] = 1;
+    }
     // etkdgDetails.expTorsionAngles[t][0] = (signs, V's)
     auto *contrib = new ForceFields::CrystalFF::TorsionAngleContribM6(
         field, i, j, k, l, etkdgDetails.expTorsionAngles[t].second,
@@ -307,10 +309,11 @@ ForceFields::ForceField *construct3DForceField(
   for (const auto &bnd : etkdgDetails.bonds) {
     unsigned int i = bnd.first;
     unsigned int j = bnd.second;
-    if (i < j)
+    if (i < j) {
       atomPairs[i * N + j] = 1;
-    else
+    } else {
       atomPairs[j * N + i] = 1;
+    }
     double d = ((*positions[i]) - (*positions[j])).length();
     double l = d - 0.01;
     double u = d + 0.01;
@@ -324,10 +327,11 @@ ForceFields::ForceField *construct3DForceField(
     unsigned int i = angle[0];
     unsigned int j = angle[1];
     unsigned int k = angle[2];
-    if (i < j)
+    if (i < j) {
       atomPairs[i * N + j] = 1;
-    else
+    } else {
       atomPairs[j * N + i] = 1;
+    }
     // check for triple bonds
     if (angle[3]) {
       auto *contrib = new ForceFields::UFF::AngleConstraintContrib(
@@ -360,6 +364,25 @@ ForceFields::ForceField *construct3DForceField(
   return field;
 }  // construct3DForceField
 
+ForceFields::ForceField *construct3DForceField(
+    const BoundsMatrix &mmat, RDGeom::Point3DPtrVect &positions,
+    const ForceFields::CrystalFF::CrystalFFDetails &etkdgDetails,
+    const std::map<std::pair<unsigned int, unsigned int>, double> &CPCI) {
+  auto *field = construct3DForceField(mmat, positions, etkdgDetails);
+
+  bool is1_4 = false;
+  // double dielConst = 1.0;
+  boost::uint8_t dielModel = 1;
+  for (const auto &charge : CPCI) {
+    auto *contrib = new ForceFields::MMFF::EleContrib(
+        field, charge.first.first, charge.first.second, charge.second,
+        dielModel, is1_4);
+    field->contribs().push_back(ForceFields::ContribPtr(contrib));
+  }
+
+  return field;
+}
+
 ForceFields::ForceField *constructPlain3DForceField(
     const BoundsMatrix &mmat, RDGeom::Point3DPtrVect &positions,
     const ForceFields::CrystalFF::CrystalFFDetails &etkdgDetails) {
@@ -382,10 +405,11 @@ ForceFields::ForceField *constructPlain3DForceField(
     int j = etkdgDetails.expTorsionAtoms[t][1];
     int k = etkdgDetails.expTorsionAtoms[t][2];
     int l = etkdgDetails.expTorsionAtoms[t][3];
-    if (i < j)
+    if (i < j) {
       atomPairs[i * N + j] = 1;
-    else
+    } else {
       atomPairs[j * N + i] = 1;
+    }
     // etkdgDetails.expTorsionAngles[t][0] = (signs, V's)
     auto *contrib = new ForceFields::CrystalFF::TorsionAngleContribM6(
         field, i, j, k, l, etkdgDetails.expTorsionAngles[t].second,
@@ -398,10 +422,11 @@ ForceFields::ForceField *constructPlain3DForceField(
   for (const auto &bnd : etkdgDetails.bonds) {
     unsigned int i = bnd.first;
     unsigned int j = bnd.second;
-    if (i < j)
+    if (i < j) {
       atomPairs[i * N + j] = 1;
-    else
+    } else {
       atomPairs[j * N + i] = 1;
+    }
     double d = ((*positions[i]) - (*positions[j])).length();
     double l = d - 0.01;
     double u = d + 0.01;
@@ -414,10 +439,11 @@ ForceFields::ForceField *constructPlain3DForceField(
   for (unsigned int a = 1; a < etkdgDetails.angles.size(); ++a) {
     unsigned int i = etkdgDetails.angles[a][0];
     unsigned int j = etkdgDetails.angles[a][2];
-    if (i < j)
+    if (i < j) {
       atomPairs[i * N + j] = 1;
-    else
+    } else {
       atomPairs[j * N + i] = 1;
+    }
     double d = ((*positions[i]) - (*positions[j])).length();
     double l = d - 0.01;
     double u = d + 0.01;

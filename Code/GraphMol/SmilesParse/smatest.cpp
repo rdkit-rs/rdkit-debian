@@ -31,7 +31,7 @@ void testPass() {
   BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdInfoLog) << "Testing patterns which should parse." << std::endl;
   string smis[] = {
-#if 0
+#if 1
     "C",
     "CC",
     "C-C",
@@ -69,6 +69,9 @@ void testPass() {
     "[C;!$(C-[OH])]=O",
     "[#6]-!:[#6]",
     "[C^3]",
+    "[*^0]",
+    "[*^1]",
+    "[*^2]",
     "[*^4]",
     "[*^5]",
     "[se]",
@@ -105,7 +108,11 @@ void testPass() {
 #endif
     "[-{0-3}]",
     "[-{0-3},C]",
-    "[-{0-3},D{1-3}]",  // github #2709
+    "[-{0-3},D{1-3}]",       // github #2709
+    "C%(1000)CCC%(1000)",    // github #2909
+    "C%(1000)CC(C%(1000))",  // github #2909
+    "C%(1000)CC.C%(1000)",   // github #2909
+
     "EOS"
   };
   while (smis[i] != "EOS") {
@@ -114,14 +121,23 @@ void testPass() {
     CHECK_INVARIANT(mol, smi);
     int nAts = mol->getNumAtoms();
     CHECK_INVARIANT(nAts != 0, smi.c_str());
-    // make sure that we can pickle and de-pickle it (this is the test for
-    // github #1710):
-    std::string pkl;
-    MolPickler::pickleMol(*mol, pkl);
+    {  // make sure that we can pickle and de-pickle it (this is the test for
+      // github #1710):
+      std::string pkl;
+      MolPickler::pickleMol(*mol, pkl);
+      auto mol2 = new Mol(pkl);
+      TEST_ASSERT(mol2);
+      delete mol2;
+    }
+    {
+      // finally make sure that we can create parsable SMARTS from it:
+      auto outSmarts = MolToSmarts(*mol);
+      auto mol2 = SmartsToMol(outSmarts);
+      TEST_ASSERT(mol2);
+      delete mol2;
+    }
     delete mol;
-    mol = new Mol(pkl);
-    TEST_ASSERT(mol);
-    delete mol;
+
     i++;
   }
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
@@ -175,7 +191,7 @@ std::vector<MatchVectType> _checkMatches(std::string smarts, std::string smiles,
   //  nMatches : expected number of matches
   //  lenFirst : length of the first match
   //
-  // Return the list of all matches just in case want to do aditional testing
+  // Return the list of all matches just in case want to do additional testing
   ROMol *mol, *mol2, *matcher, *matcher2;
   bool matches;
   unsigned int matchCount;
@@ -2646,7 +2662,7 @@ void testGithub2142() {
     std::string sma2 = "[C]";
     std::unique_ptr<ROMol> m2(SmartsToMol(sma2));
     TEST_ASSERT(m2);
-    QueryAtom *qa = static_cast<QueryAtom *>(m2->getAtomWithIdx(0));
+    auto *qa = static_cast<QueryAtom *>(m2->getAtomWithIdx(0));
     const auto q1 = static_cast<QueryAtom *>(m1->getAtomWithIdx(0))->getQuery();
     qa->expandQuery(q1->copy(), Queries::COMPOSITE_OR);
     bool ok = true;
@@ -2787,10 +2803,24 @@ void testSmartsStereoBonds() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testRingBondCrash() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog)
+      << "Testing a crash arising from negated ring bond queries" << std::endl;
+  {
+    auto m2 = "CC"_smiles;
+    auto q = "[C]@[Cl]"_smarts;
+    auto matches0 = SubstructMatch(*m2, *q);
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
   RDLog::InitLogs();
+#if 1
   testPass();
   testFail();
   testMatches();
@@ -2840,6 +2870,7 @@ int main(int argc, char *argv[]) {
   testGithub2142();
   testGithub2565();
   testSmartsStereoBonds();
-
+#endif
+  testRingBondCrash();
   return 0;
 }

@@ -18,7 +18,9 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <GraphMol/ROMol.h>
+#include <RDGeneral/BadFileException.h>
 
 #ifdef RDK_BUILD_COORDGEN_SUPPORT
 namespace schrodinger {
@@ -76,6 +78,33 @@ class RDKIT_FILEPARSERS_EXPORT MolSupplier {
   std::istream *dp_inStream = nullptr;
   // do we own dp_inStream?
   bool df_owner = false;
+  // opens a stream for reading and verifies that it can be read from.
+  // if not it throws an exception
+  // the caller owns the resulting stream
+  std::istream *openAndCheckStream(const std::string &filename) {
+    // FIX: this binary mode of opening file is here because of a bug in
+    // VC++ 6.0
+    // the function "tellg" does not work correctly if we do not open it this
+    // way
+    //   Jan 2009: Confirmed that this is still the case in visual studio 2008
+    std::ifstream *strm =
+        new std::ifstream(filename.c_str(), std::ios_base::binary);
+    if ((!(*strm)) || strm->bad()) {
+      std::ostringstream errout;
+      errout << "Bad input file " << filename;
+      delete strm;
+      throw BadFileException(errout.str());
+    }
+
+    strm->peek();
+    if (strm->bad() || strm->eof()) {
+      std::ostringstream errout;
+      errout << "Invalid input file " << filename;
+      delete strm;
+      throw BadFileException(errout.str());
+    }
+    return static_cast<std::istream *>(strm);
+  }
 };
 
 // \brief a supplier from an SD file that only reads forward:
@@ -222,7 +251,7 @@ class RDKIT_FILEPARSERS_EXPORT SmilesMolSupplier : public MolSupplier {
    *     available for the molecule and the name is defaulted to the
    *     smiles string
    *   \param titleLine - if true, the first line is assumed to list the
-   *     names of properties in order seperated by 'delimiter'. It is
+   *     names of properties in order separated by 'delimiter'. It is
    *     also assume that the 'SMILES' column and the 'name' column
    *     are not specified here if false - no title line is assumed
    *     and the properties are recorded as the "columnX" where "X" is
@@ -404,6 +433,7 @@ class RDKIT_FILEPARSERS_EXPORT MaeMolSupplier : public MolSupplier {
   std::shared_ptr<schrodinger::mae::Reader> d_reader;
   std::shared_ptr<schrodinger::mae::Block> d_next_struct;
   std::shared_ptr<std::istream> dp_sInStream;
+  std::string d_stored_exc;
 };
 #endif  // RDK_BUILD_COORDGEN_SUPPORT
 }  // namespace RDKit

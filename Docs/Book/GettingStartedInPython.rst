@@ -33,7 +33,6 @@ The majority of the basic molecular functionality is found in module :py:mod:`rd
 
 .. doctest::
 
-  >>> from __future__ import print_function
   >>> from rdkit import Chem
 
 Individual molecules can be constructed using a variety of approaches:
@@ -280,17 +279,17 @@ method, which is described in more detail below):
 
 .. doctest::
 
-  >>> AllChem.EmbedMolecule(m2)
+  >>> AllChem.EmbedMolecule(m2,randomSeed=0xf00d)   # optional random seed for reproducibility)
   0
   >>> print(Chem.MolToMolBlock(m2))    # doctest: +NORMALIZE_WHITESPACE
   cyclobutane
        RDKit          3D
   <BLANKLINE>
     4  4  0  0  0  0  0  0  0  0999 V2000
-     -0.8321    0.5405   -0.1981 C   0  0  0  0  0  0  0  0  0  0  0  0
-     -0.3467   -0.8825   -0.2651 C   0  0  0  0  0  0  0  0  0  0  0  0
-      0.7190   -0.5613    0.7314 C   0  0  0  0  0  0  0  0  0  0  0  0
-      0.4599    0.9032    0.5020 C   0  0  0  0  0  0  0  0  0  0  0  0
+     -0.7372   -0.6322   -0.4324 C   0  0  0  0  0  0  0  0  0  0  0  0
+     -0.4468    0.8555   -0.5229 C   0  0  0  0  0  0  0  0  0  0  0  0
+      0.8515    0.5725    0.2205 C   0  0  0  0  0  0  0  0  0  0  0  0
+      0.3326   -0.7959    0.6107 C   0  0  0  0  0  0  0  0  0  0  0  0
     1  2  1  0
     2  3  1  0
     3  4  1  0
@@ -304,7 +303,7 @@ hydrogens to the molecule first:
 .. doctest::
 
   >>> m3 = Chem.AddHs(m2)
-  >>> AllChem.EmbedMolecule(m3)
+  >>> AllChem.EmbedMolecule(m3,randomSeed=0xf00d)   # optional random seed for reproducibility)
   0
 
 These can then be removed:
@@ -317,10 +316,10 @@ These can then be removed:
        RDKit          3D
   <BLANKLINE>
     4  4  0  0  0  0  0  0  0  0999 V2000
-      0.3497    0.9755   -0.2202 C   0  0  0  0  0  0  0  0  0  0  0  0
-      0.9814   -0.3380    0.2534 C   0  0  0  0  0  0  0  0  0  0  0  0
-     -0.3384   -1.0009   -0.1474 C   0  0  0  0  0  0  0  0  0  0  0  0
-     -0.9992    0.3532    0.1458 C   0  0  0  0  0  0  0  0  0  0  0  0
+      1.0256    0.2491   -0.0964 C   0  0  0  0  0  0  0  0  0  0  0  0
+     -0.2041    0.9236    0.4320 C   0  0  0  0  0  0  0  0  0  0  0  0
+     -1.0435   -0.2466   -0.0266 C   0  0  0  0  0  0  0  0  0  0  0  0
+      0.2104   -0.9922   -0.3417 C   0  0  0  0  0  0  0  0  0  0  0  0
     1  2  1  0
     2  3  1  0
     3  4  1  0
@@ -790,8 +789,8 @@ molecules found in the :py:mod:`rdkit.Chem.Draw` package:
   >>> ms = [x for x in suppl if x is not None]
   >>> for m in ms: tmp=AllChem.Compute2DCoords(m)
   >>> from rdkit.Chem import Draw
-  >>> Draw.MolToFile(ms[0],'images/cdk2_mol1.o.png')
-  >>> Draw.MolToFile(ms[1],'images/cdk2_mol2.o.png')
+  >>> Draw.MolToFile(ms[0],'images/cdk2_mol1.o.png')    # doctest: +SKIP
+  >>> Draw.MolToFile(ms[1],'images/cdk2_mol2.o.png')    # doctest: +SKIP
 
 Producing these images:
 
@@ -803,13 +802,13 @@ It's also possible to produce an image grid out of a set of molecules:
 
 .. doctest::
 
-  >>> img=Draw.MolsToGridImage(ms[:8],molsPerRow=4,subImgSize=(200,200),legends=[x.GetProp("_Name") for x in ms[:8]])
+  >>> img=Draw.MolsToGridImage(ms[:8],molsPerRow=4,subImgSize=(200,200),legends=[x.GetProp("_Name") for x in ms[:8]])    # doctest: +SKIP
 
 This returns a PIL image, which can then be saved to a file:
 
 .. doctest::
 
-  >>> img.save('images/cdk2_molgrid.o.png')
+  >>> img.save('images/cdk2_molgrid.o.png')    # doctest: +SKIP
 
 The result looks like this:
 
@@ -827,15 +826,95 @@ aligned. This is easy enough to do:
   >>> AllChem.Compute2DCoords(p)
   0
   >>> for m in subms: AllChem.GenerateDepictionMatching2DStructure(m,p)
-  >>> img=Draw.MolsToGridImage(subms,molsPerRow=4,subImgSize=(200,200),legends=[x.GetProp("_Name") for x in subms])
-  >>> img.save('images/cdk2_molgrid.aligned.o.png')
+  >>> img=Draw.MolsToGridImage(subms,molsPerRow=4,subImgSize=(200,200),legends=[x.GetProp("_Name") for x in subms])    # doctest: +SKIP
+  >>> img.save('images/cdk2_molgrid.aligned.o.png'))    # doctest: +SKIP
 
 
 The result looks like this:
 
 .. image:: images/cdk2_molgrid_aligned.png
 
+Atoms in a molecule can be highlighted by drawing a coloured solid or
+open circle around them, and bonds likewise can have a coloured
+outline applied.  An obvious use is to show atoms and bonds that have
+matched a substructure query
 
+.. doctest::
+   
+   >>> from rdkit.Chem.Draw import rdMolDraw2D
+   >>> smi = 'c1cc(F)ccc1Cl'
+   >>> mol = Chem.MolFromSmiles(smi)
+   >>> patt = Chem.MolFromSmarts('ClccccF')
+   >>> hit_ats = list(mol.GetSubstructMatch(patt))
+   >>> hit_bonds = []
+   >>> for bond in patt.GetBonds():
+   ...    aid1 = hit_ats[bond.GetBeginAtomIdx()]
+   ...    aid2 = hit_ats[bond.GetEndAtomIdx()]
+   ...    hit_bonds.append(mol.GetBondBetweenAtoms(aid1,aid2).GetIdx())
+   >>> d = rdMolDraw2D.MolDraw2DSVG(500, 500) # or MolDraw2DCairo to get PNGs
+   >>> rdMolDraw2D.PrepareAndDrawMolecule(d, mol, highlightAtoms=hit_ats,
+   ...                                    highlightBonds=hit_bonds)
+
+will produce:
+
+.. image:: images/atom_highlights_1.png
+
+It is possible to specify the colours for individual atoms and bonds:
+
+.. doctest::
+   
+   >>> colours = [(0.8,0.0,0.8),(0.8,0.8,0),(0,0.8,0.8),(0,0,0.8)]
+   >>> atom_cols = {}
+   >>> for i, at in enumerate(hit_ats):
+   ...     atom_cols[at] = colours[i%4]
+   >>> bond_cols = {}
+   >>> for i, bd in enumerate(hit_bonds):
+   ...     bond_cols[bd] = colours[3 - i%4]
+   >>> 
+   >>> d = rdMolDraw2D.MolDraw2DCairo(500, 500)
+   >>> rdMolDraw2D.PrepareAndDrawMolecule(d, mol, highlightAtoms=hit_ats,
+   ...                                    highlightAtomColors=atom_cols,
+   ...                                    highlightBonds=hit_bonds,
+   ...                                    highlightBondColors=bond_cols)
+
+to give:
+
+.. image:: images/atom_highlights_2.png
+
+Atoms and bonds can also be highlighted with multiple colours if they
+fall into multiple sets, for example if they are matched by more
+than 1 substructure pattern.  This is too complicated to show in this
+simple introduction, but there is an example in
+data/test_multi_colours.py, which produces the somewhat garish
+
+.. image:: images/atom_highlights_3.png
+
+As of version 2020.03, it is possible to add arbitrary small strings
+to annotate atoms and bonds in the drawing.  The strings are added as
+properties 'atomNote' and
+'bondNote' and they will be placed automatically
+close to the atom or bond in question in a manner intended to minimise
+their clash with the rest of the drawing.  For convenience, here are 3
+flags in 
+`MolDraw2DOptions` that will add stereo information (R/S to atoms, E/Z
+to bonds) and atom and bond sequence numbers.
+
+.. doctest::
+   
+   >>> mol = Chem.MolFromSmiles('Cl[C@H](F)NC\C=C\C')
+   >>> d = rdMolDraw2D.MolDraw2DCairo(250, 200) # or MolDraw2DSVG to get SVGs
+   >>> mol.GetAtomWithIdx(2).SetProp('atomNote', 'foo')
+   >>> mol.GetBondWithIdx(0).SetProp('bondNote', 'bar')
+   >>> d.drawOptions().addStereoAnnotation = True
+   >>> d.drawOptions().addAtomIndices = True
+   >>> d.DrawMolecule(mol)
+   >>> d.FinishDrawing()
+   >>> with open('atom_annotation_1.png', 'wb') as f:   # doctest: +SKIP
+   ...     f.write(d.GetDrawingText())
+
+will produce
+
+.. image:: images/atom_annotation_1.png
 
 
 Substructure Searching
@@ -984,6 +1063,95 @@ matching atoms like this:
   ...     mas = [match[x] for x in map_list]
   ...     print(mas)
   [1, 7, 8, 10]
+
+
+Advanced substructure matching
+==============================
+
+Starting with the 2020.03 release, the RDKit allows you to provide an optional 
+function that is used to check whether or not a possible substructure match should
+be accepted. This function is called with the molecule to be matched and the indices
+of the matching atoms.
+
+Here's an example of how you can use the functionality to do "Markush-like" matching,
+requiring that all atoms in a sidechain are either carbon (type "all_carbon") or aren't 
+aromatic (type "alkyl"). We start by defining the class that we'll use to test the 
+sidechains:
+
+.. testcode::
+
+  from rdkit import Chem
+
+  class SidechainChecker(object):
+    matchers = {
+      'alkyl': lambda at: not at.GetIsAromatic(),
+      'all_carbon': lambda at: at.GetAtomicNum() == 6
+    }
+
+    def __init__(self, query, pName="queryType"):
+      # identify the atoms that have the properties we care about
+      self._atsToExamine = [(x.GetIdx(), x.GetProp(pName)) for x in query.GetAtoms()
+                            if x.HasProp(pName)]
+      self._pName = pName
+
+    def __call__(self, mol, vect):
+      seen = [0] * mol.GetNumAtoms()
+      for idx in vect:
+        seen[idx] = 1
+      # loop over the atoms we care about:
+      for idx, qtyp in self._atsToExamine:
+        midx = vect[idx]
+        stack = [midx]
+        atom = mol.GetAtomWithIdx(midx)
+        # now do a breadth-first search from that atom, checking
+        # all of its neighbors that aren't in the substructure 
+        # query:
+        stack = [atom]
+        while stack:
+          atom = stack.pop(0)
+          if not self.matchers[qtyp](atom):
+            return False
+          seen[atom.GetIdx()] = 1
+          for nbr in atom.GetNeighbors():
+            if not seen[nbr.GetIdx()]:
+              stack.append(nbr)
+      return True
+
+
+Here's the molecule we'll use:
+
+.. image:: images/substruct_search_parameters1.png
+
+And the default behavior:
+
+.. doctest::
+
+  >>> m = Chem.MolFromSmiles('C2NCC2CC1C(CCCC)C(OCCCC)C1c2ccccc2')
+  >>> p = Chem.MolFromSmarts('C1CCC1*')
+  >>> p.GetAtomWithIdx(4).SetProp("queryType", "all_carbon")
+  >>> m.GetSubstructMatches(p)
+  ((5, 6, 11, 17, 18), (5, 17, 11, 6, 7), (6, 5, 17, 11, 12), (6, 11, 17, 5, 4))
+
+Now let's add the final check to filter the results:
+
+.. doctest::
+
+  >>> params = Chem.SubstructMatchParameters()
+  >>> checker = SidechainChecker(p)
+  >>> params.setExtraFinalCheck(checker)
+  >>> m.GetSubstructMatches(p,params)
+  ((5, 6, 11, 17, 18), (5, 17, 11, 6, 7))
+
+Repeat that using the 'alkyl' query:
+
+.. doctest::
+
+  >>> p.GetAtomWithIdx(4).SetProp("queryType", "alkyl")
+  >>> checker = SidechainChecker(p)
+  >>> params.setExtraFinalCheck(checker)
+  >>> m.GetSubstructMatches(p,params)
+  ((5, 17, 11, 6, 7), (6, 5, 17, 11, 12), (6, 11, 17, 5, 4))
+
 
 Chemical Transformations
 ************************
@@ -1557,12 +1725,12 @@ the atom environment that defines the bit using the functions
   >>> fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, bitInfo=bi)
   >>> bi[872]
   ((6, 2),)
-  >>> mfp2_svg = Draw.DrawMorganBit(mol, 872, bi)
+  >>> mfp2_svg = Draw.DrawMorganBit(mol, 872, bi, useSVG=True)
   >>> rdkbi = {}
   >>> rdkfp = Chem.RDKFingerprint(mol, maxPath=5, bitInfo=rdkbi)
   >>> rdkbi[1553]
   [[0, 1, 9, 5, 4], [2, 3, 4, 9, 5]]
-  >>> rdk_svg = Draw.DrawRDKitBit(mol, 1553, rdkbi)
+  >>> rdk_svg = Draw.DrawRDKitBit(mol, 1553, rdkbi, useSVG=True)
 
 Producing these images:
 
@@ -1589,7 +1757,7 @@ example to show:
 
 .. doctest::
 
-  >>> rdk_svg = Draw.DrawRDKitBit(mol, 1553, rdkbi, whichExample=1)
+  >>> rdk_svg = Draw.DrawRDKitBit(mol, 1553, rdkbi, whichExample=1, useSVG=True)
 
 Producing this image:
 
@@ -1747,7 +1915,7 @@ Partial charges are handled a bit differently:
 
   >>> m = Chem.MolFromSmiles('c1ccccc1C(=O)O')
   >>> AllChem.ComputeGasteigerCharges(m)
-  >>> float(m.GetAtomWithIdx(0).GetProp('_GasteigerCharge'))
+  >>> m.GetAtomWithIdx(0).GetDoubleProp('_GasteigerCharge')
   -0.047...
 
 
@@ -1764,7 +1932,7 @@ The Gasteiger partial charges can be visualized as (using a different color sche
   >>> from rdkit.Chem.Draw import SimilarityMaps
   >>> mol = Chem.MolFromSmiles('COc1cccc2cc(C(=O)NCCCCN3CCN(c4cccc5nccnc54)CC3)oc21')
   >>> AllChem.ComputeGasteigerCharges(mol)
-  >>> contribs = [float(mol.GetAtomWithIdx(i).GetProp('_GasteigerCharge')) for i in range(mol.GetNumAtoms())]
+  >>> contribs = [mol.GetAtomWithIdx(i).GetDoubleProp('_GasteigerCharge') for i in range(mol.GetNumAtoms())]
   >>> fig = SimilarityMaps.GetSimilarityMapFromWeights(mol, contribs, colorMap='jet', contourLines=10)
 
 Producing this image:
@@ -2444,7 +2612,7 @@ another:
 
 .. doctest::
 
-  >>> combinedFp=fp&(fp^fp2) # can be more efficent than fp&(!fp2)
+  >>> combinedFp=fp&(fp^fp2) # can be more efficient than fp&(!fp2)
   >>> obl = list(combinedFp.GetOnBits())
   >>> fcat.GetEntryDescription(obl[-1])
   'cccc(N)cc'
@@ -2460,7 +2628,7 @@ that distinguish actives from inactives:
   >>> fps = [fpgen.GetFPForMol(x,fcat) for x in sdms]
   >>> from rdkit.ML.InfoTheory import InfoBitRanker
   >>> ranker = InfoBitRanker(len(fps[0]),2)
-  >>> acts = [float(x.GetProp('ACTIVITY')) for x in sdms]
+  >>> acts = [x.GetDoubleProp('ACTIVITY') for x in sdms]
   >>> for i,fp in enumerate(fps):
   ...   act = int(acts[i]>7)
   ...   ranker.AccumulateVotes(fp,act)
@@ -2581,7 +2749,7 @@ These are accessible using Python's help command:
   >>> m = Chem.MolFromSmiles('Cc1ccccc1')
   >>> m.GetNumAtoms()
   7
-  >>> help(m.GetNumAtoms)
+  >>> help(m.GetNumAtoms) 
   Help on method GetNumAtoms:
   <BLANKLINE>
   GetNumAtoms(...) method of rdkit.Chem.rdchem.Mol instance
@@ -2595,7 +2763,7 @@ These are accessible using Python's help command:
   <BLANKLINE>
   <BLANKLINE>
           C++ signature :
-              int GetNumAtoms(RDKit::ROMol [,int=-1 [,bool=True]])
+              int GetNumAtoms(...)
   <BLANKLINE>
   >>> m.GetNumAtoms(onlyExplicit=False)
   15

@@ -12,6 +12,15 @@
 #include <algorithm>
 
 namespace RDKit {
+RingInfo::INT_VECT RingInfo::atomRingSizes(unsigned int idx) const {
+  PRECONDITION(df_init, "RingInfo not initialized");
+
+  if (idx < d_atomMembers.size()) {
+    return d_atomMembers[idx];
+  } else {
+    return INT_VECT{0};
+  }
+}
 bool RingInfo::isAtomInRingOfSize(unsigned int idx, unsigned int size) const {
   PRECONDITION(df_init, "RingInfo not initialized");
 
@@ -39,6 +48,15 @@ unsigned int RingInfo::numAtomRings(unsigned int idx) const {
     return rdcast<unsigned int>(d_atomMembers[idx].size());
   } else {
     return 0;
+  }
+}
+RingInfo::INT_VECT RingInfo::bondRingSizes(unsigned int idx) const {
+  PRECONDITION(df_init, "RingInfo not initialized");
+
+  if (idx < d_bondMembers.size()) {
+    return d_bondMembers[idx];
+  } else {
+    return INT_VECT{0};
   }
 }
 bool RingInfo::isBondInRingOfSize(unsigned int idx, unsigned int size) const {
@@ -83,13 +101,15 @@ unsigned int RingInfo::addRing(const INT_VECT &atomIndices,
   PRECONDITION(atomIndices.size() == bondIndices.size(), "length mismatch");
   int sz = rdcast<int>(atomIndices.size());
   for (auto i : atomIndices) {
-    if (i >= static_cast<int>(d_atomMembers.size()))
+    if (i >= static_cast<int>(d_atomMembers.size())) {
       d_atomMembers.resize((i) + 1);
+    }
     d_atomMembers[i].push_back(sz);
   }
   for (auto i : bondIndices) {
-    if (i >= static_cast<int>(d_bondMembers.size()))
+    if (i >= static_cast<int>(d_bondMembers.size())) {
       d_bondMembers.resize((i) + 1);
+    }
     d_bondMembers[i].push_back(sz);
   }
   d_atomRings.push_back(atomIndices);
@@ -126,7 +146,9 @@ void RingInfo::initialize() {
   df_init = true;
 };
 void RingInfo::reset() {
-  if (!df_init) return;
+  if (!df_init) {
+    return;
+  }
   df_init = false;
   d_atomMembers.clear();
   d_bondMembers.clear();
