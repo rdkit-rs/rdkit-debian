@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2018 Greg Landrum
+// Copyright (C) 2018-2020 Greg Landrum
 //
 #include "EHTTools.h"
 #include <GraphMol/RDKitBase.h>
@@ -8,7 +8,7 @@
 #include <fstream>
 
 extern "C" {
-#include <yaehmop/bind.h>
+#include <yaehmop/tightbind/bind.h>
 }
 
 namespace RDKit {
@@ -21,7 +21,8 @@ const std::string _EHTChargeMatrix = "_EHTChargeMatrix";
 // thread at a time. This mutex enforces that.
 std::mutex yaehmop_mutex;
 
-bool runMol(const ROMol &mol, EHTResults &results, int confId) {
+bool runMol(const ROMol &mol, EHTResults &results, int confId,
+            bool preserveHamiltonianAndOverlapMatrices) {
   std::lock_guard<std::mutex> lock(yaehmop_mutex);
 
   // -----------------------------
@@ -95,7 +96,7 @@ bool runMol(const ROMol &mol, EHTResults &results, int confId) {
     }
   }
 
-  fill_atomic_parms(unit_cell->atoms, unit_cell->num_atoms, NULL,
+  fill_atomic_parms(unit_cell->atoms, unit_cell->num_atoms, nullptr,
                     const_cast<char *>(parmFilePtr));
   unit_cell->num_raw_atoms = unit_cell->num_atoms;
   charge_to_num_electrons(unit_cell);
@@ -109,13 +110,14 @@ bool runMol(const ROMol &mol, EHTResults &results, int confId) {
   // pull properties
   results.numAtoms = mol.getNumAtoms();
   results.numOrbitals = num_orbs;
+  results.numElectrons = std::lround(unit_cell->num_electrons);
   results.fermiEnergy = properties.Fermi_E;
   results.totalEnergy = properties.total_E;
   results.atomicCharges = std::make_unique<double[]>(mol.getNumAtoms());
   std::memcpy(static_cast<void *>(results.atomicCharges.get()),
               static_cast<void *>(properties.net_chgs),
               mol.getNumAtoms() * sizeof(double));
-  size_t sz = mol.getNumAtoms() * mol.getNumAtoms();
+  size_t sz = mol.getNumAtoms() * num_orbs;
   results.reducedChargeMatrix = std::make_unique<double[]>(sz);
   memcpy(static_cast<void *>(results.reducedChargeMatrix.get()),
          static_cast<void *>(properties.Rchg_mat), sz * sizeof(double));
@@ -125,6 +127,25 @@ bool runMol(const ROMol &mol, EHTResults &results, int confId) {
   memcpy(static_cast<void *>(results.reducedOverlapPopulationMatrix.get()),
          static_cast<void *>(properties.ROP_mat), sz * sizeof(double));
 
+  results.orbitalEnergies = std::make_unique<double[]>(num_orbs);
+  std::memcpy(static_cast<void *>(results.orbitalEnergies.get()),
+              static_cast<void *>(eigenset.val), num_orbs * sizeof(double));
+
+  if (preserveHamiltonianAndOverlapMatrices) {
+    // these need to be recalculated, because they were overwritten during the
+    // calculation
+    R_space_overlap_matrix(unit_cell, details, Overlap_R, num_orbs,
+                           tot_overlaps, orbital_lookup_table, 0);
+    full_R_space_Hamiltonian(unit_cell, details, Overlap_R, Hamil_R, num_orbs,
+                             orbital_lookup_table, 1);
+    sz = num_orbs * num_orbs * sizeof(double);
+    results.hamiltonianMatrix = std::make_unique<double[]>(sz);
+    std::memcpy(static_cast<void *>(results.hamiltonianMatrix.get()),
+                static_cast<void *>(Hamil_R.mat), sz);
+    results.overlapMatrix = std::make_unique<double[]>(sz);
+    std::memcpy(static_cast<void *>(results.overlapMatrix.get()),
+                static_cast<void *>(Overlap_R.mat), sz);
+  }
   cleanup_memory();
 
   fclose(nullfile);

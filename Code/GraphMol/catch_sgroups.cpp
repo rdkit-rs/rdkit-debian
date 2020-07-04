@@ -9,8 +9,6 @@
 //  of the RDKit source tree.
 //
 
-#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do
-                           // this in one cpp file
 #include "catch.hpp"
 
 #include <GraphMol/RDKitBase.h>
@@ -146,7 +144,7 @@ RWMol buildSampleMolecule() {
 
   // Set a parent with higher index
   const auto &sgroups = getSubstanceGroups(mol);
-  sgroups.at(0).setProp<unsigned int>("PARENT", 2);
+  sgroups.at(0).setProp<unsigned int>("PARENT", 3);
 
   return mol;
 }
@@ -206,10 +204,10 @@ TEST_CASE("Build and test sample molecule", "[Sgroups]") {
     CHECK(sg.getProp<unsigned int>("COMPNO") == 7u);
     CHECK(sg.getProp<std::string>("ESTATE") == "E");
 
-    std::vector<std::array<std::array<double, 3>, 3>> brackets_reference = {{
+    std::vector<std::array<std::array<double, 3>, 3>> brackets_reference = {
         {{{{1., 3., 0.}}, {{5., 7., 0.}}, {{0., 0., 0.}}}},
         {{{{2., 4., 0.}}, {{6., 8., 0.}}, {{0., 0., 0.}}}},
-    }};
+    };
     testBrackets(sg.getBrackets(), brackets_reference);
 
     auto cstates = sg.getCStates();
@@ -229,7 +227,7 @@ TEST_CASE("Build and test sample molecule", "[Sgroups]") {
 
     CHECK(sg.getProp<std::string>("BRKTYP") == "PAREN");
 
-    CHECK(sg.getProp<unsigned int>("PARENT") == 2u);
+    CHECK(sg.getProp<unsigned int>("PARENT") == 3u);
   }
 
   SECTION("second sgroup") {

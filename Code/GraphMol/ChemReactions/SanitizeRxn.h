@@ -45,8 +45,9 @@ class RDKIT_CHEMREACTIONS_EXPORT RxnSanitizeException : public std::exception {
  public:
   RxnSanitizeException(const char *msg) : _msg(msg){};
   RxnSanitizeException(const std::string &msg) : _msg(msg){};
-  const char *message() const { return _msg.c_str(); };
-  ~RxnSanitizeException() throw(){};
+  const char *what() const noexcept override { return _msg.c_str(); };
+  const char *message() const noexcept { return what(); };
+  ~RxnSanitizeException() noexcept {};
 
  private:
   std::string _msg;

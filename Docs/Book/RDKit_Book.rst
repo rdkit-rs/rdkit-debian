@@ -359,15 +359,15 @@ A          "aliphatic atom"
 D          "explicit degree"                          1                Y
 h          "number of implicit hs"                    >0               Y
 H          "total number of Hs"                       1
-r          "in SSSR ring of size"                     >0               Y
+r          "size of smallest SSSR ring"               >0               Y
 R          "number of SSSR rings"                     >0               Y
 v          "total valence"                            1                Y
 x          "number of ring bonds"                     >0               Y
 X          "total degree"                             1                Y
 z          "number of heteroatom neighbors"           >0               Y       extension
-Z          "number of alphatic heteroatom neighbors"  >0               Y       extension
+Z          "number of aliphatic heteroatom neighbors" >0               Y       extension
 \*         "any atom"
-\+         "positive charge"                          1                Y 
+\+         "positive charge"                          1                Y
 ++         "+2 charge"
 \-         "negative charge"                          1                Y
 \--        "-2 charge"
@@ -711,7 +711,7 @@ Which is equivalent to the more efficient::
 
   AtomType d1 [N,O;!H0]
 
-**Note** that these examples tend to use SMARTS's high-precendence and operator "&" and not the low-precedence and ";".
+**Note** that these examples tend to use SMARTS's high-precedence and operator "&" and not the low-precedence and ";".
 This can be important when AtomTypes are combined or when they are repeated.
 The SMARTS "," operator is higher precedence than ";", so definitions that use ";" can lead to unexpected results.
 
@@ -939,7 +939,7 @@ Here are the steps involved, in order.
         like chlorous acid, chloric acid, and perchloric acid.
         Example: ``O=Cl(=O)O -> [O-][Cl+2][O-]O``
 
-     This step should not generate execptions.
+     This step should not generate exceptions.
 
   3. ``updatePropertyCache``: calculates the explicit and implicit valences on
      all atoms. This generates exceptions for atoms in higher-than-allowed
@@ -1220,9 +1220,10 @@ Support for Enhanced Stereochemistry
 Overview
 ========
 
-We are going to follow, at least for the initial implementation, the enhanced stereo representation
-used in V3k mol files: groups of atoms with specified stereochemistry with an ``ABS``, ``AND``, or ``OR``
-marker indicating what is known. The general idea is that ``AND`` indicates mixtures and ``OR`` indicates unknown single substances.
+Enhanced stereochemistry is used to indicate that a molecule represents more than one possible diastereomer.
+``AND`` indicates that a molecule is a mixture of molecules. ``OR`` indicates unknown single substances,
+and ``ABS`` indicates a single substance. This follows, the convention used in V3k mol files: groups of
+atoms with specified stereochemistry with an ``ABS``, ``AND``, or ``OR`` marker indicating what is known.
 
 Here are some illustrations of what the various combinations mean:
 
@@ -1301,7 +1302,7 @@ and the set of atoms that make it up.
 Use cases
 =========
 
-The initial target is to not lose data on an ``V3k mol -> RDKit -> V3k mol`` round trip. Manipulation, depiction, and searching are future goals.
+The initial target is to not lose data on an ``V3k mol -> RDKit -> V3k mol`` round trip. Manipulation and depiction are future goals.
 
 It is possible to enumerate the elements of a ``StereoGroup`` using the function :py:func:`rdkit.Chem.EnumerateStereoisomers.EumerateStereoisomers`, which also
 preserves membership in the original ``StereoGroup``.
@@ -1333,6 +1334,84 @@ Reactions also preserve ``StereoGroup``s. Product atoms are included in the ``St
   >>> Chem.MolToCXSmiles(ps[0][0])
   'C[C@H](Br)C[C@H](O)Cl |&1:1|'
 
+.. |EnhancedSSS_A|  image:: ./images/EnhancedStereoSSS_molA.png
+   :scale: 75%
+   :align: middle
+.. |EnhancedSSS_B|  image:: ./images/EnhancedStereoSSS_molB.png
+   :scale: 75%
+   :align: middle
+.. |EnhancedSSS_C|  image:: ./images/EnhancedStereoSSS_molC.png
+   :scale: 75%
+   :align: middle
+.. |EnhancedSSS_D|  image:: ./images/EnhancedStereoSSS_molD.png
+   :scale: 75%
+   :align: middle
+.. |EnhancedSSS_E|  image:: ./images/EnhancedStereoSSS_molE.png
+   :scale: 75%
+   :align: middle
+.. |EnhancedSSS_F|  image:: ./images/EnhancedStereoSSS_molF.png
+   :scale: 75%
+   :align: middle
+.. |EnhancedSSS_G|  image:: ./images/EnhancedStereoSSS_molG.png
+   :scale: 75%
+   :align: middle
+
+
+Enhanced Stereochemistry and substructure search
+================================================
+
+Enhanced Stereochemistry may optionally be honored in substructure searches. The following table captures whether or not a substructure query
+(in the rows) matches a particular molecule (in the columns).
+
++-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+|                 | |EnhancedSSS_A| | |EnhancedSSS_B| | |EnhancedSSS_C| | |EnhancedSSS_D| | |EnhancedSSS_E| | |EnhancedSSS_F| | |EnhancedSSS_G| |
+|                 |                 |                 |                 |                 |                 |       OR        |      AND        |
++=================+=================+=================+=================+=================+=================+=================+=================+
+| |EnhancedSSS_A| |       Y         |       Y         |       Y         |       Y         |       Y         |       Y         |       Y         |
++-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| |EnhancedSSS_B| |       N         |       Y         |       N         |       N         |       Y         |       Y         |       Y         |
++-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| |EnhancedSSS_C| |       N         |       N         |       Y         |       N         |       N         |       Y         |       Y         |
++-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| |EnhancedSSS_D| |       N         |       N         |       N         |       Y         |       N         |       N         |       N         |
++-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| |EnhancedSSS_E| |       N         |       Y         |       N         |       N         |       N         |       Y         |       Y         |
++-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| |EnhancedSSS_F| |       N         |       N         |       N         |       N         |       N         |       Y         |       Y         |
+|       OR        |                 |                 |                 |                 |                 |                 |                 |
++-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+| |EnhancedSSS_G| |       N         |       N         |       N         |       N         |       N         |       N         |       Y         |
+|      AND        |                 |                 |                 |                 |                 |                 |                 |
++-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
+
+Substructure search using molecules with enhanced stereochemistry follows these rules (where substructure < superstructure):
+
+* achiral < everything, because an achiral query means ignore chirality in the match
+* chiral < AND, because AND includes both the chiral molecule and another one
+* chiral < OR, because OR includes either the chiral molecule or another one
+* OR < AND, because AND includes both molecules that OR could actually mean.
+* one group of two atoms < two groups of one atom, because the latter is 4 different
+diastereomers, and the former only two of the four.
+
+Some concrete examples of this:
+
+.. doctest ::
+  >>> ps = Chem.SubstructMatchParameters()
+  >>> ps.useChirality = True
+  >>> ps.useEnhancedStereo = True
+  >>> m_ABS = Chem.MolFromSmiles('CC[C@H](F)[C@H](C)O')
+  >>> m_AND = Chem.MolFromSmiles('CC[C@H](F)[C@H](C)O |&1:2,4|')
+  >>> m_OR = Chem.MolFromSmiles('CC[C@H](F)[C@H](C)O |o1:2,4|')
+  >>> m_AND.HasSubstructMatch(m_ABS,ps)
+  True
+  >>> m_OR.HasSubstructMatch(m_ABS,ps)
+  True
+  >>> m_AND.HasSubstructMatch(m_OR,ps)
+  True
+  >>> m_OR.HasSubstructMatch(m_AND,ps)
+  False
+
+
 
 Additional Information About the Fingerprints
 *********************************************
@@ -1348,7 +1427,7 @@ RDKit Fingerprints
 This is an RDKit-specific fingerprint that is inspired by (though it differs
 significantly from) public descriptions of the Daylight fingerprint
 [#daylightFP]_. The fingerprinting algorithm identifies all subgraphs in the
-molecule within a particular range of sizes, hashes each subraphs to generate a
+molecule within a particular range of sizes, hashes each subgraph to generate a
 raw bit ID, mods that raw bit ID to fit in the assigned fingerprint size, and
 then sets the corresponding bit. Options are available to generate count-based
 forms of the fingerprint or "non-folded" forms (using a sparse representation).
@@ -1367,7 +1446,7 @@ Fingerprint-specific options
     raw bit ID and generating the appropriate number of random numbers.
   - ``useHs``: toggles whether or not Hs are included in the subgraphs/paths (assuming that there
     are Hs in the molecule graph.
-  - ``tgtDensity``: if this is greather than zero, the fingerprint will be repeatedly folded in half
+  - ``tgtDensity``: if this is greater than zero, the fingerprint will be repeatedly folded in half
     until the density of set bits is greater than or equal to this value or the fingerprint only
     contains `minSize` bits. Note that this means that the resulting fingerprint will not necessarily
     be the size you requested.
@@ -1422,7 +1501,7 @@ times in a molecule, the bits corresponding to counts 1, 2, and 4 will be set.
 Morgan and Feature Morgan Fingerprints
 ======================================
 
-These are implememented based on the original paper [#morganFP]_. The algorithm
+These are implemented based on the original paper [#morganFP]_. The algorithm
 follows the description in the paper as closely as possible with the exception
 of the chemical feature definitions used for the "Feature Morgan" fingerprint -
 the RDKit implementation uses the feature types Donor, Acceptor, Aromatic,

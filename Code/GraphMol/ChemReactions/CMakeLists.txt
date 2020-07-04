@@ -1,5 +1,4 @@
 if(RDK_USE_BOOST_SERIALIZATION AND Boost_SERIALIZATION_LIBRARY)
-    ADD_DEFINITIONS("-DRDK_USE_BOOST_SERIALIZATION")
     set(RDKit_SERIALIZATION_LIBS ${Boost_SERIALIZATION_LIBRARY})
 else()
       message("== Making EnumerateLibrary without boost Serialization support")
@@ -34,14 +33,17 @@ rdkit_headers(Reaction.h
               ReactionRunner.h
               PreprocessRxn.h
               SanitizeRxn.h
-              Enumerate/Enumerate.h
+              DEST GraphMol/ChemReactions)
+
+rdkit_headers(Enumerate/Enumerate.h
               Enumerate/EnumerateBase.h
+              Enumerate/EnumerateTypes.h
               Enumerate/EnumerationPickler.h
               Enumerate/EnumerationStrategyBase.h
               Enumerate/CartesianProduct.h
               Enumerate/RandomSample.h
               Enumerate/RandomSampleAllBBs.h
-              DEST GraphMol/ChemReactions)
+              DEST GraphMol/ChemReactions/Enumerate)
 
 rdkit_test(testReaction testReaction.cpp LINK_LIBRARIES
  ChemReactions ChemTransforms Descriptors Fingerprints

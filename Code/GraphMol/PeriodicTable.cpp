@@ -35,9 +35,18 @@ PeriodicTable::PeriodicTable() {
        ++token) {
     if (*token != " ") {
       atomicData adata(*token);
-      byanum.push_back(adata);
       std::string enam = adata.Symbol();
       byname[enam] = adata.AtomicNum();
+      // there are, for backwards compatibility reasons, some duplicate rows for
+      // atomic numbers in the atomic_data data structure. It's ok to have
+      // multiple symbols map to the same atomic number (above), but we need to
+      // be sure that we only store one entry per atomic number.
+      // Note that this only works because the first atom in the adata list is the
+      // dummy atom (atomic number 0).
+      // This was #2784
+      if (rdcast<size_t>(adata.AtomicNum()) == byanum.size()) {
+        byanum.push_back(adata);
+      }
     }
   }
 
@@ -58,21 +67,29 @@ PeriodicTable::PeriodicTable() {
         istr >> anum;
         atomicData &adata = byanum[anum];
         ++token;
-        if (token == tokens.end()) continue;
+        if (token == tokens.end()) {
+          continue;
+        }
         ++token;
-        if (token == tokens.end()) continue;
+        if (token == tokens.end()) {
+          continue;
+        }
         unsigned int isotope;
         istr.clear();
         istr.str(*token);
         istr >> isotope;
         ++token;
-        if (token == tokens.end()) continue;
+        if (token == tokens.end()) {
+          continue;
+        }
         double mass;
         istr.clear();
         istr.str(*token);
         istr >> mass;
         ++token;
-        if (token == tokens.end()) continue;
+        if (token == tokens.end()) {
+          continue;
+        }
         double abundance;
         istr.clear();
         istr.str(*token);
@@ -83,16 +100,20 @@ PeriodicTable::PeriodicTable() {
   }
 }
 
-void PeriodicTable::initInstance() { ds_instance = std::unique_ptr<PeriodicTable>(new PeriodicTable()); }
+void PeriodicTable::initInstance() {
+  ds_instance = std::unique_ptr<PeriodicTable>(new PeriodicTable());
+}
 
 PeriodicTable *PeriodicTable::getTable() {
 #if RDK_BUILD_THREADSAFE_SSS
   static std::once_flag pt_init_once;
   std::call_once(pt_init_once, initInstance);
 #else
-  if (!ds_instance) initInstance();
+  if (!ds_instance) {
+    initInstance();
+  }
 #endif
   return ds_instance.get();
 }
 
-}  // end of namespace
+}  // namespace RDKit

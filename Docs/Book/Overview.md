@@ -44,12 +44,13 @@
 - [KNIME](https://www.knime.com/rdkit): Workflow and analytics tool
 - [PostgreSQL](https://github.com/rdkit/rdkit/blob/master/Docs/Book/Cartridge.rst): Extensible relational database
 - [Django](http://django-rdkit.readthedocs.org/en/latest/): "The web framework for perfectionists with deadlines"
-- [SQLite](https://github.com/rvianello/chemicalite) - "The most used database engine in the world"
+- [SQLite](https://github.com/rvianello/chemicalite): "The most used database engine in the world"
 - [Lucene](https://github.com/rdkit/org.rdkit.lucene): Text-search engine [1](#footnote1)
 
 ## Usage by other open-source projects
 This will, inevitably, be out of date. If you know of others, please let us know or submit a pull request!
 
+- [Open Force Field Toolkit](https://github.com/openforcefield/openforcefield/) - A parametrization engine for force fields based on direct chemical perception.
 - [stk](https://github.com/lukasturcani/stk) ([docs](https://lukasturcani.github.io/stk/docs/build/html/), [paper](https://onlinelibrary.wiley.com/doi/10.1002/jcc.25377)) -
 a Python library for building, manipulating, analyzing and automatic design of molecules.
 - [gpusimilarity](https://github.com/schrodinger/gpusimilarity) - A Cuda/Thrust implementation of fingerprint similarity searching

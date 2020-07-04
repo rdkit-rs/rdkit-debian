@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2017 Greg Landrum
+//  Copyright (C) 2017-2020 Greg Landrum
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -15,6 +15,7 @@
 #include <GraphMol/FileParsers/FileParsers.h>
 #include <GraphMol/Substruct/SubstructMatch.h>
 #include <GraphMol/MolAlign/AlignMolecules.h>
+#include <GraphMol/MolTransforms/MolTransforms.h>
 
 #include <RDGeneral/RDLog.h>
 
@@ -122,7 +123,9 @@ bool compareConfs(const ROMol* m, ROMol* templ, const MatchVectType& mv,
   if (alignFirst) {
     double rmsd =
         MolAlign::alignMol(*templ, *m, molConfId, templateConfId, &mv);
-    if (rmsd > rmstol) return false;
+    if (rmsd > rmstol) {
+      return false;
+    }
   }
 
   const Conformer& conf1 = m->getConformer(molConfId);
@@ -133,7 +136,9 @@ bool compareConfs(const ROMol* m, ROMol* templ, const MatchVectType& mv,
 
     RDGeom::Point3D pt1i = conf1.getAtomPos(mv[i].second);
     RDGeom::Point3D pt2i = conf2.getAtomPos(mv[i].first);
-    if ((pt1i - pt2i).length() >= postol) return false;
+    if ((pt1i - pt2i).length() >= postol) {
+      return false;
+    }
   }
   return true;
 }
@@ -169,10 +174,9 @@ void test2() {
     {
       auto coreConf = core->getConformer();
       RDGeom::INT_POINT2D_MAP coordMap;
-      for (unsigned int i = 0; i < mv.size(); ++i) {
-        coordMap[mv[i].second] =
-            RDGeom::Point2D(coreConf.getAtomPos(mv[i].first).x,
-                            coreConf.getAtomPos(mv[i].first).y);
+      for (auto& i : mv) {
+        coordMap[i.second] = RDGeom::Point2D(coreConf.getAtomPos(i.first).x,
+                                             coreConf.getAtomPos(i.first).y);
       }
       CoordGen::CoordGenParams params;
       params.coordMap = coordMap;
@@ -225,10 +229,9 @@ void test2() {
     {
       auto coreConf = core->getConformer();
       RDGeom::INT_POINT2D_MAP coordMap;
-      for (unsigned int i = 0; i < mv.size(); ++i) {
-        coordMap[mv[i].second] =
-            RDGeom::Point2D(coreConf.getAtomPos(mv[i].first).x,
-                            coreConf.getAtomPos(mv[i].first).y);
+      for (auto& i : mv) {
+        coordMap[i.second] = RDGeom::Point2D(coreConf.getAtomPos(i.first).x,
+                                             coreConf.getAtomPos(i.first).y);
       }
       CoordGen::CoordGenParams params;
       params.coordMap = coordMap;
@@ -282,10 +285,9 @@ void test2() {
     {
       auto coreConf = core->getConformer();
       RDGeom::INT_POINT2D_MAP coordMap;
-      for (unsigned int i = 0; i < mv.size(); ++i) {
-        coordMap[mv[i].second] =
-            RDGeom::Point2D(coreConf.getAtomPos(mv[i].first).x,
-                            coreConf.getAtomPos(mv[i].first).y);
+      for (auto& i : mv) {
+        coordMap[i.second] = RDGeom::Point2D(coreConf.getAtomPos(i.first).x,
+                                             coreConf.getAtomPos(i.first).y);
       }
 
       CoordGen::CoordGenParams params;
@@ -415,6 +417,76 @@ void testGithub1929() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testGithub3131() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog)
+      << "testing github3131: results from coordgen are sometimes not centered"
+      << std::endl;
+  {
+    auto m1 =
+        "CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC="
+        "C5"_smiles;
+    TEST_ASSERT(m1);
+    TEST_ASSERT(CoordGen::addCoords(*m1) == 0);
+    TEST_ASSERT(m1->getNumConformers() == 1);
+    auto center = MolTransforms::computeCentroid(m1->getConformer());
+    TEST_ASSERT(feq(center.x, 0.0));
+    TEST_ASSERT(feq(center.y, 0.0));
+  }
+
+  {
+    auto m1 =
+        "CCC1=C2N=C(C=C(N2N=C1)NCC3=C[N+](=CC=C3)[O-])N4CCCC[C@H]4CCO"_smiles;
+    TEST_ASSERT(m1);
+    TEST_ASSERT(CoordGen::addCoords(*m1) == 0);
+    TEST_ASSERT(m1->getNumConformers() == 1);
+    auto center = MolTransforms::computeCentroid(m1->getConformer());
+    TEST_ASSERT(feq(center.x, 0.0));
+    TEST_ASSERT(feq(center.y, 0.0));
+  }
+
+  {
+    // make sure that it's not recentered if we provide a coordmap:
+    auto m1 =
+        "CCC1=C2N=C(C=C(N2N=C1)NCC3=C[N+](=CC=C3)[O-])N4CCCC[C@H]4CCO"_smiles;
+    TEST_ASSERT(m1);
+    CoordGen::CoordGenParams params;
+    params.coordMap[0] = {10.0, 10.0};
+    params.coordMap[1] = {11.0, 10.0};
+    TEST_ASSERT(CoordGen::addCoords(*m1, &params) == 0);
+    TEST_ASSERT(m1->getNumConformers() == 1);
+    auto center = MolTransforms::computeCentroid(m1->getConformer());
+    TEST_ASSERT(!feq(center.x, 0.0));
+    TEST_ASSERT(!feq(center.y, 0.0));
+  }
+
+  {
+    // make sure that it's not recentered if we provide a template:
+    auto templateMol =
+        "C1=C2N=C(C=C(N2N=C1)NCC3=C[N+](=CC=C3))N4CCCC[C@H]4"_smiles;
+    TEST_ASSERT(templateMol);
+    TEST_ASSERT(CoordGen::addCoords(*templateMol) == 0);
+    TEST_ASSERT(templateMol->getNumConformers() == 1);
+
+    auto center = MolTransforms::computeCentroid(templateMol->getConformer());
+    TEST_ASSERT(feq(center.x, 0.0));
+    TEST_ASSERT(feq(center.y, 0.0));
+
+    auto m1 =
+        "CCC1=C2N=C(C=C(N2N=C1)NCC3=C[N+](=CC=C3)[O-])N4CCCC[C@H]4CCO"_smiles;
+    TEST_ASSERT(m1);
+    CoordGen::CoordGenParams params;
+    params.templateMol = templateMol.get();
+    TEST_ASSERT(CoordGen::addCoords(*m1, &params) == 0);
+    TEST_ASSERT(m1->getNumConformers() == 1);
+    center = MolTransforms::computeCentroid(m1->getConformer());
+    TEST_ASSERT(!feq(center.x, 0.0));
+    TEST_ASSERT(!feq(center.y, 0.0));
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 int main(int argc, char* argv[]) {
   (void)argc;
   (void)argv;
@@ -422,4 +494,5 @@ int main(int argc, char* argv[]) {
   test2();
   test1();
   testGithub1929();
+  testGithub3131();
 }

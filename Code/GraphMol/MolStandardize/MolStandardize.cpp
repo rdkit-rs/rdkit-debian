@@ -18,11 +18,10 @@
 #include <GraphMol/MolOps.h>
 #include <GraphMol/MolStandardize/TransformCatalog/TransformCatalogParams.h>
 #include "Charge.h"
-
 #include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
-using namespace std;
 
+using namespace std;
 namespace RDKit {
 namespace MolStandardize {
 const CleanupParameters defaultCleanupParameters;
@@ -36,6 +35,9 @@ RWMol *cleanup(const RWMol &mol, const CleanupParameters &params) {
   RWMOL_SPTR normalized(MolStandardize::normalize(&m, params));
   RWMol *reionized = MolStandardize::reionize(normalized.get(), params);
   MolOps::assignStereochemistry(*reionized);
+  
+  // update properties of reionized using m.
+  reionized->updateProps(m);
 
   return reionized;
 }
@@ -43,7 +45,7 @@ RWMol *cleanup(const RWMol &mol, const CleanupParameters &params) {
 void tautomerParent(RWMol &mol, const CleanupParameters &params) {
   RDUNUSED_PARAM(mol);
   RDUNUSED_PARAM(params);
-  UNDER_CONSTRUCTION("Not yet implmented");
+  UNDER_CONSTRUCTION("Not yet implemented");
 }
 
 // Return the fragment parent of a given molecule.
@@ -62,20 +64,24 @@ RWMol *fragmentParent(const RWMol &mol, const CleanupParameters &params,
   LargestFragmentChooser lfragchooser(params.preferOrganic);
   ROMol nm(*cleaned);
   ROMOL_SPTR lfrag(lfragchooser.choose(nm));
-  delete cleaned;
+
+  if (!skip_standardize) {
+    delete cleaned;
+  }
+
   return new RWMol(*lfrag);
 }
 
 void stereoParent(RWMol &mol, const CleanupParameters &params) {
   RDUNUSED_PARAM(mol);
   RDUNUSED_PARAM(params);
-  UNDER_CONSTRUCTION("Not yet implmented");
+  UNDER_CONSTRUCTION("Not yet implemented");
 }
 
 void isotopeParent(RWMol &mol, const CleanupParameters &params) {
   RDUNUSED_PARAM(mol);
   RDUNUSED_PARAM(params);
-  UNDER_CONSTRUCTION("Not yet implmented");
+  UNDER_CONSTRUCTION("Not yet implemented");
 }
 
 RWMol *chargeParent(const RWMol &mol, const CleanupParameters &params,
@@ -83,13 +89,16 @@ RWMol *chargeParent(const RWMol &mol, const CleanupParameters &params,
   // Return the charge parent of a given molecule.
   // The charge parent is the uncharged version of the fragment parent.
 
-  RWMol *m = nullptr;
+  const RWMol *m = nullptr;
 
   if (!skip_standardize) {
     m = cleanup(mol, params);
+  } else {
+    m = &mol;
   }
 
-  RWMOL_SPTR fragparent(fragmentParent(*m, params, true));
+
+  RWMOL_SPTR fragparent(fragmentParent(*m, params, skip_standardize));
 
   // if fragment...
   ROMol nm(*fragparent);
@@ -97,6 +106,9 @@ RWMol *chargeParent(const RWMol &mol, const CleanupParameters &params,
   Uncharger uncharger(params.doCanonical);
   ROMOL_SPTR uncharged(uncharger.uncharge(nm));
   RWMol *omol = cleanup(static_cast<RWMol>(*uncharged), params);
+  if (!skip_standardize) {
+    delete m;
+  }
   return omol;
 }
 
@@ -145,11 +157,9 @@ std::vector<std::string> enumerateTautomerSmiles(
 
   auto *tautparams = new TautomerCatalogParams(params.tautomerTransforms);
   //	unsigned int ntautomers = tautparams->getNumTautomers();
-  TautomerCatalog tautcat(tautparams);
-  TautomerEnumerator te;
+  TautomerEnumerator te(new TautomerCatalog(tautparams));
 
-  std::vector<ROMOL_SPTR> res =
-      te.enumerate(static_cast<ROMol>(*mol), &tautcat);
+  std::vector<ROMOL_SPTR> res = te.enumerate(*mol);
 
   std::vector<std::string> tsmiles;
   for (const auto &r : res) {

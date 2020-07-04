@@ -80,7 +80,7 @@ ROMol *Reionizer::reionize(const ROMol &mol) {
   const std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>> abpairs =
       abparams->getPairs();
 
-  ROMol *omol = new ROMol(mol);
+  auto *omol = new ROMol(mol);
   int start_charge = MolOps::getFormalCharge(*omol);
 
   for (const auto &cc : this->d_ccs) {
@@ -230,12 +230,12 @@ std::pair<unsigned int, std::vector<unsigned int>>
     RDKit::MatchVectType res;
     unsigned int matches = SubstructMatch(mol, *(abpair.first), res);
     if (matches > 0) {
-      std::vector<unsigned int> occurence;
+      std::vector<unsigned int> occurrence;
       for (const auto &pair : res) {
-        occurence.push_back(pair.second);
+        occurrence.push_back(pair.second);
       }
       return new std::pair<unsigned int, std::vector<unsigned int>>(position,
-                                                                    occurence);
+                                                                    occurrence);
     }
     ++position;
   }
@@ -251,12 +251,12 @@ std::pair<unsigned int, std::vector<unsigned int>> *Reionizer::weakestIonized(
     RDKit::MatchVectType res;
     unsigned int matches = SubstructMatch(mol, *(abpair.second), res);
     if (matches > 0) {
-      std::vector<unsigned int> occurence;
+      std::vector<unsigned int> occurrence;
       for (const auto &pair : res) {
-        occurence.push_back(pair.second);
+        occurrence.push_back(pair.second);
       }
       return new std::pair<unsigned int, std::vector<unsigned int>>(
-          (abpairs.size() - position - 1), occurence);
+          (abpairs.size() - position - 1), occurrence);
     }
     ++position;
   }
@@ -280,7 +280,7 @@ Uncharger::~Uncharger(){};
 
 ROMol *Uncharger::uncharge(const ROMol &mol) {
   BOOST_LOG(rdInfoLog) << "Running Uncharger\n";
-  ROMol *omol = new ROMol(mol);
+  auto *omol = new ROMol(mol);
 
   std::vector<MatchVectType> p_matches;
   std::vector<MatchVectType> q_matches;
@@ -327,30 +327,37 @@ ROMol *Uncharger::uncharge(const ROMol &mol) {
     if (n_matched > 0 && neg_surplus > 0) {
       boost::dynamic_bitset<> nonAcids(omol->getNumAtoms());
       nonAcids.set();
-      for (const auto pr : a_atoms) nonAcids.reset(pr.second);
+      for (const auto pr : a_atoms) {
+        nonAcids.reset(pr.second);
+      }
       unsigned int midx = 0;
       // zwitterion with more negative charges than quaternary positive centres
-      while (neg_surplus > 0 && n_matched > 0 && midx < n_atoms.size()) {
+      while (neg_surplus > 0 && midx < n_atoms.size()) {
         unsigned int idx = n_atoms[midx++].second;
-        if (!nonAcids[idx]) continue;
+        if (!nonAcids[idx]) {
+          continue;
+        }
         Atom *atom = omol->getAtomWithIdx(idx);
 
         if (!isEarlyAtom(atom->getAtomicNum())) {
           // Add hydrogen to negative atom, increase formal charge
           // Until quaternary positive == negative total or no more negative
           // acid
+          atom->setNumExplicitHs(atom->getTotalNumHs() + 1);
           atom->setNoImplicit(true);
-          atom->setNumExplicitHs(atom->getNumExplicitHs() + 1);
           atom->setFormalCharge(atom->getFormalCharge() + 1);
           --neg_surplus;
           BOOST_LOG(rdInfoLog) << "Removed negative charge.\n";
-        } else if (atom->getNumExplicitHs()) {
+        } else if (atom->getTotalNumHs()) {
+          atom->setNumExplicitHs(atom->getTotalNumHs() - 1);
           atom->setNoImplicit(true);
-          atom->setNumExplicitHs(atom->getNumExplicitHs() - 1);
           atom->setFormalCharge(atom->getFormalCharge() + 1);
           --neg_surplus;
           BOOST_LOG(rdInfoLog) << "Removed negative charge.\n";
         }
+        // since we changed the number of explicit Hs, we need to update the
+        // other valence parameters
+        atom->updatePropertyCache(false);
       }
     }
 
@@ -358,17 +365,22 @@ ROMol *Uncharger::uncharge(const ROMol &mol) {
     if (a_matched > 0 && neg_surplus > 0) {
       unsigned int midx = 0;
       // zwitterion with more negative charges than quaternary positive centres
-      while (neg_surplus > 0 && a_matched > 0 && midx < a_atoms.size()) {
+      while (neg_surplus > 0  && midx < a_atoms.size()) {
         // Add hydrogen to first negative acidic atom, increase formal charge
         // Until quaternary positive == negative total or no more negative atoms
         Atom *atom = omol->getAtomWithIdx(a_atoms[midx++].second);
         // skip ahead if we already neutralized this
-        if (atom->getFormalCharge() >= 0) continue;
+        if (atom->getFormalCharge() >= 0) {
+          continue;
+        }
+        atom->setNumExplicitHs(atom->getTotalNumHs() + 1);
         atom->setNoImplicit(true);
-        atom->setNumExplicitHs(atom->getNumExplicitHs() + 1);
         atom->setFormalCharge(atom->getFormalCharge() + 1);
         --neg_surplus;
         BOOST_LOG(rdInfoLog) << "Removed negative charge.\n";
+        // since we changed the number of explicit Hs, we need to update the
+        // other valence parameters
+        atom->updatePropertyCache(false);
       }
     }
 
@@ -377,20 +389,25 @@ ROMol *Uncharger::uncharge(const ROMol &mol) {
       auto idx = pair.second;
       Atom *atom = omol->getAtomWithIdx(idx);
       if (!isEarlyAtom(atom->getAtomicNum())) {
+        atom->setNumExplicitHs(atom->getTotalNumHs());
         atom->setNoImplicit(true);
         while (atom->getFormalCharge() < 0) {
           atom->setNumExplicitHs(atom->getNumExplicitHs() + 1);
           atom->setFormalCharge(atom->getFormalCharge() + 1);
           BOOST_LOG(rdInfoLog) << "Removed negative charge.\n";
         }
-      } else if (atom->getNumExplicitHs()) {
+      } else if (atom->getTotalNumHs()) {
+        atom->setNumExplicitHs(atom->getTotalNumHs());
         atom->setNoImplicit(true);
         while (atom->getFormalCharge() < 0 && atom->getNumExplicitHs()) {
-          atom->setNumExplicitHs(atom->getNumExplicitHs() - 1);
+          atom->setNumExplicitHs(atom->getTotalNumHs() - 1);
           atom->setFormalCharge(atom->getFormalCharge() + 1);
           BOOST_LOG(rdInfoLog) << "Removed negative charge.\n";
         }
       }
+      // since we chnaged the number of explicit Hs, we need to update the
+      // other valence parameters
+      atom->updatePropertyCache(false);
     }
   }
 
@@ -410,19 +427,33 @@ ROMol *Uncharger::uncharge(const ROMol &mol) {
     }
     for (const auto &idx : p_idx_matches) {
       Atom *atom = omol->getAtomWithIdx(idx);
-      if (!atom->getNumExplicitHs()) {
-        // atoms from places like Mol blocks are normally missing explicit Hs:
-        atom->setNumExplicitHs(atom->getTotalNumHs());
-      }
+      // atoms from places like Mol blocks are normally missing explicit Hs:
+      atom->setNumExplicitHs(atom->getTotalNumHs());
       atom->setNoImplicit(true);
-      while (atom->getFormalCharge() > 0 && atom->getNumExplicitHs() > 0 &&
-             netCharge > 0) {
-        atom->setNumExplicitHs(atom->getTotalNumHs() - 1);
+      while (atom->getFormalCharge() > 0 && netCharge > 0) {
         atom->setFormalCharge(atom->getFormalCharge() - 1);
         --netCharge;
+        // the special case for C here was github #2792
+        if (atom->getAtomicNum() != 6 && !isEarlyAtom(atom->getAtomicNum())) {
+          auto nExplicit = atom->getNumExplicitHs();
+          if (nExplicit >= 1) {
+            atom->setNumExplicitHs(nExplicit - 1);
+          }
+          if (nExplicit == 1) {
+            // we just removed the last one:
+            break;
+          }
+        } else {
+          atom->setNumExplicitHs(atom->getNumExplicitHs() + 1);
+        }
         BOOST_LOG(rdInfoLog) << "Removed positive charge.\n";
       }
-      if (!netCharge) break;
+      // since we changed the number of explicit Hs, we need to update the
+      // other valence parameters
+      atom->updatePropertyCache(false);
+      if (!netCharge) {
+        break;
+      }
     }
   }
   return omol;

@@ -1,13 +1,7 @@
-
-
-
-
 if(RDK_USE_BOOST_SERIALIZATION AND Boost_SERIALIZATION_LIBRARY)
     set(RDKit_SERIALIZATION_LIBS ${Boost_SERIALIZATION_LIBRARY})
-    add_definitions(-DRDK_USE_BOOST_SERIALIZATION)
 else()
     message("== Making SubstructLibrary without boost Serialization support")
-    remove_definitions(-DRDK_USE_BOOST_SERIALIZATION)
     set(RDKit_SERIALIZATION_LIBS )
 endif()
 
@@ -17,11 +11,13 @@ remove_definitions(-DRDKIT_GRAPHMOL_BUILD)
 add_definitions(-DRDKIT_SUBSTRUCTLIBRARY_BUILD)
 rdkit_library(SubstructLibrary
               SubstructLibrary.cpp
+	      PatternFactory.cpp
               LINK_LIBRARIES Fingerprints SubstructMatch SmilesParse
               GraphMol RDGeometryLib Catalogs RDGeneral DataStructs ${RDKit_SERIALIZATION_LIBS})
 
 rdkit_headers(SubstructLibrary.h
               SubstructLibrarySerialization.h
+              PatternFactory.h
               DEST GraphMol/SubstructLibrary)
 
 if(RDK_BUILD_PYTHON_WRAPPERS)

@@ -25,9 +25,10 @@ WORKDIR /opt
 RUN git clone https://github.com/emscripten-core/emsdk.git
 
 WORKDIR /opt/emsdk
+# the embind output seems to only work with fastcomp, not upstream (Oct 2019)
 RUN ./emsdk update-tags && \
-  ./emsdk install latest && \
-  ./emsdk activate latest
+  ./emsdk install latest-fastcomp && \
+  ./emsdk activate latest-fastcomp
 
 #RUN source ./emsdk_env.sh
 
@@ -35,7 +36,7 @@ RUN mkdir /src
 WORKDIR /src
 ENV RDBASE=/src/rdkit
 ARG RDKIT_BRANCH
-RUN git clone https://github.com/greglandrum/rdkit.git
+RUN git clone https://github.com/rdkit/rdkit.git
 WORKDIR $RDBASE
 RUN git checkout $RDKIT_BRANCH
 
@@ -46,7 +47,7 @@ RUN echo "source /opt/emsdk/emsdk_env.sh" >> ~/.bashrc
 SHELL ["/bin/bash", "-c", "-l"]
 RUN emconfigure cmake -DBoost_INCLUDE_DIR=/opt/boost/include -DRDK_BUILD_MINIMAL_LIB=ON \
   -DRDK_BUILD_PYTHON_WRAPPERS=OFF -DRDK_BUILD_CPP_TESTS=OFF -DRDK_BUILD_INCHI_SUPPORT=ON \
-  -DRDK_USE_BOOST_SERIALIZATION=OFF -DRDK_OPTIMIZE_NATIVE=OFF -DRDK_BUILD_THREADSAFE_SSS=OFF \
+  -DRDK_USE_BOOST_SERIALIZATION=OFF -DRDK_OPTIMIZE_POPCNT=OFF -DRDK_BUILD_THREADSAFE_SSS=OFF \
   -DRDK_BUILD_DESCRIPTORS3D=OFF -DRDK_TEST_MULTITHREADED=OFF -DRDK_BUILD_COORDGEN_SUPPORT=OFF \
   -DRDK_BUILD_SLN_SUPPORT=OFF -DRDK_USE_BOOST_IOSTREAMS=OFF -DCMAKE_CXX_FLAGS="-s DISABLE_EXCEPTION_CATCHING=0" \
   -DCMAKE_C_FLAGS="-DCOMPILE_ANSI_ONLY"  ..

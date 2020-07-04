@@ -49,18 +49,44 @@ function test_basics(){
     var qmol = Module.get_qmol("Oc(c)c");
     assert.equal(qmol.is_valid(),1);
     var match = mol.get_substruct_match(qmol);
-    assert.equal(match.size(),4);
-    assert.equal(match.get(0),6);
+    var pmatch = JSON.parse(match);
+    assert.equal(pmatch.atoms.length,4);
+    assert.equal(pmatch.atoms[0],6);
     var svg2 = mol.get_svg_with_highlights(match);
     assert(svg2.search("svg")>0);
     assert(svg.search("#FF7F7F")<0);
     assert(svg2.search("#FF7F7F")>0);
+}
 
+function test_sketcher_services(){
+    var mol = Module.get_mol("C[C@](F)(Cl)/C=C/C(F)Br");
+    assert.equal(mol.is_valid(),1);
+    var tags = mol.get_stereo_tags();
+    assert.equal(tags,'{"CIP_atoms":[[1,"(S)"],[6,"(?)"]],"CIP_bonds":[[4,5,"(E)"]]}');
+}
+
+function test_sketcher_services2(){
+    var mol = Module.get_mol("c1ccccc1");
+    assert.equal(mol.is_valid(),1);
+    var molb = mol.add_hs();
+    assert(molb.search(" H ")>0);
+    assert.equal((molb.match(/ H /g) || []).length,6);
+
+    var mol2 = Module.get_mol(molb);
+    assert.equal(mol2.is_valid(),1);
+    var molb2 = mol2.get_molblock();
+    assert(molb2.search(" H ")>0); 
+    assert.equal((molb2.match(/ H /g) || []).length,6);
+
+    molb2 = mol2.remove_hs();
+    assert(molb2.search(" H ")<0); 
 }
 
 Module.onRuntimeInitialized = () => {
     console.log(Module.version());
     test_basics();
+    test_sketcher_services();
+    test_sketcher_services2();
 };
 
 

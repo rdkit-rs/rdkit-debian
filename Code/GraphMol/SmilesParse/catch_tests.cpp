@@ -14,6 +14,7 @@
 #include "catch.hpp"
 
 #include <GraphMol/RDKitBase.h>
+#include <GraphMol/MolPickler.h>
 #include <GraphMol/QueryAtom.h>
 #include <GraphMol/QueryBond.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
@@ -550,5 +551,169 @@ TEST_CASE("github #2604: support range-based charge queries from SMARTS",
       REQUIRE(m1);
       CHECK(SubstructMatch(*m1, *query).empty());
     }
+  }
+}
+
+TEST_CASE("_smarts fails gracefully", "[smarts]") {
+  SECTION("empty") {
+    auto mol = ""_smarts;
+    REQUIRE(mol);
+  }
+  SECTION("syntax error") {
+    auto mol = "C1C"_smarts;
+    REQUIRE(!mol);
+  }
+}
+
+TEST_CASE(
+    "github #2801: MolToSmarts may generate invalid SMARTS for bond queries",
+    "[bug,smarts]") {
+  SECTION("original_report") {
+    auto q1 = "*~CCC"_smarts;
+    REQUIRE(q1);
+    Bond *qb = q1->getBondBetweenAtoms(0, 1);
+    BOND_EQUALS_QUERY *bq1 = makeBondOrderEqualsQuery(qb->getBondType());
+    qb->setQuery(bq1);
+    BOND_EQUALS_QUERY *bq2 = makeBondIsInRingQuery();
+    bq2->setNegation(true);
+    qb->expandQuery(bq2, Queries::COMPOSITE_AND, true);
+    std::string smarts = MolToSmarts(*q1);
+    CHECK(smarts == "*!@CCC");
+    std::unique_ptr<RWMol> q2(SmartsToMol(smarts));
+    REQUIRE(q2);
+  }
+  SECTION("composite_or") {
+    auto q1 = "*~CCC"_smarts;
+    REQUIRE(q1);
+    Bond *qb = q1->getBondBetweenAtoms(0, 1);
+    BOND_EQUALS_QUERY *bq1 = makeBondOrderEqualsQuery(qb->getBondType());
+    qb->setQuery(bq1);
+    BOND_EQUALS_QUERY *bq2 = makeBondIsInRingQuery();
+    bq2->setNegation(true);
+    qb->expandQuery(bq2, Queries::COMPOSITE_OR, true);
+    // this used to yield *,!@CCC
+    std::string smarts = MolToSmarts(*q1);
+    CHECK(smarts == "*!@CCC");
+    std::unique_ptr<RWMol> q2(SmartsToMol(smarts));
+    REQUIRE(q2);
+  }
+  SECTION("composite_lowand") {
+    auto q1 = "*~CCC"_smarts;
+    REQUIRE(q1);
+    Bond *qb = q1->getBondBetweenAtoms(0, 1);
+    BOND_EQUALS_QUERY *bq1 = makeBondOrderEqualsQuery(qb->getBondType());
+    qb->setQuery(bq1);
+    BOND_EQUALS_QUERY *bq2 = makeBondOrderEqualsQuery(qb->getBondType());
+    qb->expandQuery(bq2, Queries::COMPOSITE_OR, true);
+    BOND_EQUALS_QUERY *bq3 = makeBondIsInRingQuery();
+    bq3->setNegation(true);
+    qb->expandQuery(bq3, Queries::COMPOSITE_AND, true);
+    std::string smarts = MolToSmarts(*q1);
+    CHECK(smarts == "*!@CCC");
+    std::unique_ptr<RWMol> q2(SmartsToMol(smarts));
+    REQUIRE(q2);
+  }
+}
+
+TEST_CASE("large rings", "[smarts]") {
+  auto query = "[r24]"_smarts;
+  auto m_r24 = "C1CCCCCCCCCCCCCCCCCCCCCCC1"_smiles;
+  auto m_r23 = "C1CCCCCCCCCCCCCCCCCCCCCC1"_smiles;
+
+  CHECK(SubstructMatch(*m_r23, *query).empty());
+  CHECK(SubstructMatch(*m_r24, *query).size() == 24);
+}
+
+TEST_CASE("random smiles vectors", "[smiles]") {
+  auto m = "C1OCC1N(CO)(Cc1ccccc1NCCl)"_smiles;
+  REQUIRE(m);
+  SECTION("basics") {
+    std::vector<std::string> tgt = {
+        "c1cc(CN(C2COC2)CO)c(cc1)NCCl", "N(CCl)c1c(CN(C2COC2)CO)cccc1",
+        "N(CCl)c1ccccc1CN(C1COC1)CO", "OCN(Cc1ccccc1NCCl)C1COC1",
+        "C(N(C1COC1)Cc1c(cccc1)NCCl)O"};
+    unsigned int randomSeed = 0xf00d;
+    auto smiV = MolToRandomSmilesVect(*m, 5, randomSeed);
+    CHECK(smiV == tgt);
+  }
+  SECTION("options1") {
+    std::vector<std::string> tgt = {
+        "C1-C=C(-C-N(-C2-C-O-C-2)-C-O)-C(=C-C=1)-N-C-Cl",
+        "N(-C-Cl)-C1-C(-C-N(-C2-C-O-C-2)-C-O)=C-C=C-C=1",
+        "N(-C-Cl)-C1=C-C=C-C=C-1-C-N(-C1-C-O-C-1)-C-O",
+        "O-C-N(-C-C1=C-C=C-C=C-1-N-C-Cl)-C1-C-O-C-1",
+        "C(-N(-C1-C-O-C-1)-C-C1-C(=C-C=C-C=1)-N-C-Cl)-O"};
+    RWMol nm(*m);
+    MolOps::Kekulize(nm, true);
+    unsigned int randomSeed = 0xf00d;
+    bool isomericSmiles = true;
+    bool kekuleSmiles = true;
+    bool allBondsExplicit = true;
+    bool allHsExplicit = false;
+    auto smiV =
+        MolToRandomSmilesVect(nm, 5, randomSeed, isomericSmiles, kekuleSmiles,
+                              allBondsExplicit, allHsExplicit);
+    CHECK(smiV == tgt);
+  }
+  SECTION("options2") {
+    std::vector<std::string> tgt = {
+        "[cH]1[cH][c]([CH2][N]([CH]2[CH2][O][CH2]2)[CH2][OH])[c]([cH][cH]1)[NH]"
+        "[CH2][Cl]",
+        "[NH]([CH2][Cl])[c]1[c]([CH2][N]([CH]2[CH2][O][CH2]2)[CH2][OH])[cH][cH]"
+        "[cH][cH]1",
+        "[NH]([CH2][Cl])[c]1[cH][cH][cH][cH][c]1[CH2][N]([CH]1[CH2][O][CH2]1)["
+        "CH2][OH]",
+        "[OH][CH2][N]([CH2][c]1[cH][cH][cH][cH][c]1[NH][CH2][Cl])[CH]1[CH2][O]["
+        "CH2]1",
+        "[CH2]([N]([CH]1[CH2][O][CH2]1)[CH2][c]1[c]([cH][cH][cH][cH]1)[NH][CH2]"
+        "[Cl])[OH]"};
+    RWMol nm(*m);
+    MolOps::Kekulize(nm, false);
+    unsigned int randomSeed = 0xf00d;
+    bool isomericSmiles = true;
+    bool kekuleSmiles = false;
+    bool allBondsExplicit = false;
+    bool allHsExplicit = true;
+    auto smiV =
+        MolToRandomSmilesVect(nm, 5, randomSeed, isomericSmiles, kekuleSmiles,
+                              allBondsExplicit, allHsExplicit);
+    CHECK(smiV == tgt);
+  }
+}
+
+TEST_CASE(
+    "github #3197: Molecule constructed from CXSMILES cannot be translated to "
+    "SMARTS",
+    "[smarts][bug]") {
+  auto m = "C* |$;M_p$|"_smiles;
+  REQUIRE(m);
+  SECTION("smarts writing") {
+    auto smarts = MolToSmarts(*m);
+    // this will change if/when the definition of the query changes, just have
+    // to update then
+    CHECK(smarts ==
+          "[#6]-[!#2&!#5&!#6&!#7&!#8&!#9&!#10&!#14&!#15&!#16&!#17&!#18&!#33&!#"
+          "34&!#35&!#36&!#52&!#53&!#54&!#85&!#86&!#1]");
+  }
+  SECTION("serialization") {
+    std::string pkl;
+    MolPickler::pickleMol(*m, pkl, PicklerOps::PropertyPickleOptions::AllProps);
+    ROMol cpy(pkl);
+    auto osmi = MolToCXSmiles(*m);
+    CHECK(osmi == "*C |$M_p;$|");
+    auto smi = MolToCXSmiles(cpy);
+    CHECK(smi == osmi);
+    QueryAtom *oa1 = static_cast<QueryAtom *>(m->getAtomWithIdx(1));
+    QueryAtom *a1 = static_cast<QueryAtom *>(m->getAtomWithIdx(1));
+    REQUIRE(oa1->hasQuery());
+    REQUIRE(a1->hasQuery());
+    size_t osz =
+        oa1->getQuery()->endChildren() - oa1->getQuery()->beginChildren();
+    size_t sz = a1->getQuery()->endChildren() - a1->getQuery()->beginChildren();
+    // we don't need to test the exact size (since that may change), but let's
+    // at least be sure it's not unreasonable:
+    CHECK(osz > 0);
+    CHECK(osz < 200);
+    CHECK(osz == sz);
   }
 }

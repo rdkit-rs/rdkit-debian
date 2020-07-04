@@ -3879,8 +3879,9 @@ void testDativeBonds() {
 
     int dative_bond_count = 0;
     for (size_t i = 0; i < m->getNumBonds(); i++) {
-      if (m->getBondWithIdx(i)->getBondType() == Bond::DATIVE)
+      if (m->getBondWithIdx(i)->getBondType() == Bond::DATIVE) {
         dative_bond_count++;
+      }
     }
     TEST_ASSERT(dative_bond_count == 1);
 
@@ -3895,8 +3896,9 @@ void testDativeBonds() {
 
     int dative_bond_count = 0;
     for (size_t i = 0; i < m->getNumBonds(); i++) {
-      if (m->getBondWithIdx(i)->getBondType() == Bond::DATIVE)
+      if (m->getBondWithIdx(i)->getBondType() == Bond::DATIVE) {
         dative_bond_count++;
+      }
     }
     TEST_ASSERT(dative_bond_count == 2);
 
@@ -4048,10 +4050,9 @@ void testRingClosureNumberWithBrackets() {
     const char *benzenes[6] = {
         "c1ccccc1",           "c%(1)ccccc%(1)",       "c%(12)ccccc%(12)",
         "c%(123)ccccc%(123)", "c%(1234)ccccc%(1234)", "c%(99999)ccccc%(99999)"};
-    for (int i = 0; i < 6; ++i) {
-      BOOST_LOG(rdInfoLog) << "Test: " << benzenes[i] << " (should be read)"
-                           << std::endl;
-      ROMol *m = SmilesToMol(benzenes[i]);
+    for (auto &i : benzenes) {
+      BOOST_LOG(rdInfoLog) << "Test: " << i << " (should be read)" << std::endl;
+      ROMol *m = SmilesToMol(i);
       TEST_ASSERT(m);
       TEST_ASSERT(m->getNumAtoms() == 6);
       TEST_ASSERT(m->getBondWithIdx(0)->getIsAromatic());
@@ -4061,11 +4062,11 @@ void testRingClosureNumberWithBrackets() {
     }
 
     const char *not_allowed[2] = {"c%()ccccc%()", "c%(100000)ccccc%(100000)"};
-    for (int i = 0; i < 2; ++i) {
-      BOOST_LOG(rdInfoLog) << "Test: " << not_allowed[i]
-                           << " (should NOT be read)" << std::endl;
-      ROMol *m = SmilesToMol(not_allowed[i]);
-      TEST_ASSERT(m == (ROMol *)0);
+    for (auto &i : not_allowed) {
+      BOOST_LOG(rdInfoLog) << "Test: " << i << " (should NOT be read)"
+                           << std::endl;
+      ROMol *m = SmilesToMol(i);
+      TEST_ASSERT(m == (ROMol *)nullptr);
       delete m;
     }
   }
@@ -4277,6 +4278,40 @@ void testGithub1028() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testGithub3139() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog) << "Testing github issue #3139: Partial bond mem leak"
+                       << std::endl;
+
+  {
+    const std::string smi = "COc(c1)cccc1C#";
+    for (int i = 0; i < 3; ++i) {
+      const auto mol = std::unique_ptr<ROMol>(SmilesToMol(smi));
+      const auto sma = std::unique_ptr<ROMol>(SmartsToMol(smi));
+    }
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testOSSFuzzFailures() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog) << "Failures/problems detected by OSS Fuzz" << std::endl;
+
+  {  // examples that should produce no molecule
+    std::vector<std::string> failing_examples = {"C)"};
+    for (auto smi : failing_examples) {
+      const auto mol = std::unique_ptr<ROMol>(SmilesToMol(smi));
+      // output which molecule is failing
+      if (mol) {
+        std::cerr << "  Should have failed: " << smi << std::endl;
+        TEST_ASSERT(!mol);
+      }
+    }
+  }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
@@ -4352,7 +4387,9 @@ int main(int argc, char *argv[]) {
   testGithub1925();
   testGithub1972();
   testGithub2556();
-#endif
   testdoRandomSmileGeneration();
   testGithub1028();
+  testGithub3139();
+#endif
+  testOSSFuzzFailures();
 }
