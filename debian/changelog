@@ -1,5 +1,6 @@
-rdkit (201909.1-5) UNRELEASED; urgency=medium
+rdkit (202003.4-1) UNRELEASED; urgency=medium
 
+  * New upstream release.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 04 Jul 2020 19:35:11 +0200
 
