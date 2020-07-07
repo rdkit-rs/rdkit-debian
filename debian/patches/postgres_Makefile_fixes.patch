@@ -1,17 +1,17 @@
---- ./Code/PgSQL/rdkit/Makefile.orig	2019-01-14 15:16:06.892096754 +0100
-+++ ./Code/PgSQL/rdkit/Makefile	2019-01-14 15:16:18.788148697 +0100
-@@ -11,8 +11,9 @@
+--- ./Code/PgSQL/rdkit/Makefile.orig	2020-07-07 20:06:15.290851295 +0200
++++ ./Code/PgSQL/rdkit/Makefile	2020-07-07 20:06:32.818912556 +0200
+@@ -10,9 +10,8 @@
+ #STATIC_LINK=1
  # -------------------------
  
- 
--RDKIT=$(RDBASE)
- 
-+RDKIT=$(RDBASE)
+-
+ RDKIT=$(RDBASE)
+-
 +RDKIT_PGSQL_SRCDIR=$(RDBASE)/Code/PgSQL/rdkit
  
  ifeq ($(USE_INCHI),1)
-   INCHILIBS=-lRDInchiLib -lInchi
-@@ -26,18 +27,17 @@
+   INCHILIBS=-lRDKitRDInchiLib -lRDKitInchi
+@@ -26,18 +25,17 @@
    AVALONREGRESS=avalon
  endif
  
@@ -21,8 +21,7 @@
    THREADLIBS=-L${BOOSTHOME}/lib -lboost_thread -lboost_system
  endif
  
--RDKLIBS       = ${AVALONLIBS} ${INCHILIBS} -lMolDraw2D -lMolTransforms -lMolHash -lFMCS -lChemReactions -lChemTransforms -lFileParsers -lSmilesParse -lFingerprints -lSubgraphs -lDescriptors -lPartialCharges -lSubstructMatch  -lGraphMol -lEigenSolvers -lDataStructs -lDepictor -lRDGeometryLib -lRDGeneral
-+RDKLIBS       = ${AVALONLIBS} ${INCHILIBS} -lRDKitMolDraw2D -lRDKitMolTransforms -lRDKitMolHash -lRDKitFMCS -lRDKitChemReactions -lRDKitChemTransforms -lRDKitFileParsers -lRDKitSmilesParse -lRDKitFingerprints -lRDKitSubgraphs -lRDKitDescriptors -lRDKitPartialCharges -lRDKitSubstructMatch  -lRDKitGraphMol -lRDKitEigenSolvers -lRDKitDataStructs -lRDKitDepictor -lRDKitRDGeometryLib -lRDKitRDGeneral
+ RDKLIBS       = ${AVALONLIBS} ${INCHILIBS} -lRDKitMolDraw2D -lRDKitMolTransforms -lRDKitMolHash -lRDKitFMCS -lRDKitChemReactions -lRDKitChemTransforms -lRDKitFileParsers -lRDKitSmilesParse -lRDKitFingerprints -lRDKitSubgraphs -lRDKitDescriptors -lRDKitPartialCharges -lRDKitSubstructMatch  -lRDKitGraphMol -lRDKitEigenSolvers -lRDKitDataStructs -lRDKitDepictor -lRDKitRDGeometryLib -lRDKitRDGeneral
 +RDKIT_LIBDIR ?= ${RDKIT}/lib
  
  ifeq ($(STATIC_LINK),0)
@@ -34,7 +33,7 @@
  endif
  
  ifndef BOOSTHOME
-@@ -47,7 +47,7 @@
+@@ -47,7 +45,7 @@
  
  SHLIB_LINK += ${THREADLIBS}
  
@@ -43,7 +42,7 @@
  
  CPLUSPLUSFLAGS = $(filter-out -fexcess-precision=standard -Wmissing-prototypes -Wdeclaration-after-statement, $(CFLAGS))
  CPLUSPLUSFLAGS += -Wno-unused-function
-@@ -56,38 +56,49 @@
+@@ -56,38 +54,49 @@
  CPLUSPLUSFLAGS := $(filter-out -fexcess-precision=standard,$(CPLUSPLUSFLAGS))
  
  EXTENSION  = rdkit
@@ -96,13 +95,3 @@
  EXTRA_CLEAN = $(EXTENSION)--$(EXTVERSION).sql
  include $(PGXS)
  
-@@ -101,3 +112,9 @@
- 
- %.o : %.cpp
- 	$(CXX) $(CPLUSPLUSFLAGS) $(CPPFLAGS) -fPIC -c -o $@ $<
-+
-+COMPILE.cxx.bc = $(CLANG) -xc++ -Wno-ignored-attributes $(BITCODE_CXXFLAGS) $(CPPFLAGS) -emit-llvm -c
-+
-+%.bc : %.cpp
-+	$(COMPILE.cxx.bc) -o $@ $<
-+	opt-10 -module-summary -f $@ -o $@
