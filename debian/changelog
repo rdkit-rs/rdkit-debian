@@ -6,6 +6,7 @@ rdkit (202003.4-1) UNRELEASED; urgency=medium
   [ Michael Banck ]
   * debian/patches/postgres_Makefile_fixes.patch: Updated.
   * debian/patches/postgres_disable_failing_tests.patch: Likewise.
+  * debian/rules (DH_AUTO_CONFIGURE_OPTS): Added -DBoost_NO_BOOST_CMAKE=TRUE.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 04 Jul 2020 19:35:11 +0200
 
