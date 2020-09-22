@@ -1,0 +1,22 @@
+--- ./Code/PgSQL/rdkit/adapter.cpp.orig	2020-09-22 22:43:50.297379889 +0200
++++ ./Code/PgSQL/rdkit/adapter.cpp	2020-09-22 22:46:07.718050256 +0200
+@@ -646,7 +646,7 @@
+     try {
+       MolOps::parseAdjustQueryParametersFromJSON(p, pstring);
+     } catch (const ValueErrorException &e) {
+-      elog(ERROR, e.message());
++      elog(ERROR, "%s", e.message());
+     } catch (...) {
+       elog(WARNING,
+            "adjustQueryProperties: Invalid argument \'params\' ignored");
+--- ./Code/PgSQL/rdkit/mol_op.c.orig	2020-09-22 22:43:56.376417640 +0200
++++ ./Code/PgSQL/rdkit/mol_op.c	2020-09-22 22:45:51.437914922 +0200
+@@ -613,7 +613,7 @@
+ //  int      tsmiles_len = VARSIZE(tsmiles);
+   char    *smiles = pgstrdup(VARDATA(tsmiles), VARSIZE(tsmiles));
+   char    *params = PG_GETARG_CSTRING(2);
+-elog(WARNING, smiles);
++//elog(WARNING, smiles);
+ //  Assert(smiles != 0);
+     if (AggCheckCallContext(fcinfo, NULL))
+     {

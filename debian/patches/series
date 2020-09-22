@@ -4,3 +4,4 @@ postgres_disable_failing_tests.patch
 sphinx_imgconverter.patch
 catch2_header.patch
 postgres_alternative_test_outputs.patch
+postgres_compile_fixes.patch

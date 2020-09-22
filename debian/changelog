@@ -1,5 +1,8 @@
 rdkit (202003.4-2) UNRELEASED; urgency=medium
 
+  [ Michael Banck ]
+  * debian/patches/postgres_compile_fixes.patch: New patch, fixes compile
+    errors on PostgreSQL-12 (Closes: #964656).
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 07 Jul 2020 20:20:45 +0200
 
