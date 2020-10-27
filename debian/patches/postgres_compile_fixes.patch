@@ -1,5 +1,5 @@
---- ./Code/PgSQL/rdkit/adapter.cpp.orig	2020-09-22 22:43:50.297379889 +0200
-+++ ./Code/PgSQL/rdkit/adapter.cpp	2020-09-22 22:46:07.718050256 +0200
+--- a/Code/PgSQL/rdkit/adapter.cpp
++++ b/Code/PgSQL/rdkit/adapter.cpp
 @@ -646,7 +646,7 @@
      try {
        MolOps::parseAdjustQueryParametersFromJSON(p, pstring);
@@ -9,8 +9,8 @@
      } catch (...) {
        elog(WARNING,
             "adjustQueryProperties: Invalid argument \'params\' ignored");
---- ./Code/PgSQL/rdkit/mol_op.c.orig	2020-09-22 22:43:56.376417640 +0200
-+++ ./Code/PgSQL/rdkit/mol_op.c	2020-09-22 22:45:51.437914922 +0200
+--- a/Code/PgSQL/rdkit/mol_op.c
++++ b/Code/PgSQL/rdkit/mol_op.c
 @@ -613,7 +613,7 @@
  //  int      tsmiles_len = VARSIZE(tsmiles);
    char    *smiles = pgstrdup(VARDATA(tsmiles), VARSIZE(tsmiles));
@@ -20,3 +20,33 @@
  //  Assert(smiles != 0);
      if (AggCheckCallContext(fcinfo, NULL))
      {
+--- a/Code/PgSQL/rdkit/bfp_gist.c
++++ b/Code/PgSQL/rdkit/bfp_gist.c
+@@ -33,7 +33,6 @@
+ #include <fmgr.h>
+ #include <access/gist.h>
+ #include <access/skey.h>
+-#include <access/tuptoaster.h>
+ #include <utils/memutils.h>
+ 
+ #include <math.h>
+--- a/Code/PgSQL/rdkit/low_gist.c
++++ b/Code/PgSQL/rdkit/low_gist.c
+@@ -33,7 +33,6 @@
+ #include <fmgr.h>
+ #include <access/gist.h>
+ #include <access/skey.h>
+-#include <access/tuptoaster.h>
+ #include <utils/memutils.h>
+ 
+ #include "rdkit.h"
+--- a/Code/PgSQL/rdkit/rdkit_gist.c
++++ b/Code/PgSQL/rdkit/rdkit_gist.c
+@@ -32,7 +32,6 @@
+ #include <fmgr.h>
+ #include <access/gist.h>
+ #include <access/skey.h>
+-#include <access/tuptoaster.h>
+ #include <utils/memutils.h>
+ 
+ #include "rdkit.h"
