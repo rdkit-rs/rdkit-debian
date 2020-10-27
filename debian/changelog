@@ -1,7 +1,9 @@
 rdkit (202003.4-3) UNRELEASED; urgency=medium
 
+  * Team upload.
+  * Updating postgresql version.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Wed, 23 Sep 2020 09:35:51 +0200
+ -- Andrius Merkys <merkys@debian.org>  Tue, 27 Oct 2020 02:00:46 -0400
 
 rdkit (202003.4-2) unstable; urgency=medium
 
