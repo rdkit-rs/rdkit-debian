@@ -1,9 +1,9 @@
-rdkit (202003.4-3) UNRELEASED; urgency=medium
+rdkit (202003.4-3) unstable; urgency=medium
 
   * Team upload.
-  * Updating postgresql version.
+  * Updating postgresql version (Closes: #973027).
 
- -- Andrius Merkys <merkys@debian.org>  Tue, 27 Oct 2020 02:00:46 -0400
+ -- Andrius Merkys <merkys@debian.org>  Wed, 28 Oct 2020 09:10:34 -0400
 
 rdkit (202003.4-2) unstable; urgency=medium
 
