@@ -1,3 +1,10 @@
+rdkit (202003.4-4) unstable; urgency=medium
+
+  * Team upload.
+  * No-changes source-only upload.
+
+ -- Andrius Merkys <merkys@debian.org>  Mon, 02 Nov 2020 01:09:33 -0500
+
 rdkit (202003.4-3) unstable; urgency=medium
 
   * Team upload.
