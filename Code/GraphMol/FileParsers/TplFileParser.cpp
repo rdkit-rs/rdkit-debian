@@ -1,4 +1,3 @@
-// $Id$
 //
 //  Copyright (C) 2007-2010 Greg Landrum
 //
@@ -44,19 +43,18 @@ void ParseTPLAtomLine(std::string text, unsigned int lineNum, RWMol *mol,
   atomId = mol->addAtom(atom, false, true);
 
   atom->setFormalCharge(FileParserUtils::stripSpacesAndCast<int>(splitLine[2]));
-  double partialChg = FileParserUtils::stripSpacesAndCast<double>(splitLine[3]);
+  auto partialChg = FileParserUtils::stripSpacesAndCast<double>(splitLine[3]);
   atom->setProp("TPLCharge", partialChg);
-  double xp = FileParserUtils::stripSpacesAndCast<double>(splitLine[4]);
-  double yp = FileParserUtils::stripSpacesAndCast<double>(splitLine[5]);
-  double zp = FileParserUtils::stripSpacesAndCast<double>(splitLine[6]);
+  auto xp = FileParserUtils::stripSpacesAndCast<double>(splitLine[4]);
+  auto yp = FileParserUtils::stripSpacesAndCast<double>(splitLine[5]);
+  auto zp = FileParserUtils::stripSpacesAndCast<double>(splitLine[6]);
   // coords in TPL files are in picometers, adjust:
   xp /= 100.;
   yp /= 100.;
   zp /= 100.;
   conf->setAtomPos(atomId, RDGeom::Point3D(xp, yp, zp));
 
-  unsigned int nBonds =
-      FileParserUtils::stripSpacesAndCast<unsigned int>(splitLine[7]);
+  auto nBonds = FileParserUtils::stripSpacesAndCast<unsigned int>(splitLine[7]);
   // the only remaining info we care about is stereochem, and then only if
   // the number of bonds is 4:
   if (nBonds == 4 && splitLine.size() > 8 + nBonds) {
@@ -101,11 +99,9 @@ void ParseTPLBondLine(std::string text, unsigned int lineNum, RWMol *mol) {
   unsigned int bondIdx = mol->addBond(idx1, idx2, bondOrder) - 1;
   std::string stereoFlag1 = "";
   std::string stereoFlag2 = "";
-  if (splitLine.size() > 4) {
-    stereoFlag1 = splitLine[4];
-    if (splitLine.size() > 5) {
-      stereoFlag2 = splitLine[5];
-    }
+  stereoFlag1 = splitLine[4];
+  if (splitLine.size() > 5) {
+    stereoFlag2 = splitLine[5];
   }
   mol->getBondWithIdx(bondIdx)->setProp("TPLBondDir1", stereoFlag1);
   mol->getBondWithIdx(bondIdx)->setProp("TPLBondDir2", stereoFlag2);
@@ -139,6 +135,7 @@ Conformer *ParseConfData(std::istream *inStream, unsigned int &line, RWMol *mol,
     line++;
     tempStr = getLine(inStream);
     if (inStream->eof()) {
+      delete conf;
       std::ostringstream errout;
       errout << "EOF hit while reading conformer  " << confId << std::endl;
       throw FileParseException(errout.str());
@@ -147,14 +144,15 @@ Conformer *ParseConfData(std::istream *inStream, unsigned int &line, RWMol *mol,
     boost::split(splitLine, tempStr, boost::is_any_of(" \t"),
                  boost::token_compress_on);
     if (splitLine.size() < 3) {
+      delete conf;
       std::ostringstream errout;
       errout << "Did not find enough fields on line " << line
              << " while reading conformer  " << confId << std::endl;
       throw FileParseException(errout.str());
     }
-    double xp = FileParserUtils::stripSpacesAndCast<double>(splitLine[0]);
-    double yp = FileParserUtils::stripSpacesAndCast<double>(splitLine[1]);
-    double zp = FileParserUtils::stripSpacesAndCast<double>(splitLine[2]);
+    auto xp = FileParserUtils::stripSpacesAndCast<double>(splitLine[0]);
+    auto yp = FileParserUtils::stripSpacesAndCast<double>(splitLine[1]);
+    auto zp = FileParserUtils::stripSpacesAndCast<double>(splitLine[2]);
     // coords in TPL files are in picometers, adjust:
     xp /= 100.;
     yp /= 100.;
@@ -224,6 +222,7 @@ RWMol *TPLDataStreamToMol(std::istream *inStream, unsigned int &line,
     line++;
     tempStr = getLine(inStream);
     if (inStream->eof()) {
+      delete conf;
       throw FileParseException("EOF hit while reading atoms.");
     }
     ParseTPLAtomLine(tempStr, line, res, conf);
@@ -266,7 +265,7 @@ RWMol *TPLDataStreamToMol(std::istream *inStream, unsigned int &line,
       throw FileParseException("Found a non-blank line between conformers.");
     }
   }
-  if (sanitize && res) {
+  if (sanitize) {
     MolOps::sanitizeMol(*res);
   }
 
@@ -307,10 +306,10 @@ RWMol *TPLFileToMol(const std::string &fName, bool sanitize,
   //------------------------------------------------
   RWMol *MolBlockToMol(const std::string &molBlock, bool sanitize){
     std::istringstream inStream(molBlock);
-    RWMol *res=NULL;
+    RWMol *res = nullptr;
     unsigned int line = 0;
     return MolDataStreamToMol(inStream, line, sanitize);
   }
 
 #endif
-}
+}  // namespace RDKit

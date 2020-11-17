@@ -1,4 +1,4 @@
-//  Copyright (c) 2017, Novartis Institutes for BioMedical Research Inc.
+//  Copyright (c) 2017-2019, Novartis Institutes for BioMedical Research Inc.
 //  All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,10 +31,13 @@
 #include <RDBoost/python.h>
 #include <RDBoost/Wrap.h>
 #include <GraphMol/RDKitBase.h>
+#include <RDBoost/python_streambuf.h>
 
 #include <GraphMol/SubstructLibrary/SubstructLibrary.h>
+#include <GraphMol/SubstructLibrary/PatternFactory.h>
 
 namespace python = boost::python;
+using boost_adaptbx::python::streambuf;
 
 namespace RDKit {
 
@@ -50,13 +53,13 @@ const char *MolHolderDoc =
     "Holds raw in-memory molecules\n"
     "  AddMol(mol) -> adds a molecule to the molecule holder, returns index of "
     "molecule\n"
-    "  GetMol(idx) -> return the molecule at index idx\n";
+    "  GetMol(idx,sanitize=True) -> return the molecule at index idx\n";
 
 const char *CachedMolHolderDoc =
     "Holds molecules in their binary representation.\n"
     "This allows more molecules to be held in memory at a time\n"
     "  AddMol(mol) -> adds a molecule to the molecule holder, returns index of "
-    "molecule\n"
+    "molecule\n\n"
     "  AddBinary(data) -> adds a picked molecule molecule to the molecule "
     "holder, returns index of molecule\n"
     "                     The data is stored as-is, no checking is done for "
@@ -67,7 +70,7 @@ const char *CachedSmilesMolHolderDoc =
     "Holds molecules as smiles string\n"
     "This allows more molecules to be held in memory at a time\n"
     "  AddMol(mol) -> adds a molecule to the molecule holder, returns index of "
-    "molecule\n"
+    "molecule\n\n"
     "  AddSmiles(smiles) -> adds a smiles string to the molecule holder, "
     "returns index of molecule\n"
     "                       The smiles is stored as-is, no checking is done "
@@ -78,16 +81,18 @@ const char *CachedTrustedSmilesMolHolderDoc =
     "Holds molecules as trusted smiles string\n"
     "This allows more molecules to be held in memory at a time and avoids "
     "RDKit sanitization\n"
-    "overhead\n"
+    "overhead.\n"
     "See: "
     "http://rdkit.blogspot.com/2016/09/avoiding-unnecessary-work-and.html\n"
     "  AddMol(mol) -> adds a molecule to the molecule holder, returns index of "
-    "molecule\n"
+    "molecule\n\n"
     "  AddSmiles(smiles) -> adds a smiles string to the molecule holder, "
     "returns index of molecule\n"
     "                       The smiles is stored as-is, no checking is done "
     "for validity.\n"
-    "  GetMol(idx) -> return the molecule at index idx\n";
+    "  GetMol(idx,s) -> return the molecule at index idx, \n"
+    "              note, only light sanitization is done here, for instance\n"
+    "              the molecules RingInfo is not initialized\n";
 
 const char *PatternHolderDoc =
     "Holds fingerprints used for filtering of molecules.";
@@ -97,6 +102,7 @@ const char *SubstructLibraryDoc =
     "The SubstructLibrary takes full advantage of available threads during the "
     "search operation.\n"
     "Basic operation is simple\n"
+    "\n"
     ">>> from __future__ import print_function\n"
     ">>> import os\n"
     ">>> from rdkit import Chem, RDConfig\n"
@@ -110,8 +116,8 @@ const char *SubstructLibraryDoc =
     ">>> len(indices)\n"
     "11\n"
     "\n"
-    "\n"
     "Substructure matching options can be sent into GetMatches:\n"
+    "\n"
     ">>> indices = library.GetMatches(core, useChirality=False) \n"
     ">>> len(indices)\n"
     "11\n"
@@ -119,6 +125,7 @@ const char *SubstructLibraryDoc =
     "Controlling the number of threads or the maximum number of matches "
     "returned:\n"
     "is also available (the default is to run on all cores)\n"
+    "\n"
     ">>> indices = library.GetMatches(core, numThreads=2, maxResults=10) \n"
     ">>> len(indices)\n"
     "10\n"
@@ -129,7 +136,9 @@ const char *SubstructLibraryDoc =
     "kept in memory.\n"
     "To assist this we supply three other molecule holders:\n"
     "  CachedMolHolder - stores molecules as their pickled representation\n"
+    "\n"
     "  CachedSmilesMolHolder - stores molecules internally as smiles strings\n"
+    "\n"
     "  CachedTrustedSmilesMolHolder = excepts (and stores) molecules as "
     "trusted smiles strings\n"
     "\n"
@@ -137,7 +146,7 @@ const char *SubstructLibraryDoc =
     "\n"
     "Pattern fingerprints provide an easy way to indicate whether the "
     "substructure search should be\n"
-    "be done at all.  This is particulary useful with the Binary and Smiles "
+    "be done at all.  This is particularly useful with the Binary and Smiles "
     "based molecule holders\n"
     "as they have an expensive molecule creation step in addition to the "
     "substructure searching step\n "
@@ -157,6 +166,7 @@ const char *SubstructLibraryDoc =
     "This (obviously) takes longer to initialize.  However, both the molecule "
     "and pattern\n"
     "holders can be populated with raw data, a simple example is below:\n"
+    "\n"
     ">>> import csv\n"
     ">>> molholder = rdSubstructLibrary.CachedSmilesMolHolder()\n"
     ">>> pattern_holder = rdSubstructLibrary.PatternHolder()\n"
@@ -175,21 +185,66 @@ const char *SubstructLibraryDoc =
     "11\n"
     "";
 
+python::object SubstructLibrary_Serialize(const SubstructLibrary &cat) {
+  std::string res = cat.Serialize();
+  python::object retval = python::object(
+      python::handle<>(PyBytes_FromStringAndSize(res.c_str(), res.length())));
+  return retval;
+}
+
+struct substructlibrary_pickle_suite : python::pickle_suite {
+  static python::tuple getinitargs(const SubstructLibrary &self) {
+    std::string res;
+    if (!SubstructLibraryCanSerialize()) {
+      throw_runtime_error("Pickling of FilterCatalog instances is not enabled");
+    }
+    res = self.Serialize();
+    return python::make_tuple(python::object(python::handle<>(
+        PyBytes_FromStringAndSize(res.c_str(), res.length()))));
+  };
+};
+
+void toStream(const SubstructLibrary &cat, python::object &fileobj) {
+  streambuf ss(fileobj, 't');
+  streambuf::ostream ost(ss);
+  cat.toStream(ost);
+}
+
+  void initFromStream(SubstructLibrary &cat, python::object &fileobj) {
+  streambuf ss(fileobj, 'b'); // python StringIO can't seek, so need binary data
+  streambuf::istream is(ss);
+  cat.initFromStream(is);
+}
+
+boost::shared_ptr<MolHolderBase> GetMolHolder(SubstructLibrary &sslib)
+{
+  // need to convert from a ref to a real shared_ptr
+  return sslib.getMolHolder();
+}
+
+boost::shared_ptr<FPHolderBase> GetFpHolder(SubstructLibrary &sslib)
+{
+  // need to convert from a ref to a real shared_ptr
+  return sslib.getFpHolder();
+}
+
 struct substructlibrary_wrapper {
   static void wrap() {
     // n.b. there can only be one of these in all wrappings
     // python::class_<std::vector<unsigned int> >("UIntVect").def(
     //  python::vector_indexing_suite<std::vector<unsigned int>, true>());
 
-    python::class_<MolHolderBase, boost::noncopyable>("MolHolderBase", "",
-                                                      python::no_init)
-
+    python::class_<MolHolderBase, boost::shared_ptr<MolHolderBase>,
+		   boost::noncopyable>("MolHolderBase", "",
+				       python::no_init)
+        .def("__len__", &MolHolderBase::size)
         .def("AddMol", &MolHolderBase::addMol,
-             "Adds molecle to the molecule holder")
+             "Adds molecule to the molecule holder")
         .def("GetMol", &MolHolderBase::getMol,
              "Returns a particular molecule in the molecule holder\n\n"
              "  ARGUMENTS:\n"
              "    - idx: which molecule to return\n\n"
+             "    - sanitize: if sanitize is False, return the internal molecule state [default True]\n\n"
              "  NOTE: molecule indices start at 0\n")
         .def("__len__", &MolHolderBase::size);
 
@@ -225,6 +280,8 @@ struct substructlibrary_wrapper {
 
     python::class_<FPHolderBase, boost::shared_ptr<FPHolderBase>,
                    boost::noncopyable>("FPHolderBase", "", python::no_init)
+        .def("__len__", &FPHolderBase::size)
+      
         .def("AddMol", &FPHolderBase::addMol,
              "Adds a molecule to the fingerprint database, returns the index "
              "of the new pattern")
@@ -253,12 +310,16 @@ struct substructlibrary_wrapper {
         .def(python::init<boost::shared_ptr<MolHolderBase>>())
         .def(python::init<boost::shared_ptr<MolHolderBase>,
                           boost::shared_ptr<FPHolderBase>>())
-
+        .def(python::init<std::string>())
+      
+        .def("GetMolHolder", &GetMolHolder)
+        .def("GetFpHolder", &GetFpHolder)      
+      
         .def("AddMol", &SubstructLibrary::addMol, (python::arg("mol")),
              "Adds a molecule to the substruct library")
 
         .def("GetMatches", (std::vector<unsigned int>(SubstructLibrary::*)(
-                               const ROMol &, bool, bool, bool, int, int)) &
+			       const ROMol &, bool, bool, bool, int, int)) &
                                SubstructLibrary::getMatches,
              (python::arg("query"), python::arg("recursionPossible") = true,
               python::arg("useChirality") = true,
@@ -351,7 +412,53 @@ struct substructlibrary_wrapper {
 
         .def("__len__", &SubstructLibrary::size)
 
+        .def("ToStream", &toStream,
+	     python::arg("stream"),
+	     "Serialize a substructure library to a python text stream.\n"
+	     "The stream can be a file in text mode or an io.StringIO type object\n\n"
+             "  ARGUMENTS:\n"
+	     "    - stream: a text or text stream like object\n\n"
+	     "  >>> from rdkit.Chem import rdSubstructLibrary\n"
+	     "  >>> import io\n"
+	     "  >>> lib = rdSubstructLibrary.SubstructLibrary()\n"
+	     "  >>> stream = io.StringIO()\n"
+	     "  >>> lib.ToStream(stream)\n\n"
+	     "   or\n"
+	     "  >>> with open('rdkit.sslib', 'w') as stream:\n"
+	     "  ...  lib.ToStream(stream)\n"
+	     )
+
+        .def("InitFromStream", &initFromStream,
+	   python::arg("stream"),
+	   "Deserialize a substructure library from a python bytes stream.\n"
+	   "Python doesn't allow seeking operations inside a unicode or string stream anymore\n"
+	   "so this requires opening a file in binary mode or using an io.ByteIO type object\n\n"
+	   "  ARGUMENTS:\n"
+	   "    - stream: a binary stream like object\n\n"
+	   "  SubstructLibrary.Serialize already writes a binary stream\n\n"
+	   "  >>> from rdkit.Chem import rdSubstructLibrary\n"
+	   "  >>> import io\n"
+	   "  >>> lib = rdSubstructLibrary.SubstructLibrary()\n"
+	   "  >>> stream = io.BytesIO( lib.Serialize() )\n"
+	   "  >>> lib.InitFromStream(stream)\n\n"
+           "   remember to write to text and read from a binary stream\n"
+	   "  >>> with open('rdkit.sslib', 'w') as f: lib.ToStream(f)\n"
+	   "  >>> with open('rdkit.sslib', 'rb') as f: lib.InitFromStream(f)\n"
+	)
+      
+        .def("Serialize", &SubstructLibrary_Serialize)
+        // enable pickle support
+        .def_pickle(substructlibrary_pickle_suite())
         ;
+
+    python::def("SubstructLibraryCanSerialize", SubstructLibraryCanSerialize,
+                "Returns True if the SubstructLibrary is serializable "
+                "(requires boost serialization");
+
+    python::def("AddPatterns", addPatterns,
+		"Add pattern fingerprints to the given library, use numThreads=-1 to use all available cores",
+		(python::arg("sslib"), python::arg("numThreads")=1));
+
   }
 };
 }

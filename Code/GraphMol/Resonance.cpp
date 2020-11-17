@@ -1,4 +1,5 @@
 //
+//
 //  Copyright (C) 2015 Paolo Tosco
 //
 //   @@ All Rights Reserved @@
@@ -16,17 +17,22 @@
 #include <thread>
 #include <future>
 #endif
+#include <algorithm>
 
 namespace RDKit {
 // class definitions that do not need being exposed in Resonance.h
+
+typedef std::set<std::size_t> CESet;
+typedef std::unordered_map<std::size_t, unsigned int> CEDegCount;
+
 class CEVect2 {
  public:
-  CEVect2(CEMap &ceMap);
+  CEVect2(const CEMap &ceMap);
   ConjElectrons *getCE(unsigned int depth, unsigned int width);
-  unsigned int ceCount() { return rdcast<unsigned int>(d_ceVect.size()); }
-  unsigned int depth() { return rdcast<unsigned int>(d_degVect.size()); }
-  void resize(unsigned int size);
-  void idxToDepthWidth(unsigned int idx, unsigned int &d, unsigned int &w);
+  size_t ceCount() { return d_ceVect.size(); }
+  size_t depth() { return d_degVect.size(); }
+  void resize(size_t size);
+  void idxToDepthWidth(size_t idx, unsigned int &d, unsigned int &w);
   unsigned int ceCountAtDepth(unsigned int depth);
   unsigned int ceCountUntilDepth(unsigned int depth);
 
@@ -41,18 +47,35 @@ class CEMetrics {
   friend class ConjElectrons;
 
  public:
-  CEMetrics();
-  bool operator==(const CEMetrics &other);
-  bool operator!=(const CEMetrics &other) { return !(*this == other); }
+  CEMetrics(){};
+  bool operator==(const CEMetrics &other) const {
+    return (d_hash == other.d_hash);
+  }
+  bool operator!=(const CEMetrics &other) const {
+    return (d_hash != other.d_hash);
+  }
 
  private:
-  unsigned int d_absFormalCharges;
-  unsigned int d_fcSameSignDist;
-  unsigned int d_fcOppSignDist;
-  unsigned int d_nbMissing;
-  int d_wtdFormalCharges;
-  unsigned int d_sumFormalChargeIdxs;
-  unsigned int d_sumMultipleBondIdxs;
+  int d_absFormalCharges{0};
+  int d_fcSameSignDist{0};
+  int d_fcOppSignDist{0};
+  int d_nbMissing{0};
+  int d_wtdFormalCharges{0};
+  int d_sumFormalChargeIdxs{0};
+  int d_sumMultipleBondIdxs{0};
+  std::size_t d_hash{0};
+};
+
+struct CEStats {
+  CEStats()
+      : d_init(false),
+        d_haveNoCationsRightOfN(false),
+        d_haveNoChargeSeparation(false),
+        d_minNbMissing(0) {}
+  bool d_init;
+  bool d_haveNoCationsRightOfN;
+  bool d_haveNoChargeSeparation;
+  unsigned int d_minNbMissing;
 };
 
 class ConjElectrons {
@@ -96,17 +119,24 @@ class ConjElectrons {
   unsigned int sumMultipleBondIdxs() const {
     return d_ceMetrics.d_sumMultipleBondIdxs;
   }
-  CEMetrics &metrics() { return d_ceMetrics; }
+  std::size_t hash() { return d_ceMetrics.d_hash; }
   int wtdFormalCharges() const { return d_ceMetrics.d_wtdFormalCharges; };
-  void enumerateNonBonded(CEMap &ceMap);
+  void enumerateNonBonded(CEMap &ceMap, CEDegCount &ceDegCount,
+                          CEStats &ceStats);
   void initCeFromMol();
   void assignNonBonded();
   void assignFormalCharge();
-  bool assignFormalChargesAndStore(CEMap &ceMap, unsigned int fpFlags);
+  bool assignFormalChargesAndStore(CEMap &ceMap, CEDegCount &ceDegCount,
+                                   CEStats &ceStats, unsigned int fpFlags);
   void assignBondsFormalChargesToMol(ROMol &mol);
-  bool checkCharges();
+  bool checkChargesAndBondOrders();
   void computeMetrics();
-  bool storeFP(CEMap &ceMap, unsigned int flags);
+  bool checkMetrics(CEStats &ceStats, bool &ok) const;
+  void purgeMaps(CEMap &ceMap, CEDegCount &ceDegCount, CEStats &ceStats) const;
+  void updateDegCount(CEDegCount &ceDegCount);
+  std::size_t computeFP(unsigned int flags);
+  inline bool haveFP(CESet &ceSet, unsigned int flags);
+  inline bool storeFP(CEMap &ceMap, unsigned int flags);
   ResonanceMolSupplier *parent() const { return d_parent; };
 
  private:
@@ -116,7 +146,7 @@ class ConjElectrons {
   unsigned int d_numFormalCharges;
   int d_totalFormalCharge;
   int d_allowedChgLeftOfN;
-  boost::uint8_t d_flags;
+  std::uint8_t d_flags;
   CEMetrics d_ceMetrics;
   ConjBondMap d_conjBondMap;
   ConjAtomMap d_conjAtomMap;
@@ -146,18 +176,21 @@ class AtomElectrons {
   typedef enum {
     LAST_BOND = (1 << 0),
     DEFINITIVE = (1 << 1),
-    STACKED = (1 << 2)
+    STACKED = (1 << 2),
+    HAS_MULTIPLE_BOND = (1 << 3),
   } AtomElectronsFlags;
   typedef enum { NEED_CHARGE_BIT = 1 } AllowedBondFlag;
   AtomElectrons(ConjElectrons *parent, const Atom *a);
   AtomElectrons(ConjElectrons *parent, const AtomElectrons &ae);
   ~AtomElectrons(){};
-  boost::uint8_t findAllowedBonds(unsigned int bi);
+  std::uint8_t findAllowedBonds(unsigned int bi);
   bool hasOctet() const { return ((d_nb + d_tv * 2) == 8); };
   bool isLastBond() const { return (d_flags & LAST_BOND); };
   void setLastBond() { d_flags |= LAST_BOND; };
   bool isDefinitive() const { return (d_flags & DEFINITIVE); };
   void setDefinitive() { d_flags |= DEFINITIVE; };
+  bool hasMultipleBond() const { return (d_flags & HAS_MULTIPLE_BOND); };
+  void setHasMultipleBond() { d_flags |= HAS_MULTIPLE_BOND; };
   bool isStacked() const { return (d_flags & STACKED); };
   void setStacked() { d_flags |= STACKED; };
   void clearStacked() { d_flags &= ~STACKED; };
@@ -178,16 +211,17 @@ class AtomElectrons {
   void assignNonBonded(unsigned int nb) { d_nb = nb; }
   void assignFormalCharge() { d_fc = oe() - (d_nb + d_tv); }
   bool isNbrCharged(unsigned int bo, unsigned int oeConstraint = 0);
+  AtomElectrons &operator=(const AtomElectrons &) = delete;
+  AtomElectrons(const AtomElectrons &) = delete;
 
  private:
-  boost::uint8_t d_nb;
-  boost::uint8_t d_tv;
-  boost::int8_t d_fc;
-  boost::uint8_t d_flags;
+  std::uint8_t d_nb;
+  std::uint8_t d_tv;
+  std::int8_t d_fc;
+  std::uint8_t d_flags;
   const Atom *d_atom;
   ConjElectrons *d_parent;
-  AtomElectrons &operator=(const AtomElectrons &);
-  boost::uint8_t canAddBondWithOrder(unsigned int bo);
+  std::uint8_t canAddBondWithOrder(unsigned int bo);
   void allConjBondsDefinitiveBut(unsigned int bi);
 };
 
@@ -207,13 +241,14 @@ class BondElectrons {
   unsigned int orderFromBond();
   void initOrderFromBond() { d_bo = orderFromBond(); };
   const Bond *bond() { return d_bond; };
+  BondElectrons &operator=(const BondElectrons &) = delete;
+  BondElectrons(const BondElectrons &) = delete;
 
  private:
-  boost::uint8_t d_bo;
-  boost::uint8_t d_flags;
+  std::uint8_t d_bo;
+  std::uint8_t d_flags;
   const Bond *d_bond;
   ConjElectrons *d_parent;
-  BondElectrons &operator=(const BondElectrons &);
 };
 
 namespace ResonanceUtils {
@@ -262,12 +297,19 @@ void fixExplicitImplicitHs(ROMol &mol) {
 // object constructor
 AtomElectrons::AtomElectrons(ConjElectrons *parent, const Atom *a)
     : d_nb(0),
-      d_tv(static_cast<boost::uint8_t>(a->getTotalDegree())),
       d_fc(0),
       d_flags(0),
       d_atom(a),
       d_parent(parent) {
   PRECONDITION(d_atom, "d_atom cannot be NULL");
+  d_tv = static_cast<std::uint8_t>(a->getTotalDegree());
+  const ROMol &mol = d_atom->getOwningMol();
+  for (const auto &bNbri :
+       boost::make_iterator_range(mol.getAtomBonds(d_atom))) {
+    if (d_tv && mol[bNbri]->getBondType() >= Bond::DATIVEONE) {
+      --d_tv;
+    }
+  }
 }
 
 // copy constructor
@@ -287,7 +329,7 @@ void AtomElectrons::initTvNbFcFromAtom() {
   d_nb = oe() - d_tv - d_fc;
 }
 
-boost::uint8_t AtomElectrons::findAllowedBonds(unsigned int bi) {
+std::uint8_t AtomElectrons::findAllowedBonds(unsigned int bi) {
   // AtomElectrons::findAllowedBonds returns a 6-bit result
   // encoded as follows:
   // +-------------------------------------+
@@ -301,7 +343,7 @@ boost::uint8_t AtomElectrons::findAllowedBonds(unsigned int bi) {
   // +-------------------------------------+
 
   allConjBondsDefinitiveBut(bi);
-  boost::uint8_t res = 0;
+  std::uint8_t res = 0;
   for (unsigned int i = 0; i < 3; ++i) {
     res |= (canAddBondWithOrder(i + 1) << (i * 2));
   }
@@ -309,7 +351,7 @@ boost::uint8_t AtomElectrons::findAllowedBonds(unsigned int bi) {
 }
 
 // returns true if any conjugated neighbor is charged (and
-// has atomic number == atomicNum, if the latter is non-zero)
+// has oe() == oeConstraint, if the latter is non-zero)
 bool AtomElectrons::isNbrCharged(unsigned int bo, unsigned int oeConstraint) {
   bool res = false;
   const ROMol &mol = d_parent->parent()->mol();
@@ -318,11 +360,19 @@ bool AtomElectrons::isNbrCharged(unsigned int bo, unsigned int oeConstraint) {
   for (; !res && (nbrIdx != endNbrs); ++nbrIdx) {
     const Bond *bondNbr = mol[*nbrIdx];
     unsigned int biNbr = bondNbr->getIdx();
-    if (d_parent->parent()->getBondConjGrpIdx(biNbr) != conjGrpIdx()) continue;
+    if (d_parent->parent()->getBondConjGrpIdx(biNbr) != conjGrpIdx()) {
+      continue;
+    }
     BondElectrons *beNbr = d_parent->getBondElectronsWithIdx(biNbr);
+    if (!beNbr) {
+      continue;
+    }
     const Atom *atomNbr = bondNbr->getOtherAtom(d_atom);
     unsigned int aiNbr = atomNbr->getIdx();
     AtomElectrons *aeNbr = d_parent->getAtomElectronsWithIdx(aiNbr);
+    if (!aeNbr) {
+      continue;
+    }
     res = (((beNbr->isDefinitive() && !aeNbr->hasOctet()) ||
             (!beNbr->isDefinitive() && aeNbr->isDefinitive() &&
              (aeNbr->oe() < (5 - bo)))) &&
@@ -334,9 +384,11 @@ bool AtomElectrons::isNbrCharged(unsigned int bo, unsigned int oeConstraint) {
 // returns a 2-bit value, where the least significant bit is true
 // if the atom can add a bond with order bo, and the most significant
 // bit is true if the atom needs be charged
-boost::uint8_t AtomElectrons::canAddBondWithOrder(unsigned int bo) {
-  boost::uint8_t canAdd = !isDefinitive();
-  if (canAdd) canAdd = (d_tv <= (5 - bo));
+std::uint8_t AtomElectrons::canAddBondWithOrder(unsigned int bo) {
+  std::uint8_t canAdd = !isDefinitive();
+  if (canAdd) {
+    canAdd = (d_tv <= (5 - bo));
+  }
   // if canAdd is true, loop over neighboring conjugated bonds
   // and check their definitive flag; if all neighbors are
   // definitive, we need an additional check on total valence
@@ -345,9 +397,9 @@ boost::uint8_t AtomElectrons::canAddBondWithOrder(unsigned int bo) {
     // carbon, not more than 1 on atoms left of N
     unsigned int rightOfC = ((oe() > 4) ? 1 : 0);
     unsigned int fcInc = 0;
-    if (rightOfC)
+    if (rightOfC) {
       fcInc = (!isNbrCharged(bo, 4) ? 1 : 0);
-    else {
+    } else {
       // atoms left of N can be charged only if:
       // - the neighbor is uncharged and either the conjugate
       //   group does not bear a non-zero total formal charge
@@ -356,16 +408,25 @@ boost::uint8_t AtomElectrons::canAddBondWithOrder(unsigned int bo) {
       // - the neighbor is charged, and triple-bonded to
       //   this atom, which is left of N (e.g., isonitrile)
       bool isnc = isNbrCharged(bo);
-      fcInc = (((!isnc &&
-                 !(!d_parent->allowedChgLeftOfN() &&
-                   d_parent->totalFormalCharge())) ||
+      fcInc = (((!isnc && !(!d_parent->allowedChgLeftOfN() &&
+                            d_parent->totalFormalCharge())) ||
                 (isnc && (bo == 3) && (oe() < 5)))
                    ? 1
                    : 0);
     }
     unsigned int e = oe() + d_tv - 1 + bo;
     canAdd = ((e + fcInc + rightOfC) >= 8);
-    if (canAdd && (e < 8)) canAdd |= (1 << NEED_CHARGE_BIT);
+    if (canAdd && (e < 8)) {
+      if (d_parent->totalFormalCharge() != 0 ||
+          (d_parent->parent()->flags() &
+           (ResonanceMolSupplier::UNCONSTRAINED_CATIONS |
+            ResonanceMolSupplier::UNCONSTRAINED_ANIONS)) ||
+          rightOfC) {
+        canAdd |= (1 << NEED_CHARGE_BIT);
+      } else {
+        canAdd = 0;
+      }
+    }
   }
   return canAdd;
 }
@@ -380,10 +441,13 @@ void AtomElectrons::allConjBondsDefinitiveBut(unsigned int bi) {
   for (; allDefinitive && (nbrIdx != endNbrs); ++nbrIdx) {
     unsigned int nbi = mol[*nbrIdx]->getIdx();
     if ((nbi != bi) &&
-        (d_parent->parent()->getBondConjGrpIdx(nbi) == conjGrpIdx()))
+        (d_parent->parent()->getBondConjGrpIdx(nbi) == conjGrpIdx())) {
       allDefinitive = d_parent->getBondElectronsWithIdx(nbi)->isDefinitive();
+    }
   }
-  if (allDefinitive) setLastBond();
+  if (allDefinitive) {
+    setLastBond();
+  }
 }
 
 // called after all bonds to the atom have been marked as definitive
@@ -399,7 +463,9 @@ void AtomElectrons::finalizeAtom() {
     if (nb) {
       int fc = nb / 2;
       if (d_parent->allowedChgLeftOfN()) {
-        if (d_parent->allowedChgLeftOfN() < 0) fc = -fc;
+        if (d_parent->allowedChgLeftOfN() < 0) {
+          fc = -fc;
+        }
         d_parent->decrAllowedChgLeftOfN(fc);
       }
     }
@@ -449,23 +515,6 @@ void BondElectrons::setOrder(unsigned int bo) {
   d_bo = bo;
 }
 
-CEMetrics::CEMetrics()
-    : d_absFormalCharges(0),
-      d_fcSameSignDist(0),
-      d_fcOppSignDist(0),
-      d_nbMissing(0),
-      d_wtdFormalCharges(0),
-      d_sumFormalChargeIdxs(0),
-      d_sumMultipleBondIdxs(0){};
-
-bool CEMetrics::operator==(const CEMetrics &other) {
-  return ((d_absFormalCharges == other.d_absFormalCharges) &&
-          (d_fcSameSignDist == other.d_fcSameSignDist) &&
-          (d_fcOppSignDist == other.d_fcOppSignDist) &&
-          (d_nbMissing == other.d_nbMissing) &&
-          (d_wtdFormalCharges == other.d_wtdFormalCharges));
-}
-
 // object constructor
 ConjElectrons::ConjElectrons(ResonanceMolSupplier *parent,
                              unsigned int groupIdx)
@@ -479,12 +528,15 @@ ConjElectrons::ConjElectrons(ResonanceMolSupplier *parent,
   unsigned int nb = mol.getNumBonds();
   unsigned int na = mol.getNumAtoms();
   for (unsigned int ai = 0; ai < na; ++ai) {
-    if (d_parent->getAtomConjGrpIdx(ai) != -1)
+    if (d_parent->getAtomConjGrpIdx(ai) != -1) {
       d_totalFormalCharge += mol.getAtomWithIdx(ai)->getFormalCharge();
+    }
   }
   d_allowedChgLeftOfN = d_totalFormalCharge;
   for (unsigned int bi = 0; bi < nb; ++bi) {
-    if (d_parent->getBondConjGrpIdx(bi) != static_cast<int>(groupIdx)) continue;
+    if (d_parent->getBondConjGrpIdx(bi) != static_cast<int>(groupIdx)) {
+      continue;
+    }
     const Bond *bond = mol.getBondWithIdx(bi);
     // store the pointers to BondElectrons objects in a map
     d_conjBondMap[bi] = new BondElectrons(this, bond);
@@ -492,8 +544,9 @@ ConjElectrons::ConjElectrons(ResonanceMolSupplier *parent,
     const Atom *atom[2] = {bond->getBeginAtom(), bond->getEndAtom()};
     for (auto &i : atom) {
       unsigned int ai = i->getIdx();
-      if (d_conjAtomMap.find(ai) == d_conjAtomMap.end())
+      if (d_conjAtomMap.find(ai) == d_conjAtomMap.end()) {
         d_conjAtomMap[ai] = new AtomElectrons(this, i);
+      }
     }
   }
   // count total number of valence electrons in conjugated group
@@ -512,32 +565,36 @@ ConjElectrons::ConjElectrons(const ConjElectrons &ce)
       d_ceMetrics(ce.d_ceMetrics),
       d_beginAIStack(ce.d_beginAIStack),
       d_parent(ce.d_parent) {
-  for (const auto &it : ce.d_conjAtomMap)
+  for (const auto &it : ce.d_conjAtomMap) {
     d_conjAtomMap[it.first] = new AtomElectrons(this, *(it.second));
-  for (const auto &it : ce.d_conjBondMap)
+  }
+  for (const auto &it : ce.d_conjBondMap) {
     d_conjBondMap[it.first] = new BondElectrons(this, *(it.second));
+  }
 }
 
 // object destructor
 ConjElectrons::~ConjElectrons() {
   for (ConjAtomMap::const_iterator it = d_conjAtomMap.begin();
-       it != d_conjAtomMap.end(); ++it)
+       it != d_conjAtomMap.end(); ++it) {
     delete it->second;
+  }
   for (ConjBondMap::const_iterator it = d_conjBondMap.begin();
-       it != d_conjBondMap.end(); ++it)
+       it != d_conjBondMap.end(); ++it) {
     delete it->second;
+  }
 }
 
-// store fingerprints for this ConjElectrons object in ceMap
-// return true if the FP did not already exist in the map, false
-// if they did (so the ConjElectrons object can be deleted)
-bool ConjElectrons::storeFP(CEMap &ceMap, unsigned int flags) {
-  boost::uint8_t byte;
+std::size_t ConjElectrons::computeFP(unsigned int flags) {
+  std::uint8_t byte;
   ConjFP fp;
-  unsigned int fpSize = 0;
-  if (flags & FP_ATOMS) fpSize += rdcast<unsigned int>(d_conjAtomMap.size());
-  if (flags & FP_BONDS)
-    fpSize += rdcast<unsigned int>((d_conjBondMap.size() - 1) / 4 + 1);
+  size_t fpSize = 0;
+  if (flags & FP_ATOMS) {
+    fpSize += d_conjAtomMap.size();
+  }
+  if (flags & FP_BONDS) {
+    fpSize += (d_conjBondMap.size() - 1) / 4 + 1;
+  }
   fp.reserve(fpSize);
   if (flags & FP_ATOMS) {
     // for each atom, we push a byte to the FP vector whose
@@ -562,16 +619,33 @@ bool ConjElectrons::storeFP(CEMap &ceMap, unsigned int flags) {
         byte = 0;
         i = 0;
       }
-      byte |= (static_cast<boost::uint8_t>(it->second->order()) << (i * 2));
+      byte |= (static_cast<std::uint8_t>(it->second->order()) << (i * 2));
       ++i;
     }
-    if (i) fp.push_back(byte);
+    if (i) {
+      fp.push_back(byte);
+    }
   }
   // convert the FP vector to a hash
-  std::size_t hash = boost::hash_range(fp.begin(), fp.end());
+  return boost::hash_range(fp.begin(), fp.end());
+}
+
+// store fingerprints for this ConjElectrons object in ceSet
+// return true if the FP did not already exist in the set, false
+// if they did (so the ConjElectrons object can be deleted)
+bool ConjElectrons::haveFP(CESet &ceSet, unsigned int flags) {
   // return true if the FP did not already exist in ceMap,
   // false if it did
-  return ceMap.insert(std::make_pair(hash, this)).second;
+  return ceSet.insert(computeFP(flags)).second;
+}
+
+// store fingerprints for this ConjElectrons object in ceMap
+// return true if the FP did not already exist in the map, false
+// if they did (so the ConjElectrons object can be deleted)
+bool ConjElectrons::storeFP(CEMap &ceMap, unsigned int flags) {
+  // return true if the FP did not already exist in ceMap,
+  // false if it did
+  return ceMap.insert(std::make_pair(computeFP(flags), this)).second;
 }
 
 // assign bond orders and formal charges as encoded in the
@@ -602,11 +676,13 @@ void ConjElectrons::assignBondsFormalChargesToMol(ROMol &mol) {
 // respective atoms and bonds
 void ConjElectrons::initCeFromMol() {
   for (ConjAtomMap::const_iterator it = d_conjAtomMap.begin();
-       it != d_conjAtomMap.end(); ++it)
+       it != d_conjAtomMap.end(); ++it) {
     it->second->initTvNbFcFromAtom();
+  }
   for (ConjBondMap::const_iterator it = d_conjBondMap.begin();
-       it != d_conjBondMap.end(); ++it)
+       it != d_conjBondMap.end(); ++it) {
     it->second->initOrderFromBond();
+  }
   d_currElectrons = 0;
 }
 
@@ -624,65 +700,89 @@ void ConjElectrons::assignNonBonded() {
 // assign formal charges to atoms
 void ConjElectrons::assignFormalCharge() {
   for (ConjAtomMap::const_iterator it = d_conjAtomMap.begin();
-       it != d_conjAtomMap.end(); ++it)
+       it != d_conjAtomMap.end(); ++it) {
     it->second->assignFormalCharge();
+  }
 }
 
-// return true if formal charges for this ConjElectrons
+// return true if bond orders and formal charges for this ConjElectrons
 // object are OK, false if they aren't
-bool ConjElectrons::checkCharges() {
+bool ConjElectrons::checkChargesAndBondOrders() {
   bool areAcceptable = true;
   bool haveIncompleteOctetRightOfC = false;
+  bool haveNitrogenGroup = false;
   bool havePosLeftOfN = false;
   bool haveNegLeftOfN = false;
-  bool havePosRightOfNNoOctet = false;
   for (ConjAtomMap::const_iterator it = d_conjAtomMap.begin();
        areAcceptable && (it != d_conjAtomMap.end()); ++it) {
     AtomElectrons *ae = it->second;
     // formal charges should be between -2 and +1
     areAcceptable = ((ae->fc() < 2) && (ae->fc() > -3));
     if (areAcceptable) {
-      if (ae->fc() > 0)
+      if (ae->fc() > 0) {
         d_flags |= HAVE_CATION;
-      else if (ae->fc() < 0)
+      } else if (ae->fc() < 0) {
         d_flags |= HAVE_ANION;
+      }
       if (ae->oe() > 4) {
-        if (!ae->hasOctet()) haveIncompleteOctetRightOfC = true;
+        if (ae->oe() == 5) {
+          haveNitrogenGroup = true;
+        }
+        if (!ae->hasOctet()) {
+          haveIncompleteOctetRightOfC = true;
+        }
         if ((ae->fc() > 0) && (ae->oe() > 5)) {
           d_flags |= HAVE_CATION_RIGHT_OF_N;
-          if (!ae->hasOctet()) havePosRightOfNNoOctet = true;
         }
       } else {
-        if (ae->fc() < 0)
+        if (ae->fc() < 0) {
           haveNegLeftOfN = true;
-        else if (ae->fc() > 0)
+        } else if (ae->fc() > 0) {
           havePosLeftOfN = true;
+        }
       }
       // no carbanions should coexist with incomplete octets
       areAcceptable = !(haveIncompleteOctetRightOfC && haveNegLeftOfN);
     }
   }
-  if (areAcceptable &&
+  if (areAcceptable && havePosLeftOfN &&
       !(d_parent->flags() & ResonanceMolSupplier::UNCONSTRAINED_CATIONS)) {
     // if the UNCONSTRAINED_CATIONS flag is not set, positively charged
-    // atoms left and right of N with an incomplete octet are acceptable
-    // only if the conjugated group has a positive total formal charge
-    if (havePosLeftOfN || havePosRightOfNNoOctet)
-      areAcceptable = (d_totalFormalCharge > 0);
+    // atoms left of N with an incomplete octet are acceptable
+    // only if the conjugated group has a positive total formal charge,
+    // no atoms bearing a negative charge and no nitrogens
+    areAcceptable = (d_totalFormalCharge > 0 && !(d_flags & HAVE_ANION) &&
+                     !haveNitrogenGroup);
   }
   if (areAcceptable && haveNegLeftOfN &&
-      !(d_parent->flags() & ResonanceMolSupplier::UNCONSTRAINED_ANIONS))
+      !(d_parent->flags() & ResonanceMolSupplier::UNCONSTRAINED_ANIONS)) {
     // if the UNCONSTRAINED_ANIONS flag is not set, negatively charged
     // atoms left of N are acceptable only if the conjugated group has
-    // a negative total formal charge
-    areAcceptable = (d_totalFormalCharge < 0);
+    // a negative total formal charge and no atoms bearing a positive
+    // charge
+    areAcceptable = (d_totalFormalCharge < 0 && !(d_flags & HAVE_CATION));
+  }
+  // if the ALLOW_INCOMPLETE_OCTETS flag is not set, incomplete octets
+  // right of C are only allowed in the absence of anions
+  if (areAcceptable &&
+      !(d_parent->flags() & ResonanceMolSupplier::ALLOW_INCOMPLETE_OCTETS)) {
+    areAcceptable = !(haveIncompleteOctetRightOfC && (d_flags & HAVE_ANION));
+  }
   for (ConjBondMap::const_iterator it = d_conjBondMap.begin();
        areAcceptable && (it != d_conjBondMap.end()); ++it) {
     BondElectrons *be = it->second;
     AtomElectrons *ae[2] = {d_conjAtomMap[be->bond()->getBeginAtomIdx()],
                             d_conjAtomMap[be->bond()->getEndAtomIdx()]};
     for (unsigned int i = 0; areAcceptable && (i < 2); ++i) {
-      if (ae[i]->oe() < 5) {
+      // cumulated bonds are disallowed in aromatic rings
+      if (be->order() > 1 && ae[i]->atom()->getIsAromatic()) {
+        if (ae[i]->hasMultipleBond()) {
+          areAcceptable = false;
+        } else {
+          ae[i]->setHasMultipleBond();
+        }
+      }
+      if (areAcceptable && ae[i]->oe() < 5) {
         // no carbocations allowed on carbons bearing double
         // or triple bonds, carbanions allowed on all carbons
         // no double charged allowed left of N
@@ -690,27 +790,104 @@ bool ConjElectrons::checkCharges() {
             ((be->order() == 1) || ((be->order() > 1) && (ae[i]->fc() < 1)));
       }
     }
-    if (areAcceptable)
+    if (areAcceptable) {
       // charged neighboring atoms left of N are not acceptable
       areAcceptable = !((ae[0]->oe() < 5) && ae[0]->fc() && (ae[1]->oe() < 5) &&
                         ae[1]->fc());
+    }
   }
   return areAcceptable;
+}
+
+bool ConjElectrons::checkMetrics(CEStats &ceStats, bool &changed) const {
+  bool ok = true;
+  changed = false;
+  if (!ceStats.d_init || (nbMissing() < ceStats.d_minNbMissing)) {
+    changed = ceStats.d_init;
+    ceStats.d_init = true;
+    ceStats.d_minNbMissing = nbMissing();
+  }
+  if ((d_parent->flags() & ResonanceMolSupplier::ALLOW_INCOMPLETE_OCTETS) ||
+      (nbMissing() <= ceStats.d_minNbMissing)) {
+    if (!hasCationRightOfN() && !ceStats.d_haveNoCationsRightOfN) {
+      ceStats.d_haveNoCationsRightOfN = true;
+      changed = true;
+    }
+    if (!hasChargeSeparation() && !ceStats.d_haveNoChargeSeparation) {
+      ceStats.d_haveNoChargeSeparation = true;
+      changed = true;
+    }
+  }
+  // if the flag ALLOW_INCOMPLETE_OCTETS is not set, ConjElectrons
+  // objects having less electrons than the most electron-complete
+  // structure (which most often will have all complete octets) are
+  // discarded
+  if ((!(d_parent->flags() & ResonanceMolSupplier::ALLOW_INCOMPLETE_OCTETS) &&
+       (nbMissing() > ceStats.d_minNbMissing)) ||
+      (!(d_parent->flags() & ResonanceMolSupplier::UNCONSTRAINED_CATIONS) &&
+       hasCationRightOfN() && ceStats.d_haveNoCationsRightOfN) ||
+      (!(d_parent->flags() & ResonanceMolSupplier::ALLOW_CHARGE_SEPARATION) &&
+       hasChargeSeparation() && ceStats.d_haveNoChargeSeparation)) {
+    ok = false;
+  }
+  return ok;
+}
+
+void ConjElectrons::purgeMaps(CEMap &ceMap, CEDegCount &ceDegCount,
+                              CEStats &ceStats) const {
+  bool changed = true;
+  while (changed) {
+    for (CEMap::iterator it = ceMap.begin(); it != ceMap.end();) {
+      if (!it->second->checkMetrics(ceStats, changed)) {
+        CEMap::iterator toBeDeleted = it;
+        ++it;
+        auto it2 = ceDegCount.find(toBeDeleted->second->hash());
+        if (it2 != ceDegCount.end()) {
+          --it2->second;
+          if (!it2->second) {
+            ceDegCount.erase(it2);
+          }
+        }
+        delete toBeDeleted->second;
+        ceMap.erase(toBeDeleted);
+      } else {
+        ++it;
+      }
+      if (changed) {
+        break;
+      }
+    }
+  }
 }
 
 // assign formal charges and, if they are acceptable, store
 // return true if FPs did not already exist in ceMap, false if they did
 bool ConjElectrons::assignFormalChargesAndStore(CEMap &ceMap,
+                                                CEDegCount &ceDegCount,
+                                                CEStats &ceStats,
                                                 unsigned int fpFlags) {
   assignFormalCharge();
-  bool ok = checkCharges();
-  if (ok) ok = storeFP(ceMap, fpFlags);
-  if (ok) computeMetrics();
+  bool ok = checkChargesAndBondOrders();
+  bool changed = false;
+  if (ok) {
+    computeMetrics();
+    ok = checkMetrics(ceStats, changed);
+  }
+  if (ok) {
+    ok = storeFP(ceMap, fpFlags);
+  }
+  if (changed) {
+    purgeMaps(ceMap, ceDegCount, ceStats);
+  }
+  if (ok) {
+    updateDegCount(ceDegCount);
+  }
   return ok;
 }
 
 // enumerate all possible permutations of non-bonded electrons
-void ConjElectrons::enumerateNonBonded(CEMap &ceMap) {
+void ConjElectrons::enumerateNonBonded(CEMap &ceMap, CEDegCount &ceDegCount,
+                                       CEStats &ceStats) {
   ConjElectrons *ce = this;
   // the way we compute FPs for a resonance structure depends
   // on whether we want to enumerate all Kekule structures
@@ -746,14 +923,15 @@ void ConjElectrons::enumerateNonBonded(CEMap &ceMap) {
     // we compute the number of permutations (numComb) and a
     // binary code (v) which indicates which of the atom indices in
     // aiVec will be octet-unsatisfied for each permutation
-    ResonanceUtils::getNumCombStartV(
-        numCand, rdcast<unsigned int>(aiVec.size()), numComb, v);
+    ResonanceUtils::getNumCombStartV(numCand, aiVec.size(), numComb, v);
     // if there are multiple permutations, make a copy of the original
     // ConjElectrons object, since the latter will be modified
     ConjElectrons *ceCopy = ((numComb > 1) ? new ConjElectrons(*ce) : nullptr);
     // enumerate all permutations
     for (unsigned int c = 0; c < numComb; ++c) {
-      if (c) ce = new ConjElectrons(*ceCopy);
+      if (c) {
+        ce = new ConjElectrons(*ceCopy);
+      }
       unsigned int vc = v;
       for (unsigned int i : aiVec) {
         AtomElectrons *ae = ce->getAtomElectronsWithIdx(i);
@@ -761,50 +939,57 @@ void ConjElectrons::enumerateNonBonded(CEMap &ceMap) {
         // if this atom was chosen to be octet-unsatisfied in
         // this permutation, give it one electron pair less than
         // its need (which most likely means no electrons at all)
-        if (vc & 1) e -= 2;
+        if (vc & 1) {
+          e -= 2;
+        }
         ce->decrCurrElectrons(e);
         ae->assignNonBonded(e);
         vc >>= 1;
       }
       // delete this candidate if it fails the formal charge check
-      if (!ce->assignFormalChargesAndStore(ceMap, fpFlags)) delete ce;
+      if (!ce->assignFormalChargesAndStore(ceMap, ceDegCount, ceStats,
+                                           fpFlags)) {
+        delete ce;
+      }
       // get the next binary code
       ResonanceUtils::updateV(v);
     }
-    if (ceCopy) delete ceCopy;
+    delete ceCopy;
   } else if (nbTotal == currElectrons()) {
     // if the electrons required to satisfy all octets
     // are as many as those currently available, assignment
     // is univocal
     ce->assignNonBonded();
     // delete this candidate if it fails the formal charge check
-    if (!ce->assignFormalChargesAndStore(ceMap, fpFlags)) delete ce;
-  } else
+    if (!ce->assignFormalChargesAndStore(ceMap, ceDegCount, ceStats, fpFlags)) {
+      delete ce;
+    }
+  } else {
     // if the electrons required to satisfy all octets are less
     // than those currently available, we must have failed the bond
     // assignment, so the candidate must be deleted
     delete ce;
+  }
 }
 
 void ConjElectrons::computeMetrics() {
   // 1000 * Electronegativity according to the Allen scale
   // (Allen, L.C. J. Am. Chem. Soc. 1989, 111, 9003-9014)
-  static const unsigned int en[] = {
-      2300, 4160, 912,  1576, 2051, 2544, 3066, 3610, 4193, 4789, 869,
-      1293, 1613, 1916, 2253, 2589, 2869, 3242, 734,  1034, 1190, 1380,
-      1530, 1650, 1750, 1800, 1840, 1880, 1850, 1590, 1756, 1994, 2211,
-      2434, 2685, 2966, 706,  963,  1120, 1320, 1410, 1470, 1510, 1540,
-      1560, 1590, 1870, 1520, 1656, 1824, 1984, 2158, 2359, 2582, 659,
-      881,  1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000,
-      1000, 1000, 1000, 1000, 1090, 1160, 1340, 1470, 1600, 1650, 1680,
-      1720, 1920, 1760, 1789, 1854, 2010, 2190, 2390, 2600, 670,  890};
-  const int enSize = sizeof(en) / sizeof(double);
+  static const std::vector<unsigned int> en{
+      1000, 2300, 4160, 912,  1576, 2051, 2544, 3066, 3610, 4193, 4789, 869,
+      1293, 1613, 1916, 2253, 2589, 2869, 3242, 734,  1034, 1190, 1380, 1530,
+      1650, 1750, 1800, 1840, 1880, 1850, 1590, 1756, 1994, 2211, 2434, 2685,
+      2966, 706,  963,  1120, 1320, 1410, 1470, 1510, 1540, 1560, 1590, 1870,
+      1520, 1656, 1824, 1984, 2158, 2359, 2582, 659,  881,  1000, 1000, 1000,
+      1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1090,
+      1160, 1340, 1470, 1600, 1650, 1680, 1720, 1920, 1760, 1789, 1854, 2010,
+      2190, 2390, 2600, 670,  890};
   for (ConjAtomMap::const_iterator it = d_conjAtomMap.begin();
        it != d_conjAtomMap.end(); ++it) {
     d_ceMetrics.d_absFormalCharges += abs(it->second->fc());
-    int anIdx = it->second->atom()->getAtomicNum() - 1;
+    size_t anIdx = it->second->atom()->getAtomicNum();
     d_ceMetrics.d_wtdFormalCharges +=
-        (it->second->fc() * ((anIdx >= enSize) ? 1000 : en[anIdx]));
+        (it->second->fc() * ((anIdx >= en.size()) ? 1000 : en[anIdx]));
     d_ceMetrics.d_nbMissing += it->second->neededNbForOctet();
   }
   computeDistFormalCharges();
@@ -812,21 +997,35 @@ void ConjElectrons::computeMetrics() {
   computeSumMultipleBondIdxs();
 }
 
+void ConjElectrons::updateDegCount(CEDegCount &ceDegCount) {
+  static const size_t ceMetricsArrayLen = 5;
+  const auto metricsIt = reinterpret_cast<const int *>(&d_ceMetrics);
+  d_ceMetrics.d_hash =
+      boost::hash_range(metricsIt, metricsIt + ceMetricsArrayLen);
+  ++ceDegCount[d_ceMetrics.d_hash];
+}
+
 // compute sum of shortest path distances between all pairs of
 // formal charges of the same sign and of opposite signs
 void ConjElectrons::computeDistFormalCharges() {
+  unsigned int n = d_parent->mol().getNumAtoms();
   for (ConjAtomMap::const_iterator it1 = d_conjAtomMap.begin();
        it1 != d_conjAtomMap.end(); ++it1) {
-    if (!it1->second->fc()) continue;
+    if (!it1->second->fc()) {
+      continue;
+    }
+    size_t y = it1->first * n;
     for (auto it2 = it1; it2 != d_conjAtomMap.end(); ++it2) {
-      if ((it1 == it2) || !it2->second->fc()) continue;
-      unsigned int dist = rdcast<unsigned int>(
-          MolOps::getShortestPath(d_parent->mol(), it1->first, it2->first)
-              .size());
-      if ((it1->second->fc() * it2->second->fc()) > 0)
+      if ((it1 == it2) || !it2->second->fc()) {
+        continue;
+      }
+      unsigned int dist = static_cast<unsigned int>(
+          MolOps::getDistanceMat(d_parent->mol())[y + it2->first] + 0.1);
+      if ((it1->second->fc() * it2->second->fc()) > 0) {
         d_ceMetrics.d_fcSameSignDist += dist;
-      else
+      } else {
         d_ceMetrics.d_fcOppSignDist += dist;
+      }
     }
   }
 }
@@ -835,7 +1034,9 @@ void ConjElectrons::computeDistFormalCharges() {
 void ConjElectrons::computeSumFormalChargeIdxs() {
   for (ConjAtomMap::const_iterator it = d_conjAtomMap.begin();
        it != d_conjAtomMap.end(); ++it) {
-    if (it->second->fc()) d_ceMetrics.d_sumFormalChargeIdxs += it->first;
+    if (it->second->fc()) {
+      d_ceMetrics.d_sumFormalChargeIdxs += it->first;
+    }
   }
 }
 
@@ -843,7 +1044,9 @@ void ConjElectrons::computeSumFormalChargeIdxs() {
 void ConjElectrons::computeSumMultipleBondIdxs() {
   for (ConjBondMap::const_iterator it = d_conjBondMap.begin();
        it != d_conjBondMap.end(); ++it) {
-    if (it->second->order() > 1) d_ceMetrics.d_sumMultipleBondIdxs += it->first;
+    if (it->second->order() > 1) {
+      d_ceMetrics.d_sumMultipleBondIdxs += it->first;
+    }
   }
 }
 
@@ -909,21 +1112,23 @@ bool CEVect2::resonanceStructureCompare(const ConjElectrons *a,
                                            b->sumMultipleBondIdxs()));
 }
 
-CEVect2::CEVect2(CEMap &ceMap) {
+CEVect2::CEVect2(const CEMap &ceMap) {
   d_ceVect.reserve(ceMap.size());
-  for (CEMap::const_iterator it = ceMap.begin(); it != ceMap.end(); ++it)
+  for (CEMap::const_iterator it = ceMap.begin(); it != ceMap.end(); ++it) {
     d_ceVect.push_back(it->second);
+  }
   std::sort(d_ceVect.begin(), d_ceVect.end(), resonanceStructureCompare);
   bool first = true;
-  CEMetrics metricsPrev;
+  std::size_t hashPrev;
   for (CEVect::const_iterator it = d_ceVect.begin(); it != d_ceVect.end();
        ++it) {
-    if (first || ((*it)->metrics() != metricsPrev)) {
+    if (first || ((*it)->hash() != hashPrev)) {
       first = false;
-      metricsPrev = (*it)->metrics();
+      hashPrev = (*it)->hash();
       d_degVect.push_back(1);
-    } else
+    } else {
       ++d_degVect.back();
+    }
   }
 }
 
@@ -939,13 +1144,12 @@ ConjElectrons *CEVect2::getCE(unsigned int depth, unsigned int width) {
        << "] = " << d_degVect[depth];
     throw std::runtime_error(ss.str());
   }
-  unsigned int i = 0;
-  for (unsigned int d = 0; d < depth; ++d) i += d_degVect[d];
-  i += width;
+  size_t i =
+      std::accumulate(d_degVect.begin(), d_degVect.begin() + depth, 0U) + width;
   return d_ceVect[i];
 }
 
-void CEVect2::resize(unsigned int size) {
+void CEVect2::resize(size_t size) {
   d_ceVect.resize(size ? ceCountUntilDepth(size - 1) : 0);
   d_degVect.resize(size);
 }
@@ -965,13 +1169,10 @@ unsigned int CEVect2::ceCountUntilDepth(unsigned int depth) {
     ss << "depth = " << depth << ", d_degVect.size() = " << d_degVect.size();
     throw std::runtime_error(ss.str());
   }
-  unsigned int i = 0;
-  for (unsigned int d = 0; d <= depth; ++d) i += d_degVect[d];
-  return i;
+  return std::accumulate(d_degVect.begin(), d_degVect.begin() + depth + 1, 0U);
 }
 
-void CEVect2::idxToDepthWidth(unsigned int idx, unsigned int &d,
-                              unsigned int &w) {
+void CEVect2::idxToDepthWidth(size_t idx, unsigned int &d, unsigned int &w) {
   if (idx >= d_ceVect.size()) {
     std::stringstream ss;
     ss << "idx = " << idx << ", d_ceVect.size() = " << d_ceVect.size();
@@ -987,20 +1188,23 @@ void CEVect2::idxToDepthWidth(unsigned int idx, unsigned int &d,
 
 // get the pointer to the BondElectrons object for bond having index bi
 BondElectrons *ConjElectrons::getBondElectronsWithIdx(unsigned int bi) {
-  return d_conjBondMap[bi];
+  auto it = d_conjBondMap.find(bi);
+  return (it != d_conjBondMap.end() ? it->second : nullptr);
 }
 
 // get the pointer to the AtomElectrons object for atom having index ai
 AtomElectrons *ConjElectrons::getAtomElectronsWithIdx(unsigned int ai) {
-  return d_conjAtomMap[ai];
+  auto it = d_conjAtomMap.find(ai);
+  return (it != d_conjAtomMap.end() ? it->second : nullptr);
 }
 
 // count number of total electrons
 unsigned int ConjElectrons::countTotalElectrons() {
   // count total number of valence electrons in conjugated group
   for (ConjBondMap::const_iterator it = d_conjBondMap.begin();
-       it != d_conjBondMap.end(); ++it)
+       it != d_conjBondMap.end(); ++it) {
     d_totalElectrons += (2 * it->second->orderFromBond());
+  }
   for (ConjAtomMap::const_iterator it = d_conjAtomMap.begin();
        it != d_conjAtomMap.end(); ++it) {
     const Atom *a = it->second->atom();
@@ -1010,8 +1214,25 @@ unsigned int ConjElectrons::countTotalElectrons() {
   return d_totalElectrons;
 }
 
+size_t ResonanceMolSupplierCallback::getNumStructures(
+    unsigned int conjGrpIdx) const {
+  PRECONDITION(conjGrpIdx < d_progress.size(), "conjGrpIdx out of bounds");
+  return d_progress.at(conjGrpIdx).d_totalStructs;
+}
+
+size_t ResonanceMolSupplierCallback::getNumDiverseStructures(
+    unsigned int conjGrpIdx) const {
+  PRECONDITION(conjGrpIdx < d_progress.size(), "conjGrpIdx out of bounds");
+  return d_progress.at(conjGrpIdx).d_diverseStructs;
+}
+
+void ResonanceMolSupplier::setProgressCallback(
+    ResonanceMolSupplierCallback *callback) {
+  d_callback.reset(callback);
+}
+
 // if the total number of resonance structures exceeds d_maxStructs,
-// trim the number of ConjElectrons object for each conjugated group
+// trim the number of ConjElectrons objects for each conjugated group
 // to exclude the less likely structures and save memory
 // we are going to generate the complete resonance structures
 // combining the most likely ConjElectrons objects in a breadth-first
@@ -1036,8 +1257,9 @@ void ResonanceMolSupplier::trimCeVect2() {
       for (unsigned int d = s[conjGrpIdx]; d < d_ceVect3[conjGrpIdx]->depth();
            ++d) {
         for (unsigned int w = 0; w < d_ceVect3[conjGrpIdx]->ceCountAtDepth(d);
-             ++w)
-          delete (d_ceVect3[conjGrpIdx]->getCE(d, w));
+             ++w) {
+          delete d_ceVect3[conjGrpIdx]->getCE(d, w);
+        }
       }
       d_ceVect3[conjGrpIdx]->resize(s[conjGrpIdx]);
     }
@@ -1046,7 +1268,7 @@ void ResonanceMolSupplier::trimCeVect2() {
 
 // get the ConjElectrons indices to be combined given
 // the complete resonance structure index
-void ResonanceMolSupplier::idxToCEPerm(unsigned int idx,
+void ResonanceMolSupplier::idxToCEPerm(size_t idx,
                                        std::vector<unsigned int> &c) const {
   // the c vector holds a pair of values for each ConjGrp,
   // namely depth and width where the ConjElectrons
@@ -1060,8 +1282,10 @@ void ResonanceMolSupplier::idxToCEPerm(unsigned int idx,
     for (unsigned int j = 0; j < g; ++j) {
       d *= d_ceVect3[j]->ceCount();
     }
-    d_ceVect3[g]->idxToDepthWidth(idx / d, c[gt2], c[gt2 + 1]);
-    idx %= d;
+    if (d_ceVect3[g]->ceCount()) {
+      d_ceVect3[g]->idxToDepthWidth(idx / d, c[gt2], c[gt2 + 1]);
+      idx %= d;
+    }
   }
 }
 
@@ -1071,25 +1295,37 @@ void ResonanceMolSupplier::idxToCEPerm(unsigned int idx,
 bool ResonanceMolSupplier::cePermCompare(const CEPerm *a, const CEPerm *b) {
   unsigned int aSum = 0;
   unsigned int bSum = 0;
-  for (unsigned int i = 0; i < a->v.size(); i += 2) {
+  for (size_t i = 0; i < a->v.size(); i += 2) {
     aSum += a->v[i];
     bSum += b->v[i];
   }
-  if (aSum != bSum) return (aSum < bSum);
+  if (aSum != bSum) {
+    return (aSum < bSum);
+  }
   unsigned int aMax = 0;
   unsigned int bMax = 0;
-  for (unsigned int i = 0; i < a->v.size(); i += 2) {
-    if (!i || (a->v[i] > aMax)) aMax = a->v[i];
-    if (!i || (b->v[i] > bMax)) bMax = b->v[i];
+  for (size_t i = 0; i < a->v.size(); i += 2) {
+    if (!i || (a->v[i] > aMax)) {
+      aMax = a->v[i];
+    }
+    if (!i || (b->v[i] > bMax)) {
+      bMax = b->v[i];
+    }
   }
-  if (aMax != bMax) return (aMax < bMax);
-  for (unsigned int i = 0; i < a->v.size(); i += 2) {
-    if (a->v[i] != b->v[i]) return (a->v[i] < b->v[i]);
+  if (aMax != bMax) {
+    return (aMax < bMax);
+  }
+  for (size_t i = 0; i < a->v.size(); i += 2) {
+    if (a->v[i] != b->v[i]) {
+      return (a->v[i] < b->v[i]);
+    }
   }
   // if the other criteria didn't discriminate,
   // sort based on degenerate resonance structures
-  for (unsigned int i = 1; i < a->v.size(); i += 2) {
-    if (a->v[i] != b->v[i]) return (a->v[i] < b->v[i]);
+  for (size_t i = 1; i < a->v.size(); i += 2) {
+    if (a->v[i] != b->v[i]) {
+      return (a->v[i] < b->v[i]);
+    }
   }
   // we'll never get here, this it is just to silence a warning
   return false;
@@ -1101,7 +1337,7 @@ bool ResonanceMolSupplier::cePermCompare(const CEPerm *a, const CEPerm *b) {
 void ResonanceMolSupplier::prepEnumIdxVect() {
   d_enumIdx.resize(d_length);
   std::vector<CEPerm *> cePermVect(d_length);
-  for (unsigned int i = 0; i < d_length; ++i) {
+  for (size_t i = 0; i < d_length; ++i) {
     cePermVect[i] = new CEPerm;
     cePermVect[i]->idx = i;
     idxToCEPerm(i, cePermVect[i]->v);
@@ -1120,11 +1356,20 @@ ResonanceMolSupplier::ResonanceMolSupplier(ROMol &mol, unsigned int flags,
       d_flags(flags),
       d_idx(0),
       d_numThreads(1),
-      d_isEnumerated(false) {
+      d_isEnumerated(false),
+      d_wasCanceled(false) {
   const unsigned int MAX_STRUCTS = 1000000;
+  if (d_flags & UNCONSTRAINED_CATIONS) {
+    d_flags |= (ALLOW_CHARGE_SEPARATION | ALLOW_INCOMPLETE_OCTETS);
+  }
+  if (d_flags & UNCONSTRAINED_ANIONS) {
+    d_flags |= ALLOW_CHARGE_SEPARATION;
+  }
   d_maxStructs = std::min(maxStructs, MAX_STRUCTS);
   d_length = std::min(1U, d_maxStructs);
   d_mol = new ROMol(mol);
+  // call here to avoid a race condition in threads
+  MolOps::getDistanceMat(*d_mol);
   MolOps::Kekulize((RWMol &)*d_mol, false);
   // identify conjugate substructures
   assignConjGrpIdx();
@@ -1134,14 +1379,19 @@ ResonanceMolSupplier::ResonanceMolSupplier(ROMol &mol, unsigned int flags,
 ResonanceMolSupplier::~ResonanceMolSupplier() {
   for (CEVect3::const_iterator ceVect3It = d_ceVect3.begin();
        ceVect3It != d_ceVect3.end(); ++ceVect3It) {
-    if (!(*ceVect3It)) continue;
-    for (unsigned int d = 0; d < (*ceVect3It)->depth(); ++d) {
-      for (unsigned int w = 0; w < (*ceVect3It)->ceCountAtDepth(d); ++w)
-        delete ((*ceVect3It)->getCE(d, w));
+    if (!(*ceVect3It)) {
+      continue;
     }
-    delete (*ceVect3It);
+    for (unsigned int d = 0; d < (*ceVect3It)->depth(); ++d) {
+      for (unsigned int w = 0; w < (*ceVect3It)->ceCountAtDepth(d); ++w) {
+        delete (*ceVect3It)->getCE(d, w);
+      }
+    }
+    delete *ceVect3It;
   }
-  if (d_mol) delete d_mol;
+  if (d_mol) {
+    delete d_mol;
+  }
 }
 
 void ResonanceMolSupplier::setNumThreads(int numThreads) {
@@ -1149,9 +1399,16 @@ void ResonanceMolSupplier::setNumThreads(int numThreads) {
 }
 
 void ResonanceMolSupplier::enumerate() {
-  if (d_isEnumerated) return;
+  if (d_isEnumerated) {
+    return;
+  }
+  if (d_callback.get()) {
+    d_callback->d_progress.resize(d_nConjGrp);
+  }
   resizeCeVect();
-  if (d_numThreads == 1) mainLoop(0, 1);
+  if (d_numThreads == 1) {
+    mainLoop(0, 1);
+  }
 #ifdef RDK_THREADSAFE_SSS
   else {
     std::vector<std::future<void>> tg;
@@ -1175,7 +1432,9 @@ void ResonanceMolSupplier::enumerate() {
 
 void ResonanceMolSupplier::mainLoop(unsigned int ti, unsigned int nt) {
   for (unsigned int conjGrpIdx = 0; conjGrpIdx < d_nConjGrp; ++conjGrpIdx) {
-    if ((conjGrpIdx % nt) != ti) continue;
+    if ((conjGrpIdx % nt) != ti) {
+      continue;
+    }
     CEMap ceMap;
     buildCEMap(ceMap, conjGrpIdx);
     storeCEMap(ceMap, conjGrpIdx);
@@ -1189,26 +1448,40 @@ void ResonanceMolSupplier::mainLoop(unsigned int ti, unsigned int nt) {
 // index -1
 void ResonanceMolSupplier::assignConjGrpIdx() {
   unsigned int nb = d_mol->getNumBonds();
+  if (!nb) {
+    return;
+  }
+  std::stack<unsigned int> bondIndexStack;
   d_bondConjGrpIdx.resize(nb, -1);
   unsigned int na = d_mol->getNumAtoms();
   d_atomConjGrpIdx.resize(na, -1);
-  for (unsigned int i = 0; i < nb; ++i) {
-    const Bond *bi = d_mol->getBondWithIdx(i);
-    unsigned int biBeginIdx = bi->getBeginAtomIdx();
-    unsigned int biEndIdx = bi->getEndAtomIdx();
-    if (bi->getIsConjugated() && (d_bondConjGrpIdx[i] == -1)) {
-      // assign this conjugate bond to the matching group, if any
-      for (unsigned int j = 0; (d_bondConjGrpIdx[i] == -1) && (j < nb); ++j) {
-        if ((i == j) || (d_bondConjGrpIdx[j] == -1)) continue;
-        const Bond *bj = d_mol->getBondWithIdx(j);
-        if ((bj->getBeginAtomIdx() == biBeginIdx) ||
-            (bj->getBeginAtomIdx() == biEndIdx) ||
-            (bj->getEndAtomIdx() == biBeginIdx) ||
-            (bj->getEndAtomIdx() == biEndIdx))
-          d_bondConjGrpIdx[i] = d_bondConjGrpIdx[j];
+  for (d_nConjGrp = 0; true; ++d_nConjGrp) {
+    for (const auto b : d_mol->bonds()) {
+      unsigned int i = b->getIdx();
+      if (b->getIsConjugated() && (d_bondConjGrpIdx[i] == -1)) {
+        bondIndexStack.push(i);
+        break;
       }
-      // no existing group matches: create a new group
-      if (d_bondConjGrpIdx[i] == -1) d_bondConjGrpIdx[i] = d_nConjGrp++;
+    }
+    if (bondIndexStack.empty()) {
+      break;
+    }
+    while (!bondIndexStack.empty()) {
+      unsigned int i = bondIndexStack.top();
+      bondIndexStack.pop();
+      const Bond *bi = d_mol->getBondWithIdx(i);
+      for (const Atom *bondAtom : {bi->getBeginAtom(), bi->getEndAtom()}) {
+        // loop over bonds sprouting from bondAtom
+        for (const auto &bNbri :
+             boost::make_iterator_range(d_mol->getAtomBonds(bondAtom))) {
+          const auto &bNbr = (*d_mol)[bNbri];
+          unsigned int biNbr = bNbr->getIdx();
+          if (bNbr->getIsConjugated() && (d_bondConjGrpIdx[biNbr] == -1)) {
+            d_bondConjGrpIdx[biNbr] = d_nConjGrp;
+            bondIndexStack.push(biNbr);
+          }
+        }
+      }
     }
   }
   for (unsigned int i = 0; i < nb; ++i) {
@@ -1222,55 +1495,9 @@ void ResonanceMolSupplier::assignConjGrpIdx() {
   }
 }
 
-// enumerateNonBonded() is called for each ConjElectrons object
-// retrieved from ceMapTmp; the resulting ConjElectrons
-// objects are collected in ceMap
-void ResonanceMolSupplier::enumerateNbArrangements(CEMap &ceMap,
-                                                   CEMap &ceMapTmp) {
-  for (auto &it : ceMapTmp) it.second->enumerateNonBonded(ceMap);
-}
-
-void ResonanceMolSupplier::pruneStructures(CEMap &ceMap) {
-  unsigned int minNbMissing = 0;
-  bool first = true;
-  bool haveNoCationsRightOfN = false;
-  bool haveNoChargeSeparation = false;
-  for (CEMap::const_iterator it = ceMap.begin(); (it != ceMap.end()); ++it) {
-    if (first || (it->second->nbMissing() < minNbMissing)) {
-      first = false;
-      minNbMissing = it->second->nbMissing();
-    }
-  }
-  for (CEMap::const_iterator it = ceMap.begin(); (it != ceMap.end()); ++it) {
-    if (!(d_flags & ALLOW_INCOMPLETE_OCTETS) &&
-        (it->second->nbMissing() > minNbMissing))
-      continue;
-    if (!it->second->hasCationRightOfN()) haveNoCationsRightOfN = true;
-    if (!it->second->hasChargeSeparation()) haveNoChargeSeparation = true;
-  }
-  for (CEMap::iterator it = ceMap.begin(); it != ceMap.end();) {
-    // if the flag ALLOW_INCOMPLETE_OCTETS is not set, ConjElectrons
-    // objects having less electrons than the most electron-complete
-    // structure (which most often will have all complete octets) are
-    // discarded
-    if ((!(d_flags & ALLOW_INCOMPLETE_OCTETS) &&
-         (it->second->nbMissing() > minNbMissing)) ||
-        (!(d_flags & UNCONSTRAINED_CATIONS) &&
-         it->second->hasCationRightOfN() && haveNoCationsRightOfN) ||
-        (!(d_flags & ALLOW_CHARGE_SEPARATION) &&
-         it->second->hasChargeSeparation() && haveNoChargeSeparation)) {
-      CEMap::iterator toBeDeleted = it;
-      ++it;
-      delete (toBeDeleted->second);
-      ceMap.erase(toBeDeleted);
-    } else
-      ++it;
-  }
-}
-
 // function which enumerates all possible multiple bond arrangements
 // for each conjugated group, stores each arrangement in a ConjElectrons
-// object ans stores the latter in a map (ceMapTmp), keyed with its
+// object and stores the latter in a map (ceMapTmp), keyed with its
 // fingerprints. Depending on whether the KEKULE_ALL flag is set, the FP
 // computation will be based either on the bond arrangement or on atom
 // valences; this provides a convenient mechanism to remove degenerate
@@ -1291,7 +1518,9 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
                               : ConjElectrons::FP_ATOMS);
   unsigned int nb = d_mol->getNumBonds();
   unsigned int na = d_mol->getNumAtoms();
-  CEMap ceMapTmp;
+  CESet ceSetTmp;
+  CEDegCount ceDegCount;
+  CEStats ceStats;
   // There are two stacks in this algorithm:
   // 1) ConjElectrons stack (ceStack, unique). It stores partial bond
   //    arrangements whenever multiple paths arise. Partial bond
@@ -1307,11 +1536,12 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
   // the first ConjElectrons object has the user-supplied bond
   // and formal charge arrangement and is stored as such
   ce->initCeFromMol();
-  // we ignore the result of the call to checkCharges()
+  // we ignore the result of the call to checkChargesAndBondOrders()
   // but we need to call it so that the HAVE_CATION_RIGHT_OF_N flag
   // may eventually be set
-  ce->checkCharges();
+  ce->checkChargesAndBondOrders();
   ce->computeMetrics();
+  ce->updateDegCount(ceDegCount);
   ce->storeFP(ceMap, fpFlags);
   ce = ceCopy;
   // initialize ceStack
@@ -1327,10 +1557,14 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
       bool aiFound = false;
       while (aiBegin < na) {
         aiFound = (d_atomConjGrpIdx[aiBegin] == static_cast<int>(conjGrpIdx));
-        if (aiFound) break;
+        if (aiFound) {
+          break;
+        }
         ++aiBegin;
       }
-      if (!aiFound) continue;
+      if (!aiFound) {
+        continue;
+      }
       ce->pushToBeginStack(aiBegin);
     }
     // loop until the atom index stack is empty
@@ -1351,17 +1585,22 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
         // if this neighbor is not part of the conjugated group,
         // ignore it
         if (ce->parent()->getAtomConjGrpIdx(aiNbr) !=
-            static_cast<int>(conjGrpIdx))
+            static_cast<int>(conjGrpIdx)) {
           continue;
+        }
         AtomElectrons *aeNbr = ce->getAtomElectronsWithIdx(aiNbr);
         // if we've already dealt with this neighbor before, ignore it
-        if (aeNbr->isDefinitive()) continue;
+        if (!aeNbr || aeNbr->isDefinitive()) {
+          continue;
+        }
         unsigned int biNbr =
             d_mol->getBondBetweenAtoms(ai[BEGIN_POS], aiNbr)->getIdx();
         BondElectrons *beNbr = ce->getBondElectronsWithIdx(biNbr);
         // if we have already assigned the bond order to this bond,
         // ignore it
-        if (beNbr->isDefinitive()) continue;
+        if (!beNbr || beNbr->isDefinitive()) {
+          continue;
+        }
         // if this is the first neighbor we find, process it
         if (!ae[END_POS]) {
           bi = biNbr;
@@ -1371,13 +1610,16 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
         }
         // otherwise, if there are multiple neighbors, process the first
         // and store the rest to the atom index stack
-        else
+        else {
           ce->pushToBeginStack(aiNbr);
+        }
       }
       // if no neighbors were found, move on to the next atom index
       // in the stack
-      if (!be) continue;
-      boost::uint8_t allowedBondsPerAtom[2];
+      if (!be) {
+        continue;
+      }
+      std::uint8_t allowedBondsPerAtom[2];
       // loop over the two atoms that need be bonded
       for (unsigned int i = 0; i < 2; ++i) {
         // for each atom, find which bond orders are allowed
@@ -1387,11 +1629,12 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
         // to the stack
         if (ae[i]->isLastBond()) {
           ae[i]->setDefinitive();
-        } else
+        } else {
           ce->pushToBeginStack(ai[i]);
+        }
       }
       // logical AND between allowed bond masks for the two atoms
-      boost::uint8_t allowedBonds =
+      std::uint8_t allowedBonds =
           allowedBondsPerAtom[BEGIN_POS] & allowedBondsPerAtom[END_POS];
       bool isAnyBondAllowed = false;
       bool needToFork = false;
@@ -1401,8 +1644,8 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
       for (unsigned int i = 0; i < 3; ++i) {
         unsigned int t = i * 2;
         ConjElectrons *ceToSet = nullptr;
-        boost::uint8_t orderMask = (1 << t);
-        boost::uint8_t chgMask = (1 << (t + 1));
+        std::uint8_t orderMask = (1 << t);
+        std::uint8_t chgMask = (1 << (t + 1));
         unsigned int bo = i + 1;
         // if the currently available electrons are enough for this
         // bond type and both atoms can accept this bond type
@@ -1429,8 +1672,9 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
           // set bond orders and finalize atoms as needed
           ceToSet->getBondElectronsWithIdx(bi)->setOrder(bo);
           for (unsigned int j = 0; j < 2; ++j) {
-            if (ae[j]->isLastBond())
+            if (ae[j]->isLastBond()) {
               ceToSet->getAtomElectronsWithIdx(ai[j])->finalizeAtom();
+            }
           }
         }
       }
@@ -1444,14 +1688,29 @@ void ResonanceMolSupplier::buildCEMap(CEMap &ceMap, unsigned int conjGrpIdx) {
     if (ce) {
       // if this bond arrangement was already stored previously,
       // discard it
-      if (!ce->storeFP(ceMapTmp, fpFlagsTmp)) delete ce;
+      if (!ce->haveFP(ceSetTmp, fpFlagsTmp)) {
+        delete ce;
+      } else {
+        // enumerate possible non-bonded electron
+        // arrangements, and store them in ceMap
+        ce->enumerateNonBonded(ceMap, ceDegCount, ceStats);
+        // quit the loop early if the number of non-degenerate
+        // structures already exceeds d_maxStructs
+        if (d_callback.get()) {
+          d_callback->d_progress[conjGrpIdx].d_totalStructs = ceMap.size();
+          d_callback->d_progress[conjGrpIdx].d_diverseStructs =
+              ceDegCount.size();
+          if (!(*d_callback)()) {
+            d_wasCanceled = true;
+            break;
+          }
+        }
+        if (ceDegCount.size() >= d_maxStructs) {
+          break;
+        }
+      }
     }
   }
-  // for each bond arrangement in ceMapTmp, enumerate possible
-  // non-bonded electron arrangements, amd store them in ceMap
-  enumerateNbArrangements(ceMap, ceMapTmp);
-  // prune structures depending on how flags were set
-  pruneStructures(ceMap);
 }
 
 // getter function which returns the bondConjGrpIdx for a given
@@ -1485,7 +1744,7 @@ inline void ResonanceMolSupplier::resizeCeVect() {
 
 // stores the ConjElectrons pointers currently stored in ceMap
 // in the d_ceVect3 vector
-inline void ResonanceMolSupplier::storeCEMap(CEMap &ceMap,
+inline void ResonanceMolSupplier::storeCEMap(const CEMap &ceMap,
                                              unsigned int conjGrpIdx) {
   d_ceVect3[conjGrpIdx] = new CEVect2(ceMap);
 }
@@ -1577,4 +1836,4 @@ ROMol *ResonanceMolSupplier::assignBondsFormalCharges(
   ResonanceUtils::sanitizeMol((RWMol &)*mol);
   return mol;
 }
-}
+}  // namespace RDKit

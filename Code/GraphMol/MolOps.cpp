@@ -59,7 +59,9 @@ void nitrogenCleanup(RWMol &mol, Atom *atom) {
   // munged:
   //  O=[n+]1occcc1
   // this was sf.net issue 1811276
-  if (atom->getFormalCharge()) return;
+  if (atom->getFormalCharge()) {
+    return;
+  }
 
   // we need to play this little aromaticity game because the
   // explicit valence code modifies its results for aromatic
@@ -112,7 +114,9 @@ void phosphorusCleanup(RWMol &mol, Atom *atom) {
   PRECONDITION(atom, "bad atom");
 
   // we only want to do neutrals
-  if (atom->getFormalCharge()) return;
+  if (atom->getFormalCharge()) {
+    return;
+  }
 
   // NOTE that we are calling calcExplicitValence() here, we do
   // this because we cannot be sure that it has already been
@@ -173,18 +177,20 @@ void halogenCleanup(RWMol &mol, Atom *atom) {
       ++nid1;
     }
     if (neighborsAllO) {
-      atom->setFormalCharge(ev / 2);
+      int formalCharge = 0;
       boost::tie(nid1, end1) = mol.getAtomNeighbors(atom);
       while (nid1 != end1) {
         Bond *b = mol.getBondBetweenAtoms(aid, *nid1);
         if (b->getBondType() == Bond::DOUBLE) {
           b->setBondType(Bond::SINGLE);
           Atom *otherAtom = mol.getAtomWithIdx(*nid1);
+          formalCharge++;
           otherAtom->setFormalCharge(-1);
           otherAtom->calcExplicitValence(false);
         }
         ++nid1;
       }
+      atom->setFormalCharge(formalCharge);
       atom->calcExplicitValence(false);
     }
   }
@@ -232,14 +238,14 @@ void adjustHs(RWMol &mol) {
     //    Smiles:  O=C1NC=CC2=C1C=CC=C2
     //
     //    after perception is done, the N atom has two aromatic
-    //    bonds to it and a single implict H.  When the Smiles is
+    //    bonds to it and a single implicit H.  When the Smiles is
     //    written, we get: n1ccc2ccccc2c1=O.  Here the nitrogen has
     //    no implicit Hs (because there are two aromatic bonds to
     //    it, giving it a valence of 3).  Also: this SMILES is bogus
     //    (un-kekulizable).  The correct SMILES would be:
     //    [nH]1ccc2ccccc2c1=O.  So we need to loop through the atoms
     //    and find those that have lost implicit H; we'll add those
-    //    back as explict Hs.
+    //    back as explicit Hs.
     //
     //    <phew> that takes way longer to comment than it does to
     //    write:
@@ -381,6 +387,48 @@ void sanitizeMol(RWMol &mol, unsigned int &operationThatFailed,
   operationThatFailed = 0;
 }
 
+std::vector<std::unique_ptr<MolSanitizeException>> detectChemistryProblems(
+    const ROMol &imol, unsigned int sanitizeOps) {
+  RWMol mol(imol);
+  std::vector<std::unique_ptr<MolSanitizeException>> res;
+
+  // clear out any cached properties
+  mol.clearComputedProps();
+
+  int operation;
+  operation = SANITIZE_CLEANUP;
+  if (sanitizeOps & operation) {
+    // clean up things like nitro groups
+    cleanUp(mol);
+  }
+
+  // update computed properties on atoms and bonds:
+  operation = SANITIZE_PROPERTIES;
+  if (sanitizeOps & operation) {
+    for (auto &atom : mol.atoms()) {
+      try {
+        bool strict = true;
+        atom->updatePropertyCache(strict);
+      } catch (const MolSanitizeException &e) {
+        res.emplace_back(e.copy());
+      }
+    }
+  } else {
+    mol.updatePropertyCache(false);
+  }
+
+  // kekulizations
+  operation = SANITIZE_KEKULIZE;
+  if (sanitizeOps & operation) {
+    try {
+      Kekulize(mol);
+    } catch (const MolSanitizeException &e) {
+      res.emplace_back(e.copy());
+    }
+  }
+  return res;
+}
+
 std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
                                     INT_VECT *frags,
                                     VECT_INT_VECT *fragsMolAtomMapping,
@@ -394,10 +442,10 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
     ownIt = true;
   }
   unsigned int nFrags = getMolFrags(mol, *mapping);
-  std::vector<ROMOL_SPTR> res;
+  std::vector<RWMOL_SPTR> res;
   if (nFrags == 1) {
-    auto *tmp = new ROMol(mol);
-    ROMOL_SPTR sptr(tmp);
+    auto *tmp = new RWMol(mol);
+    RWMOL_SPTR sptr(tmp);
     res.push_back(sptr);
     if (fragsMolAtomMapping) {
       INT_VECT comp;
@@ -412,17 +460,16 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
     boost::dynamic_bitset<> copiedBonds(mol.getNumBonds(), 0);
     res.reserve(nFrags);
     for (unsigned int frag = 0; frag < nFrags; ++frag) {
-      auto *tmp = new ROMol();
-      ROMOL_SPTR sptr(tmp);
+      auto *tmp = new RWMol();
+      RWMOL_SPTR sptr(tmp);
       res.push_back(sptr);
     }
 
     // copy atoms
     INT_INT_VECT_MAP comMap;
     for (unsigned int idx = 0; idx < mol.getNumAtoms(); ++idx) {
-      RWMol *tmp = static_cast<RWMol *>(res[(*mapping)[idx]].get());
       const Atom *oAtm = mol.getAtomWithIdx(idx);
-      ids[idx] = tmp->addAtom(oAtm->copy(), false, true);
+      ids[idx] = res[(*mapping)[idx]]->addAtom(oAtm->copy(), false, true);
       copiedAtoms[idx] = 1;
       if (fragsMolAtomMapping) {
         if (comMap.find((*mapping)[idx]) == comMap.end()) {
@@ -457,8 +504,7 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
           }
           ringStereoAtomsCopied.push_back(ridx);
         }
-        RWMol *tmp = static_cast<RWMol *>(res[(*mapping)[idx]].get());
-        tmp->getAtomWithIdx(ids[idx])->setProp(
+        res[(*mapping)[idx]]->getAtomWithIdx(ids[idx])->setProp(
             common_properties::_ringStereoAtoms, ringStereoAtomsCopied);
       }
     }
@@ -473,9 +519,8 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
         continue;
       }
       Bond *nBond = bond->copy();
-      RWMol *tmp =
-          static_cast<RWMol *>(res[(*mapping)[nBond->getBeginAtomIdx()]].get());
-      nBond->setOwningMol(static_cast<ROMol *>(tmp));
+      RWMol *tmp = res[(*mapping)[nBond->getBeginAtomIdx()]].get();
+      nBond->setOwningMol( tmp );
       nBond->setBeginAtomIdx(ids[nBond->getBeginAtomIdx()]);
       nBond->setEndAtomIdx(ids[nBond->getEndAtomIdx()]);
       nBond->getStereoAtoms().clear();
@@ -490,7 +535,7 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
     if (mol.getRingInfo()->isInitialized()) {
       for (const auto &i : mol.getRingInfo()->atomRings()) {
         INT_VECT aids;
-        RWMol *tmp = static_cast<RWMol *>(res[(*mapping)[i[0]]].get());
+        auto tmp = res[(*mapping)[i[0]]].get();
         if (!tmp->getRingInfo()->isInitialized()) {
           tmp->getRingInfo()->initialize();
         }
@@ -498,17 +543,19 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
           aids.push_back(ids[j]);
         }
         INT_VECT bids;
-        INT_VECT_CI lastRai;
-        for (INT_VECT_CI rai = aids.begin(); rai != aids.end(); rai++) {
-          if (rai != aids.begin()) {
-            const Bond *bnd = tmp->getBondBetweenAtoms(*rai, *lastRai);
-            if (!bnd) throw ValueErrorException("expected bond not found");
-            bids.push_back(bnd->getIdx());
+        INT_VECT_CI lastRai = aids.begin();
+        for (INT_VECT_CI rai = aids.begin() + 1; rai != aids.end(); ++rai) {
+          const Bond *bnd = tmp->getBondBetweenAtoms(*rai, *lastRai);
+          if (!bnd) {
+            throw ValueErrorException("expected bond not found");
           }
+          bids.push_back(bnd->getIdx());
           lastRai = rai;
         }
         const Bond *bnd = tmp->getBondBetweenAtoms(*lastRai, *(aids.begin()));
-        if (!bnd) throw ValueErrorException("expected bond not found");
+        if (!bnd) {
+          throw ValueErrorException("expected bond not found");
+        }
         bids.push_back(bnd->getIdx());
         tmp->getRingInfo()->addRing(aids, bids);
       }
@@ -526,7 +573,9 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
           newM->addConformer(conf);
         }
         for (unsigned int i = 0; i < mol.getNumAtoms(); ++i) {
-          if (ids[i] < 0) continue;
+          if (ids[i] < 0) {
+            continue;
+          }
           res[(*mapping)[i]]
               ->getConformer((*cit)->getId())
               .setAtomPos(ids[i], (*cit)->getAtomPos(i));
@@ -544,14 +593,14 @@ std::vector<ROMOL_SPTR> getMolFrags(const ROMol &mol, bool sanitizeFrags,
 
   if (sanitizeFrags) {
     for (auto &re : res) {
-      sanitizeMol(*static_cast<RWMol *>(re.get()));
+      sanitizeMol( *re );
     }
   }
 
   if (ownIt) {
     delete mapping;
   }
-  return res;
+  return std::vector<ROMOL_SPTR>( res.begin(), res.end() );
 }
 
 unsigned int getMolFrags(const ROMol &mol, INT_VECT &mapping) {
@@ -596,16 +645,17 @@ std::map<T, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
     if (whiteList) {
       bool found = std::find(whiteList->begin(), whiteList->end(), where) !=
                    whiteList->end();
-      if (!found && !negateList)
+      if (!found && !negateList) {
         continue;
-      else if (found && negateList)
+      } else if (found && negateList) {
         continue;
+      }
     }
     assignments[i] = where;
     if (res.find(where) == res.end()) {
       res[where] = boost::shared_ptr<ROMol>(new ROMol());
     }
-    RWMol *frag = static_cast<RWMol *>(res[where].get());
+    auto *frag = static_cast<RWMol *>(res[where].get());
     ids[i] = frag->addAtom(mol.getAtomWithIdx(i)->copy(), false, true);
     // loop over neighbors and add bonds in the fragment to all atoms
     // that are already in the same fragment
@@ -632,7 +682,9 @@ std::map<T, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
       newM->addConformer(conf);
     }
     for (unsigned int i = 0; i < mol.getNumAtoms(); ++i) {
-      if (ids[i] < 0) continue;
+      if (ids[i] < 0) {
+        continue;
+      }
       res[assignments[i]]
           ->getConformer((*cit)->getId())
           .setAtomPos(ids[i], (*cit)->getAtomPos(i));
@@ -645,15 +697,20 @@ std::map<T, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
   }
   return res;
 }
-template std::map<std::string, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
-    const ROMol &mol, std::string (*query)(const ROMol &, const Atom *),
-    bool sanitizeFrags, const std::vector<std::string> *, bool);
-template std::map<int, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
-    const ROMol &mol, int (*query)(const ROMol &, const Atom *),
-    bool sanitizeFrags, const std::vector<int> *, bool);
-template std::map<unsigned int, boost::shared_ptr<ROMol>> getMolFragsWithQuery(
-    const ROMol &mol, unsigned int (*query)(const ROMol &, const Atom *),
-    bool sanitizeFrags, const std::vector<unsigned int> *, bool);
+template RDKIT_GRAPHMOL_EXPORT std::map<std::string, boost::shared_ptr<ROMol>>
+getMolFragsWithQuery(const ROMol &mol,
+                     std::string (*query)(const ROMol &, const Atom *),
+                     bool sanitizeFrags, const std::vector<std::string> *,
+                     bool);
+template RDKIT_GRAPHMOL_EXPORT std::map<int, boost::shared_ptr<ROMol>>
+getMolFragsWithQuery(const ROMol &mol,
+                     int (*query)(const ROMol &, const Atom *),
+                     bool sanitizeFrags, const std::vector<int> *, bool);
+template RDKIT_GRAPHMOL_EXPORT std::map<unsigned int, boost::shared_ptr<ROMol>>
+getMolFragsWithQuery(const ROMol &mol,
+                     unsigned int (*query)(const ROMol &, const Atom *),
+                     bool sanitizeFrags, const std::vector<unsigned int> *,
+                     bool);
 
 #if 0
     void findSpanningTree(const ROMol &mol,INT_VECT &mst){

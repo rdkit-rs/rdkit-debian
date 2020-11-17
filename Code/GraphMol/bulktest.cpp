@@ -8,6 +8,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/MolPickler.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
@@ -15,7 +16,7 @@
 #include <RDGeneral/RDLog.h>
 
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 
 using namespace RDKit;
 using namespace std;

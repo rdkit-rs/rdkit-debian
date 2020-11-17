@@ -30,6 +30,12 @@ void expandQuery(QueryBond *self, const QueryBond *other,
   }
 }
 
+void setQuery(QueryBond *self, const QueryBond *other) {
+  if (other->hasQuery()) {
+    self->setQuery(other->getQuery()->copy());
+  }
+}
+
 int BondHasProp(const Bond *bond, const char *key) {
   int res = bond->hasProp(key);
   return res;
@@ -82,6 +88,8 @@ struct bond_wrapper {
   static void wrap() {
     python::class_<Bond>("Bond", bondClassDoc.c_str(), python::no_init)
 
+        .def("HasOwningMol", &Bond::hasOwningMol,
+             "Returns whether or not this instance belongs to a molecule.\n")
         .def("GetOwningMol", &Bond::getOwningMol,
              "Returns the Mol that owns this bond.\n",
              python::return_value_policy<python::reference_existing_object>())
@@ -322,8 +330,15 @@ struct bond_wrapper {
         "The class to store QueryBonds.\n\
 These cannot currently be constructed directly from Python\n";
     python::class_<QueryBond, python::bases<Bond>>(
-        "QueryBond", bondClassDoc.c_str(), python::no_init);
+        "QueryBond", bondClassDoc.c_str(), python::no_init)
+        .def("ExpandQuery", expandQuery,
+             (python::arg("self"), python::arg("other"),
+              python::arg("how") = Queries::COMPOSITE_AND,
+              python::arg("maintainOrder") = true),
+             "combines the query from other with ours")
+        .def("SetQuery", setQuery, (python::arg("self"), python::arg("other")),
+             "Replace our query with a copy of the other query");
   };
 };
-}  // end of namespace
+}  // namespace RDKit
 void wrap_bond() { RDKit::bond_wrapper::wrap(); }

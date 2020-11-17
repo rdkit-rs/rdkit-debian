@@ -1,5 +1,4 @@
 /*
- * $Id: BasicMoleculeTests.java 131 2011-01-20 22:01:29Z ebakke $
  *
  *  Copyright (c) 2010, Novartis Institutes for BioMedical Research Inc.
  *  All rights reserved.
@@ -151,6 +150,20 @@ public class BasicMoleculeTests extends GraphMolTest {
 		assertEquals(1,mvv.get(1).get(1).getFirst());
 		assertEquals(3,mvv.get(1).get(1).getSecond());
 	}
+	@Test public void testSubstructParams1() {
+		ROMol p;
+		Match_Vect_Vect mvv;
+		ROMol m2;
+		m2 = RWMol.MolFromSmiles("C[C@](F)(Cl)Br");
+		p = RWMol.MolFromSmiles("C[C@@](F)(Cl)Br");
+		mvv=m2.getSubstructMatches(p);
+		assertEquals(1,mvv.size());
+		assertEquals(5,mvv.get(0).size());
+		SubstructMatchParameters params = new SubstructMatchParameters();
+		params.setUseChirality(true);
+		mvv=m2.getSubstructMatches(p,params);
+		assertEquals(0,mvv.size());
+	}
 
 	@Test public void testFingerprints1() {
 		ROMol m1,m2;
@@ -229,6 +242,16 @@ public class BasicMoleculeTests extends GraphMolTest {
 
 	}
 
+	@Test public void testGetAtomNeighbors() {
+		String smiles="CC(C)C";
+		ROMol mol = RWMol.MolFromSmiles(smiles);
+		assertEquals(mol.getAtomNeighbors(mol.getAtomWithIdx(0)).size(),1);
+		assertEquals(mol.getAtomNeighbors(mol.getAtomWithIdx(1)).size(),3);
+		assertEquals(mol.getAtomNeighbors(mol.getAtomWithIdx(2)).size(),1);
+		assertEquals(mol.getAtomBonds(mol.getAtomWithIdx(0)).size(),1);
+		assertEquals(mol.getAtomBonds(mol.getAtomWithIdx(1)).size(),3);
+		assertEquals(mol.getAtomBonds(mol.getAtomWithIdx(2)).size(),1);
+	}
 
 /*	@Test -- the contents of this test now in UnitTestPickling, testIssue219
 	public void testConformer(){

@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #pragma once
 #include <vector>
 #include "FMCS.h"
@@ -15,15 +16,15 @@
 namespace RDKit {
 namespace FMCS {
 struct TargetMatch {
-  bool Empty;
-  size_t MatchedAtomSize;
-  size_t MatchedBondSize;
+  bool Empty{true};
+  size_t MatchedAtomSize{0};
+  size_t MatchedBondSize{0};
   std::vector<unsigned> TargetAtomIdx;
   std::vector<unsigned> TargetBondIdx;
   std::vector<bool> VisitedTargetBonds;
   std::vector<bool> VisitedTargetAtoms;  // for checking rings
  public:
-  TargetMatch() : Empty(true), MatchedAtomSize(0), MatchedBondSize(0) {}
+  TargetMatch()  {}
   TargetMatch(const TargetMatch& src) { *this = src; }
   TargetMatch& operator=(const TargetMatch& src) {
     Empty = src.Empty;
@@ -95,5 +96,5 @@ struct TargetMatch {
     Empty = false;
   }
 };
-}
-}
+}  // namespace FMCS
+}  // namespace RDKit

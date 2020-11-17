@@ -35,6 +35,12 @@ void expandQuery(QueryAtom *self, const QueryAtom *other,
   }
 }
 
+void setQuery(QueryAtom *self, const QueryAtom *other) {
+  if (other->hasQuery()) {
+    self->setQuery(other->getQuery()->copy());
+  }
+}
+
 template <class T>
 void AtomSetProp(const Atom *atom, const char *key, const T &val) {
   // std::cerr<<"asp: "<<atom<<" " << key<<" - " << val << std::endl;
@@ -93,12 +99,15 @@ bool AtomIsInRingSize(const Atom *atom, int size) {
                                                                 size);
 }
 
-std::string AtomGetSmarts(const Atom *atom) {
+std::string AtomGetSmarts(const Atom *atom, bool doKekule, bool allHsExplicit,
+                          bool isomericSmiles) {
   std::string res;
   if (atom->hasQuery()) {
     res = SmartsWrite::GetAtomSmarts(static_cast<const QueryAtom *>(atom));
   } else {
-    res = SmilesWrite::GetAtomSmiles(atom);
+    // FIX: this should not be necessary
+    res = SmilesWrite::GetAtomSmiles(atom, doKekule, nullptr, allHsExplicit,
+                                     isomericSmiles);
   }
   return res;
 }
@@ -112,7 +121,9 @@ AtomMonomerInfo *AtomGetMonomerInfo(Atom *atom) {
 }
 AtomPDBResidueInfo *AtomGetPDBResidueInfo(Atom *atom) {
   AtomMonomerInfo *res = atom->getMonomerInfo();
-  if (!res) return nullptr;
+  if (!res) {
+    return nullptr;
+  }
   if (res->getMonomerType() != AtomMonomerInfo::PDBRESIDUE) {
     throw_value_error("MonomerInfo is not a PDB Residue");
   }
@@ -133,9 +144,16 @@ struct atom_wrapper {
     python::class_<Atom>("Atom", atomClassDoc.c_str(),
                          python::init<std::string>())
 
+        .def(python::init<const Atom &>())
         .def(python::init<unsigned int>(
             "Constructor, takes either an int (atomic number) or a string "
             "(atomic symbol).\n"))
+
+        .def("__copy__", &Atom::copy,
+             python::return_value_policy<
+                 python::manage_new_object,
+                 python::with_custodian_and_ward_postcall<0, 1>>(),
+             "Create a copy of the atom")
 
         .def("GetAtomicNum", &Atom::getAtomicNum, "Returns the atomic number.")
 
@@ -209,6 +227,8 @@ struct atom_wrapper {
         .def("GetHybridization", &Atom::getHybridization,
              "Returns the atom's hybridization.\n")
 
+        .def("HasOwningMol", &Atom::hasOwningMol,
+             "Returns whether or not this instance belongs to a molecule.\n")
         .def("GetOwningMol", &Atom::getOwningMol,
              "Returns the Mol that owns this atom.\n",
              python::return_internal_reference<>())
@@ -243,6 +263,9 @@ struct atom_wrapper {
              "debugging purposes.\n\n")
 
         .def("GetSmarts", AtomGetSmarts,
+             (python::arg("self"), python::arg("doKekule") = false,
+              python::arg("allHsExplicit") = false,
+              python::arg("isomericSmiles") = true),
              "returns the SMARTS (or SMILES) string for an Atom\n\n")
 
         // properties
@@ -324,6 +347,24 @@ struct atom_wrapper {
              "  ARGUMENTS:\n"
              "    - key: the name of the property to return (a bool).\n\n"
              "  RETURNS: a bool\n\n"
+             "  NOTE:\n"
+             "    - If the property has not been set, a KeyError exception "
+             "will be raised.\n")
+
+        .def("SetExplicitBitVectProp", AtomSetProp<ExplicitBitVect>,
+             (python::arg("self"), python::arg("key"), python::arg("val")),
+             "Sets an atomic property\n\n"
+             "  ARGUMENTS:\n"
+             "    - key: the name of the property to be set (an "
+             "ExplicitBitVect).\n"
+             "    - value: the property value (an ExplicitBitVect).\n\n")
+
+        .def("GetExplicitBitVectProp", GetProp<Atom, ExplicitBitVect>,
+             "Returns the value of the property.\n\n"
+             "  ARGUMENTS:\n"
+             "    - key: the name of the property to return (a "
+             "ExplicitBitVect).\n\n"
+             "  RETURNS: an ExplicitBitVect \n\n"
              "  NOTE:\n"
              "    - If the property has not been set, a KeyError exception "
              "will be raised.\n")
@@ -411,7 +452,9 @@ These cannot currently be constructed directly from Python\n";
              (python::arg("self"), python::arg("other"),
               python::arg("how") = Queries::COMPOSITE_AND,
               python::arg("maintainOrder") = true),
-             "combines the query from other with ours");
+             "combines the query from other with ours")
+        .def("SetQuery", setQuery, (python::arg("self"), python::arg("other")),
+             "Replace our query with a copy of the other query");
 
     python::def(
         "GetAtomRLabel", getAtomRLabel, (python::arg("atom")),
@@ -442,12 +485,12 @@ These cannot currently be constructed directly from Python\n";
         "SetSupplementalSmilesLabel", setSupplementalSmilesLabel,
         (python::arg("atom"), python::arg("label")),
         "Sets a supplemental label on an atom that is written to the smiles "
-        "string.\n"
+        "string.\n\n"
         ">>> m = Chem.MolFromSmiles(\"C\")\n"
         ">>> Chem.SetSupplementalSmilesLabel(m.GetAtomWithIdx(0), '<xxx>')\n"
         ">>> Chem.MolToSmiles(m)\n"
         "'C<xxx>'\n");
   }
 };
-}  // end of namespace
+}  // namespace RDKit
 void wrap_atom() { RDKit::atom_wrapper::wrap(); }

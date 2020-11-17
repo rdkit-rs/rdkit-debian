@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2015 Greg Landrum
+//  Copyright (C) 2015-2020 Greg Landrum
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/export.h>
 #ifndef RDKITMOLDRAW2DDETAILS_H
 #define RDKITMOLDRAW2DDETAILS_H
 
@@ -17,6 +18,7 @@
 #include <GraphMol/RDKitBase.h>
 
 #include <boost/tuple/tuple.hpp>
+#include <boost/format.hpp>
 
 // ****************************************************************************
 using RDGeom::Point2D;
@@ -46,10 +48,47 @@ const int char_widths[] = {
     0,   0,    0,   889, 0,   0,   0,    278,  0,    0,   222,  611, 944,  611,
     0,   0,    834};
 
-void arcPoints(const Point2D &cds1, const Point2D &cds2,
-               std::vector<Point2D> &res, float startAng = 0,
-               float extent = 360);
-}
-}
+// angles in degrees.
+RDKIT_MOLDRAW2D_EXPORT void arcPoints(const Point2D &cds1, const Point2D &cds2,
+                                      std::vector<Point2D> &res,
+                                      float startAng = 0, float extent = 360);
+
+//! add R/S, relative stereo, and E/Z annotations to atoms and bonds
+RDKIT_MOLDRAW2D_EXPORT void addStereoAnnotation(
+    const ROMol &mol, bool includeRelativeCIP = false);
+
+//! add annotations with atom indices.
+RDKIT_MOLDRAW2D_EXPORT inline void addAtomIndices(const ROMol &mol) {
+  // we don't need this in the global set of tags since it will only be used
+  // here
+  if (mol.hasProp("_atomIndicesAdded")) return;
+  bool computed = true;
+  mol.setProp("_atomIndicesAdded", 1, computed);
+  for (auto atom : mol.atoms()) {
+    auto lab = std::to_string(atom->getIdx());
+    if (atom->hasProp(common_properties::atomNote)) {
+      lab += "," + atom->getProp<std::string>(common_properties::atomNote);
+    }
+    atom->setProp(common_properties::atomNote, lab);
+  }
+};
+
+//! add annotations with bond indices.
+RDKIT_MOLDRAW2D_EXPORT inline void addBondIndices(const ROMol &mol) {
+  // we don't need this in the global set of tags since it will only be used
+  // here
+  if (mol.hasProp("_bondIndicesAdded")) return;
+  bool computed = true;
+  mol.setProp("_bondIndicesAdded", 1, computed);
+  for (auto bond : mol.bonds()) {
+    auto lab = std::to_string(bond->getIdx());
+    if (bond->hasProp(common_properties::bondNote)) {
+      lab += "," + bond->getProp<std::string>(common_properties::bondNote);
+    }
+    bond->setProp(common_properties::bondNote, lab);
+  }
+};
+}  // namespace MolDraw2D_detail
+}  // namespace RDKit
 
 #endif

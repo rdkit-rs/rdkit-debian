@@ -15,7 +15,6 @@
 // ours
 #include <GraphMol/FileParsers/MolSupplier.h>
 #include <GraphMol/RDKitBase.h>
-#include <RDBoost/iterator_next.h>
 #include "MolSupplier.h"
 
 namespace python = boost::python;
@@ -23,31 +22,31 @@ namespace python = boost::python;
 namespace RDKit {
 
 std::string tdtMolSupplierClassDoc =
-    "A class which supplies molecules from a TDT file.\n \
-\n \
-  Usage examples:\n \
-\n \
-    1) Lazy evaluation: the molecules are not constructed until we ask for them:\n \
-       >>> suppl = TDTMolSupplier('in.smi')\n \
-       >>> for mol in suppl:\n \
-       ...    mol.GetNumAtoms()\n \
-\n \
-    2) Lazy evaluation 2:\n \
-       >>> suppl = TDTMolSupplier('in.smi')\n \
-       >>> mol1 = suppl.next()\n \
-       >>> mol2 = suppl.next()\n \
-       >>> suppl.reset()\n \
-       >>> mol3 = suppl.next()\n \
-       # mol3 and mol1 are the same: \
-       >>> MolToSmiles(mol3)==MolToSmiles(mol1)\n \
-\n \
-    3) Random Access:  all molecules are constructed as soon as we ask for the\n \
-       length:\n \
-       >>> suppl = TDTMolSupplier('in.smi')\n \
-       >>> nMols = len(suppl)\n \
-       >>> for i in range(nMols):\n \
-       ...   suppl[i].GetNumAtoms()\n \
-\n \
+    "A class which supplies molecules from a TDT file.\n\
+\n\
+  Usage examples:\n\
+\n\
+    1) Lazy evaluation: the molecules are not constructed until we ask for them:\n\n\
+       >>> suppl = TDTMolSupplier('in.smi')\n\
+       >>> for mol in suppl:\n\
+       ...    mol.GetNumAtoms()\n\
+\n\
+    2) Lazy evaluation 2:\n\n\
+       >>> suppl = TDTMolSupplier('in.smi')\n\
+       >>> mol1 = next(suppl)\n\
+       >>> mol2 = next(suppl)\n\
+       >>> suppl.reset()\n\
+       >>> mol3 = next(suppl)\n\n\
+       # mol3 and mol1 are the same:\
+       >>> MolToSmiles(mol3)==MolToSmiles(mol1)\n\
+\n\
+    3) Random Access:  all molecules are constructed as soon as we ask for the\n\
+       length:\n\n\
+       >>> suppl = TDTMolSupplier('in.smi')\n\
+       >>> nMols = len(suppl)\n\
+       >>> for i in range(nMols):\n\
+       ...   suppl[i].GetNumAtoms()\n\
+\n\
   Properties in the file are used to set properties on each molecule.\n\
   The properties are accessible using the mol.GetProp(propName) method.\n\
 \n";
@@ -62,7 +61,7 @@ struct tdtmolsup_wrap {
         .def("__iter__",
              (TDTMolSupplier * (*)(TDTMolSupplier *)) & MolSupplIter,
              python::return_internal_reference<1>())
-        .def(NEXT_METHOD, (ROMol * (*)(TDTMolSupplier *)) & MolSupplNext,
+        .def("__next__", (ROMol * (*)(TDTMolSupplier *)) & MolSupplNext,
              "Returns the next molecule in the file.  Raises _StopIteration_ "
              "on EOF.\n",
              python::return_value_policy<python::manage_new_object>())
@@ -81,6 +80,6 @@ struct tdtmolsup_wrap {
              (python::arg("self"), python::arg("index")));
   };
 };
-}
+}  // namespace RDKit
 
 void wrap_tdtsupplier() { RDKit::tdtmolsup_wrap::wrap(); }

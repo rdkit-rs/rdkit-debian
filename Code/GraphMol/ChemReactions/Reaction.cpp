@@ -47,8 +47,8 @@
 namespace RDKit {
 
 std::vector<MOL_SPTR_VECT> ChemicalReaction::runReactants(
-    const MOL_SPTR_VECT reactants) const {
-  return run_Reactants(*this, reactants);
+    const MOL_SPTR_VECT reactants, unsigned int maxProducts) const {
+  return run_Reactants(*this, reactants, maxProducts);
 }
 
 std::vector<MOL_SPTR_VECT> ChemicalReaction::runReactant(
@@ -60,9 +60,9 @@ ChemicalReaction::ChemicalReaction(const std::string &pickle) {
   ReactionPickler::reactionFromPickle(pickle, this);
 }
 
-void ChemicalReaction::initReactantMatchers() {
+void ChemicalReaction::initReactantMatchers(bool silent) {
   unsigned int nWarnings, nErrors;
-  if (!this->validate(nWarnings, nErrors)) {
+  if (!this->validate(nWarnings, nErrors, silent)) {
     BOOST_LOG(rdErrorLog) << "initialization failed\n";
     this->df_needsInit = true;
   } else {
@@ -120,8 +120,8 @@ bool ChemicalReaction::validate(unsigned int &numWarnings,
     }
     if (!thisMolMapped) {
       if (!silent) {
-        BOOST_LOG(rdWarningLog) << "reactant " << molIdx
-                                << " has no mapped atoms.\n";
+        BOOST_LOG(rdWarningLog)
+            << "reactant " << molIdx << " has no mapped atoms.\n";
       }
       numWarnings++;
     }
@@ -136,14 +136,18 @@ bool ChemicalReaction::validate(unsigned int &numWarnings,
     // misleading warnings
     for (ROMol::AtomIterator atomIt = (*molIter)->beginAtoms();
          atomIt != (*molIter)->endAtoms(); ++atomIt) {
-      if ((*atomIt)->hasProp(common_properties::_QueryFormalCharge))
+      if ((*atomIt)->hasProp(common_properties::_QueryFormalCharge)) {
         (*atomIt)->clearProp(common_properties::_QueryFormalCharge);
-      if ((*atomIt)->hasProp(common_properties::_QueryHCount))
+      }
+      if ((*atomIt)->hasProp(common_properties::_QueryHCount)) {
         (*atomIt)->clearProp(common_properties::_QueryHCount);
-      if ((*atomIt)->hasProp(common_properties::_QueryMass))
+      }
+      if ((*atomIt)->hasProp(common_properties::_QueryMass)) {
         (*atomIt)->clearProp(common_properties::_QueryMass);
-      if ((*atomIt)->hasProp(common_properties::_QueryIsotope))
+      }
+      if ((*atomIt)->hasProp(common_properties::_QueryIsotope)) {
         (*atomIt)->clearProp(common_properties::_QueryIsotope);
+      }
     }
     bool thisMolMapped = false;
     for (ROMol::AtomIterator atomIt = (*molIter)->beginAtoms();
@@ -211,11 +215,14 @@ bool ChemicalReaction::validate(unsigned int &numWarnings,
                qIter != query->endChildren(); ++qIter) {
             queries.push_back((*qIter).get());
           }
-          if (query->getDescription() == "AtomFormalCharge") {
+          if (query->getDescription() == "AtomFormalCharge" ||
+              query->getDescription() == "AtomNegativeFormalCharge") {
             int qval;
+            int neg =
+                query->getDescription() == "AtomNegativeFormalCharge" ? -1 : 1;
             if ((*atomIt)->getPropIfPresent(
                     common_properties::_QueryFormalCharge, qval) &&
-                qval !=
+                (neg * qval) !=
                     static_cast<const ATOM_EQUALS_QUERY *>(query)->getVal()) {
               if (!silent) {
                 BOOST_LOG(rdWarningLog)
@@ -224,9 +231,13 @@ bool ChemicalReaction::validate(unsigned int &numWarnings,
               }
               numWarnings++;
             } else {
+              int neg = query->getDescription() == "AtomNegativeFormalCharge"
+                            ? -1
+                            : 1;
               (*atomIt)->setProp(
                   common_properties::_QueryFormalCharge,
-                  static_cast<const ATOM_EQUALS_QUERY *>(query)->getVal());
+                  neg *
+                      static_cast<const ATOM_EQUALS_QUERY *>(query)->getVal());
             }
           } else if (query->getDescription() == "AtomHCount") {
             int qval;
@@ -286,8 +297,8 @@ bool ChemicalReaction::validate(unsigned int &numWarnings,
     }
     if (!thisMolMapped) {
       if (!silent) {
-        BOOST_LOG(rdWarningLog) << "product " << molIdx
-                                << " has no mapped atoms.\n";
+        BOOST_LOG(rdWarningLog)
+            << "product " << molIdx << " has no mapped atoms.\n";
       }
       numWarnings++;
     }
@@ -396,7 +407,7 @@ bool isMoleculeAgentOfReaction(const ChemicalReaction &rxn, const ROMol &mol) {
 void addRecursiveQueriesToReaction(
     ChemicalReaction &rxn, const std::map<std::string, ROMOL_SPTR> &queries,
     const std::string &propName,
-    std::vector<std::vector<std::pair<unsigned int, std::string> > >
+    std::vector<std::vector<std::pair<unsigned int, std::string>>>
         *reactantLabels) {
   if (!rxn.isInitialized()) {
     throw ChemicalReactionException(
@@ -410,7 +421,7 @@ void addRecursiveQueriesToReaction(
   for (MOL_SPTR_VECT::const_iterator rIt = rxn.beginReactantTemplates();
        rIt != rxn.endReactantTemplates(); ++rIt) {
     if (reactantLabels != nullptr) {
-      std::vector<std::pair<unsigned int, std::string> > labels;
+      std::vector<std::pair<unsigned int, std::string>> labels;
       addRecursiveQueries(**rIt, queries, propName, &labels);
       (*reactantLabels).push_back(labels);
     } else {
@@ -438,6 +449,7 @@ int numComplexQueries(
   }
   return res;
 }
+#if 0
 // FIX: this is adapted from Fingerprints.cpp and we really should have code
 // like this centralized
 bool isComplexQuery(const Atom &a) {
@@ -456,7 +468,7 @@ bool isComplexQuery(const Atom &a) {
   }
   return true;
 }
-
+#endif
 bool isChangedAtom(const Atom &rAtom, const Atom &pAtom, int mapNum,
                    const std::map<int, const Atom *> &mappedProductAtoms) {
   PRECONDITION(mappedProductAtoms.find(mapNum) != mappedProductAtoms.end(),
@@ -469,30 +481,29 @@ bool isChangedAtom(const Atom &rAtom, const Atom &pAtom, int mapNum,
   } else if (rAtom.getDegree() != pAtom.getDegree()) {
     // the degree changed
     return true;
-  } else if (pAtom.getAtomicNum() > 0 && isComplexQuery(rAtom)) {
+  } else if (pAtom.getAtomicNum() > 0 && isComplexQuery(&rAtom)) {
     // more than a simple query
     return true;
   }
 
   // now check bond layout:
   std::map<unsigned int, const Bond *> reactantBonds;
-  ROMol::ADJ_ITER nbrIdx, endNbrs;
-  boost::tie(nbrIdx, endNbrs) = rAtom.getOwningMol().getAtomNeighbors(&rAtom);
-  while (nbrIdx != endNbrs) {
-    const Atom *nbr = rAtom.getOwningMol()[*nbrIdx];
+  for (const auto &nbrIdx : boost::make_iterator_range(
+           rAtom.getOwningMol().getAtomNeighbors(&rAtom))) {
+    const Atom *nbr = rAtom.getOwningMol()[nbrIdx];
     int mapNum;
     if (nbr->getPropIfPresent(common_properties::molAtomMapNumber, mapNum)) {
       reactantBonds[mapNum] = rAtom.getOwningMol().getBondBetweenAtoms(
           rAtom.getIdx(), nbr->getIdx());
     } else {
-      // if we have an un-mapped neighbor, we are automatically a reacting atom:
+      // if we have an un-mapped neighbor, we are automatically a reacting
+      // atom:
       return true;
     }
-    ++nbrIdx;
   }
-  boost::tie(nbrIdx, endNbrs) = pAtom.getOwningMol().getAtomNeighbors(&pAtom);
-  while (nbrIdx != endNbrs) {
-    const Atom * nbr = pAtom.getOwningMol()[*nbrIdx];
+  for (const auto &nbrIdx : boost::make_iterator_range(
+           pAtom.getOwningMol().getAtomNeighbors(&pAtom))) {
+    const Atom *nbr = pAtom.getOwningMol()[nbrIdx];
     int mapNum;
     if (nbr->getPropIfPresent(common_properties::molAtomMapNumber, mapNum)) {
       // if we don't have a bond to a similarly mapped atom in the reactant,
@@ -514,11 +525,15 @@ bool isChangedAtom(const Atom &rAtom, const Atom &pAtom, int mapNum,
             // null queries are trump, they match everything
           } else if (rBond->getBondType() == Bond::SINGLE &&
                      pBond->getBondType() == Bond::SINGLE &&
-                     rBond->getQuery()->getDescription() == "BondOr" &&
-                     pBond->getQuery()->getDescription() == "BondOr") {
-            // The SMARTS parser tags unspecified bonds as single, but then adds
-            // a query so that they match single or double.
-            // these cases match
+                     ((rBond->getQuery()->getDescription() == "BondOr" &&
+                       pBond->getQuery()->getDescription() == "BondOr") ||
+                      (rBond->getQuery()->getDescription() ==
+                           "SingleOrAromaticBond" &&
+                       pBond->getQuery()->getDescription() ==
+                           "SingleOrAromaticBond"))) {
+            // The SMARTS parser tags unspecified bonds as single, but then
+            // adds a query so that they match single or double. these cases
+            // match
           } else {
             if (rBond->getBondType() == pBond->getBondType() &&
                 rBond->getQuery()->getDescription() == "BondOrder" &&
@@ -548,7 +563,6 @@ bool isChangedAtom(const Atom &rAtom, const Atom &pAtom, int mapNum,
         }
       }
     }
-    ++nbrIdx;
   }
 
   // haven't found anything to say that we are changed, so we must
@@ -557,20 +571,14 @@ bool isChangedAtom(const Atom &rAtom, const Atom &pAtom, int mapNum,
 }
 
 template <class T>
-bool getMappedAtoms(T &rIt, std::map<int, const Atom *> &mappedAtoms) {
-  ROMol::ATOM_ITER_PAIR atItP = rIt->getVertices();
-  while (atItP.first != atItP.second) {
-    const Atom *oAtom = (*rIt)[*(atItP.first++)];
+void getMappedAtoms(T &rIt, std::map<int, const Atom *> &mappedAtoms) {
+  for (const auto atom : rIt->atoms()) {
     // we only worry about mapped atoms:
     int mapNum;
-    if (oAtom->getPropIfPresent(common_properties::molAtomMapNumber, mapNum)) {
-      mappedAtoms[mapNum] = oAtom;
-    } else {
-      // unmapped atom, return it
-      return false;
+    if (atom->getPropIfPresent(common_properties::molAtomMapNumber, mapNum)) {
+      mappedAtoms[mapNum] = atom;
     }
   }
-  return true;
 }
 }  // end of anonymous namespace
 
@@ -595,9 +603,7 @@ VECT_INT_VECT getReactingAtoms(const ChemicalReaction &rxn,
   auto resIt = res.begin();
   for (auto rIt = rxn.beginReactantTemplates();
        rIt != rxn.endReactantTemplates(); ++rIt, ++resIt) {
-    ROMol::ATOM_ITER_PAIR atItP = (*rIt)->getVertices();
-    while (atItP.first != atItP.second) {
-      const Atom *oAtom = (**rIt)[*(atItP.first++)];
+    for (const auto oAtom : (*rIt)->atoms()) {
       // unmapped atoms are definitely changing:
       int mapNum;
       if (!oAtom->getPropIfPresent(common_properties::molAtomMapNumber,
@@ -678,4 +684,4 @@ void ChemicalReaction::removeAgentTemplates(MOL_SPTR_VECT *targetVector) {
   m_agentTemplates.clear();
 }
 
-}  // end of RDKit namespace
+}  // namespace RDKit

@@ -1,6 +1,5 @@
 
 /*
-* $Id: GraphMolJava.i 2141 2012-07-27 06:16:45Z glandrum $
 *
 *  Copyright (c) 2010, Novartis Institutes for BioMedical Research Inc.
 *  All rights reserved.
@@ -70,6 +69,8 @@
 #define BOOST_NO_CXX11_NULLPTR
 %include <boost/smart_ptr/shared_array.hpp>
 
+/* undefine RDKIT_<LIBNAME>_EXPORT macros */
+%include <RDGeneral/export.h>
 /* Include the base types before anything that will utilize them */
 #ifdef SWIGWIN
 %include "../msvc_stdint.i"
@@ -92,32 +93,32 @@
     }
     catch (RDKit::ChemicalReactionException &e) {
       std::string err="ChemicalReactionException: ";
-      err+=e.message();
+      err+=e.what();
       SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, err.c_str());
     }
     catch (RDKit::ChemicalReactionParserException &e) {
       std::string err="ChemicalReactionParserException: ";
-      err+=e.message();
+      err+=e.what();
       SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, err.c_str());
     }
     catch (RDKit::ConformerException &e) {
       std::string err="ConformerException: ";
-      err+=e.message();
+      err+=e.what();
       SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, err.c_str());
     }
     catch (RDKit::MolPicklerException &e) {
       std::string err="MolPicklerException: ";
-      err+=e.message();
+      err+=e.what();
       SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, err.c_str());
     }
     catch (RDKit::MolSanitizeException &e) {
       std::string err="MolSanitizeException: ";
-      err+=e.message();
+      err+=e.what();
       SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, err.c_str());
     }
     catch (RDKit::SmilesParseException e) {
       std::string err="SmilesParseException: ";
-      err+=e.message();
+      err+=e.what();
       SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, err.c_str());
     }
     catch (KeyErrorException e) {
@@ -177,6 +178,10 @@ typedef unsigned long long int	uintmax_t;
 %shared_ptr(RDKit::QueryBond)
 %shared_ptr(RDKit::QueryOps)
 %shared_ptr(RDKit::MolSanitizeException)
+%shared_ptr(RDKit::AtomSanitizeException)
+%shared_ptr(RDKit::AtomValenceException)
+%shared_ptr(RDKit::AtomKekulizeException)
+%shared_ptr(RDKit::KekulizeException)
 %shared_ptr(RDKit::SmilesParseException)
 %shared_ptr(RDKit::RingInfo)
 %shared_ptr(RDKit::ChemicalReaction)
@@ -205,6 +210,7 @@ typedef unsigned long long int	uintmax_t;
 %include "../Conformer.i"
 %include "../Dict.i"
 %include "../RDProps.i"
+%include "../StereoGroup.i"
 %include "../ROMol.i"
 %include "../RWMol.i"
 %include "../Bond.i"
@@ -244,6 +250,15 @@ typedef unsigned long long int	uintmax_t;
 %include "../MolDraw2D.i"
 %include "../FilterCatalog.i"
 %include "../Trajectory.i"
+%include "../RGroupDecomposition.i"
+%include "../SubstructLibrary.i"
+%include "../ScaffoldNetwork.i"
+%include "../TautomerQuery.i"
+%include "../SubstanceGroup.i"
+%include "../MolHash.i"
+%include "../Abbreviations.i"
+%include "../Streams.i"
+
 
 // Create a class to throw various sorts of errors for testing.  Required for unit tests in ErrorHandlingTests.java
 #ifdef INCLUDE_ERROR_GENERATOR
@@ -321,10 +336,10 @@ typedef unsigned long long int	uintmax_t;
 
 %include "../Descriptors.i"
 
-#ifdef BUILD_AVALON_SUPPORT
+#ifdef RDK_BUILD_AVALON_SUPPORT
 %include "../AvalonLib.i"
 #endif
-#ifdef BUILD_INCHI_SUPPORT
+#ifdef RDK_BUILD_INCHI_SUPPORT
 %include "../Inchi.i"
 #endif
 

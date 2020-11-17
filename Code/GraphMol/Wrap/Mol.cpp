@@ -9,6 +9,7 @@
 //
 #define NO_IMPORT_ARRAY
 #include <RDBoost/python.h>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <string>
 
 #include "rdchem.h"
@@ -26,6 +27,7 @@
 #include <GraphMol/Substruct/SubstructMatch.h>
 #include <boost/python/iterator.hpp>
 #include <boost/python/copy_non_const_reference.hpp>
+#include <GraphMol/SmilesParse/SmilesParse.h>
 
 namespace python = boost::python;
 
@@ -106,27 +108,6 @@ PyObject *GetMolConformers(ROMol &mol) {
   return res;
 }
 
-int MolHasProp(const ROMol &mol, const char *key) {
-  int res = mol.hasProp(key);
-  // std::cout << "key: "  << key << ": " << res << std::endl;
-  return res;
-}
-
-template <class T>
-void MolSetProp(const ROMol &mol, const char *key, const T &val,
-                bool computed = false) {
-  mol.setProp<T>(key, val, computed);
-}
-
-void MolClearProp(const ROMol &mol, const char *key) {
-  if (!mol.hasProp(key)) {
-    return;
-  }
-  mol.clearProp(key);
-}
-
-void MolClearComputedProps(const ROMol &mol) { mol.clearComputedProps(); }
-
 void MolDebug(const ROMol &mol, bool useStdout) {
   if (useStdout) {
     mol.debugMol(std::cout);
@@ -185,6 +166,24 @@ int getMolNumAtoms(const ROMol &mol, int onlyHeavy, bool onlyExplicit) {
   return mol.getNumAtoms(onlyExplicit);
 }
 
+namespace {
+class pyobjFunctor {
+ public:
+  pyobjFunctor(python::object obj) : dp_obj(std::move(obj)) {}
+  ~pyobjFunctor() {}
+  bool operator()(const ROMol &m, const std::vector<unsigned int> &match) {
+    return python::extract<bool>(dp_obj(boost::ref(m), boost::ref(match)));
+  }
+
+ private:
+  python::object dp_obj;
+};
+void setSubstructMatchFinalCheck(SubstructMatchParameters &ps,
+                                 python::object func) {
+  ps.extraFinalCheck = pyobjFunctor(func);
+}
+}  // namespace
+
 class ReadWriteMol : public RWMol {
  public:
   ReadWriteMol(){};
@@ -212,6 +211,22 @@ class ReadWriteMol : public RWMol {
     PRECONDITION(bond, "bad bond");
     replaceBond(idx, bond, preserveProps);
   };
+  void SetStereoGroups(python::list &stereo_groups) {
+    std::vector<StereoGroup> groups;
+    pythonObjectToVect<StereoGroup>(stereo_groups, groups);
+    for (const auto &group : groups) {
+      for (const auto atom : group.getAtoms()) {
+        if (!atom) {
+          throw_value_error("NULL atom in StereoGroup");
+        }
+        if (&atom->getOwningMol() != this) {
+          throw_value_error(
+              "atom in StereoGroup does not belong to this molecule.");
+        }
+      }
+    }
+    setStereoGroups(std::move(groups));
+  }
   ROMol *GetMol() const {
     auto *res = new ROMol(*this);
     return res;
@@ -255,8 +270,11 @@ struct mol_wrapper {
         .value("PrivateProps", RDKit::PicklerOps::PrivateProps)
         .value("ComputedProps", RDKit::PicklerOps::ComputedProps)
         .value("AllProps", RDKit::PicklerOps::AllProps)
+        .value("CoordsAsDouble", RDKit::PicklerOps::CoordsAsDouble)
         .export_values();
     ;
+
+    RegisterVectorConverter<StereoGroup>("StereoGroup_vect");
 
     python::def("GetDefaultPickleProperties",
                 MolPickler::getDefaultPickleProperties,
@@ -264,6 +282,47 @@ struct mol_wrapper {
     python::def("SetDefaultPickleProperties",
                 MolPickler::setDefaultPickleProperties,
                 "Set the current global mol pickler options.");
+
+    // REVIEW: There's probably a better place for this definition
+    python::class_<RDKit::SubstructMatchParameters, boost::noncopyable>(
+        "SubstructMatchParameters",
+        "Parameters controlling substructure matching")
+        .def_readwrite(
+            "useChirality", &RDKit::SubstructMatchParameters::useChirality,
+            "Use chirality in determining whether or not atoms/bonds match")
+        .def_readwrite(
+            "useEnhancedStereo",
+            &RDKit::SubstructMatchParameters::useEnhancedStereo,
+            "take enhanced stereochemistry into account while doing the match. "
+            "This only has an effect if useChirality is also True.")
+        .def_readwrite(
+            "aromaticMatchesConjugated",
+            &RDKit::SubstructMatchParameters::aromaticMatchesConjugated,
+            "aromatic and conjugated bonds match each other")
+        .def_readwrite("useQueryQueryMatches",
+                       &RDKit::SubstructMatchParameters::useQueryQueryMatches,
+                       "Consider query-query matches, not just simple matches")
+        .def_readwrite("recursionPossible",
+                       &RDKit::SubstructMatchParameters::recursionPossible,
+                       "Allow recursive queries")
+        .def_readwrite("uniquify", &RDKit::SubstructMatchParameters::uniquify,
+                       "uniquify (by atom index) match results")
+        .def_readwrite("maxMatches",
+                       &RDKit::SubstructMatchParameters::maxMatches,
+                       "maximum number of matches to return")
+        .def_readwrite(
+            "numThreads", &RDKit::SubstructMatchParameters::numThreads,
+            "number of threads to use when multi-threading is possible."
+            "0 selects the number of concurrent threads supported by the"
+            "hardware. negative values are added to the number of concurrent"
+            "threads supported by the hardware.")
+        .def("setExtraFinalCheck", setSubstructMatchFinalCheck,
+             python::with_custodian_and_ward<1, 2>(),
+             R"DOC(allows you to provide a function that will be called
+               with the molecule
+           and a vector of atom IDs containing a potential match.
+           The function should return true or false indicating whether or not
+           that match should be accepted.)DOC");
 
     python::class_<ROMol, ROMOL_SPTR, boost::noncopyable>(
         "Mol", molClassDoc.c_str(),
@@ -359,8 +418,9 @@ struct mol_wrapper {
              "  NOTE: bond indices start at 0\n")
 
         // substructures
-        .def("HasSubstructMatch", (bool (*)(const ROMol &m, const ROMol &query,
-                                            bool, bool, bool))HasSubstructMatch,
+        .def("HasSubstructMatch",
+             (bool (*)(const ROMol &m, const ROMol &query, bool, bool,
+                       bool))HasSubstructMatch,
              (python::arg("self"), python::arg("query"),
               python::arg("recursionPossible") = true,
               python::arg("useChirality") = false,
@@ -375,8 +435,8 @@ struct mol_wrapper {
              "    - useQueryQueryMatches: use query-query matching logic\n\n"
              "  RETURNS: True or False\n")
         .def("GetSubstructMatch",
-             (PyObject * (*)(const ROMol &m, const ROMol &query, bool,
-                             bool))GetSubstructMatch,
+             (PyObject * (*)(const ROMol &m, const ROMol &query, bool, bool))
+                 GetSubstructMatch,
              (python::arg("self"), python::arg("query"),
               python::arg("useChirality") = false,
               python::arg("useQueryQueryMatches") = false),
@@ -399,7 +459,7 @@ struct mol_wrapper {
 
         .def("GetSubstructMatches",
              (PyObject * (*)(const ROMol &m, const ROMol &query, bool, bool,
-                             bool, unsigned int))GetSubstructMatches,
+                             bool, unsigned int)) GetSubstructMatches,
              (python::arg("self"), python::arg("query"),
               python::arg("uniquify") = true,
               python::arg("useChirality") = false,
@@ -444,22 +504,89 @@ struct mol_wrapper {
               python::arg("useQueryQueryMatches") = false))
         .def("GetSubstructMatch",
              (PyObject * (*)(const ROMol &m, const MolBundle &query, bool,
-                             bool))GetSubstructMatch,
+                             bool)) GetSubstructMatch,
              (python::arg("self"), python::arg("query"),
               python::arg("useChirality") = false,
               python::arg("useQueryQueryMatches") = false))
 
         .def("GetSubstructMatches",
              (PyObject * (*)(const ROMol &m, const MolBundle &query, bool, bool,
-                             bool, unsigned int))GetSubstructMatches,
+                             bool, unsigned int)) GetSubstructMatches,
              (python::arg("self"), python::arg("query"),
               python::arg("uniquify") = true,
               python::arg("useChirality") = false,
               python::arg("useQueryQueryMatches") = false,
               python::arg("maxMatches") = 1000))
 
+        //--------------------------------------------
+        .def("HasSubstructMatch",
+             (bool (*)(const ROMol &m, const ROMol &query,
+                       const SubstructMatchParameters &))helpHasSubstructMatch,
+             (python::arg("self"), python::arg("query"), python::arg("params")),
+             "Queries whether or not the molecule contains a particular "
+             "substructure.\n\n"
+             "  ARGUMENTS:\n"
+             "    - query: a Molecule\n\n"
+             "    - params: parameters controlling the substructure match\n\n"
+             "  RETURNS: True or False\n")
+        .def("GetSubstructMatch",
+             (PyObject * (*)(const ROMol &m, const ROMol &query,
+                             const SubstructMatchParameters &params))
+                 helpGetSubstructMatch,
+             (python::arg("self"), python::arg("query"), python::arg("params")),
+             "Returns the indices of the molecule's atoms that match a "
+             "substructure query.\n\n"
+             "  ARGUMENTS:\n"
+             "    - query: a Molecule\n\n"
+             "    - params: parameters controlling the substructure match\n\n"
+             "  RETURNS: a tuple of integers\n\n"
+             "  NOTES:\n"
+             "     - only a single match is returned\n"
+             "     - the ordering of the indices corresponds to the atom "
+             "ordering\n"
+             "         in the query. For example, the first index is for the "
+             "atom in\n"
+             "         this molecule that matches the first atom in the "
+             "query.\n")
+
+        .def("GetSubstructMatches",
+             (PyObject * (*)(const ROMol &m, const ROMol &query,
+                             const SubstructMatchParameters &))
+                 helpGetSubstructMatches,
+             (python::arg("self"), python::arg("query"), python::arg("params")),
+             "Returns tuples of the indices of the molecule's atoms that "
+             "match "
+             "a substructure query.\n\n"
+             "  ARGUMENTS:\n"
+             "    - query: a Molecule.\n"
+             "    - params: parameters controlling the substructure match\n\n"
+             "  RETURNS: a tuple of tuples of integers\n\n"
+             "  NOTE:\n"
+             "     - the ordering of the indices corresponds to the atom "
+             "ordering\n"
+             "         in the query. For example, the first index is for the "
+             "atom in\n"
+             "         this molecule that matches the first atom in the "
+             "query.\n")
+
+        .def("HasSubstructMatch",
+             (bool (*)(const ROMol &m, const MolBundle &query,
+                       const SubstructMatchParameters &))helpHasSubstructMatch,
+             (python::arg("self"), python::arg("query"),
+              python::arg("params") = true))
+        .def("GetSubstructMatch",
+             (PyObject * (*)(const ROMol &m, const MolBundle &query,
+                             const SubstructMatchParameters &))
+                 helpGetSubstructMatch,
+             (python::arg("self"), python::arg("query"), python::arg("params")))
+        .def("GetSubstructMatches",
+             (PyObject * (*)(const ROMol &m, const MolBundle &query,
+                             const SubstructMatchParameters &))
+                 helpGetSubstructMatches,
+             (python::arg("self"), python::arg("query"), python::arg("params")))
+
         // properties
-        .def("SetProp", MolSetProp<std::string>,
+        .def("SetProp", MolSetProp<ROMol, std::string>,
              (python::arg("self"), python::arg("key"), python::arg("val"),
               python::arg("computed") = false),
              "Sets a molecular property\n\n"
@@ -469,7 +596,7 @@ struct mol_wrapper {
              "    - computed: (optional) marks the property as being "
              "computed.\n"
              "                Defaults to False.\n\n")
-        .def("SetDoubleProp", MolSetProp<double>,
+        .def("SetDoubleProp", MolSetProp<ROMol, double>,
              (python::arg("self"), python::arg("key"), python::arg("val"),
               python::arg("computed") = false),
              "Sets a double valued molecular property\n\n"
@@ -479,7 +606,7 @@ struct mol_wrapper {
              "    - computed: (optional) marks the property as being "
              "computed.\n"
              "                Defaults to 0.\n\n")
-        .def("SetIntProp", MolSetProp<int>,
+        .def("SetIntProp", MolSetProp<ROMol, int>,
              (python::arg("self"), python::arg("key"), python::arg("val"),
               python::arg("computed") = false),
              "Sets an integer valued molecular property\n\n"
@@ -490,7 +617,7 @@ struct mol_wrapper {
              "    - computed: (optional) marks the property as being "
              "computed.\n"
              "                Defaults to False.\n\n")
-        .def("SetUnsignedProp", MolSetProp<unsigned int>,
+        .def("SetUnsignedProp", MolSetProp<ROMol, unsigned int>,
              (python::arg("self"), python::arg("key"), python::arg("val"),
               python::arg("computed") = false),
              "Sets an unsigned integer valued molecular property\n\n"
@@ -500,7 +627,7 @@ struct mol_wrapper {
              "    - computed: (optional) marks the property as being "
              "computed.\n"
              "                Defaults to False.\n\n")
-        .def("SetBoolProp", MolSetProp<bool>,
+        .def("SetBoolProp", MolSetProp<ROMol, bool>,
              (python::arg("self"), python::arg("key"), python::arg("val"),
               python::arg("computed") = false),
              "Sets a boolean valued molecular property\n\n"
@@ -510,7 +637,7 @@ struct mol_wrapper {
              "    - computed: (optional) marks the property as being "
              "computed.\n"
              "                Defaults to False.\n\n")
-        .def("HasProp", MolHasProp,
+        .def("HasProp", MolHasProp<ROMol>,
              "Queries a molecule to see if a particular property has been "
              "assigned.\n\n"
              "  ARGUMENTS:\n"
@@ -555,12 +682,12 @@ struct mol_wrapper {
              "  NOTE:\n"
              "    - If the property has not been set, a KeyError exception "
              "will be raised.\n")
-        .def("ClearProp", MolClearProp,
+        .def("ClearProp", MolClearProp<ROMol>,
              "Removes a property from the molecule.\n\n"
              "  ARGUMENTS:\n"
              "    - key: the name of the property to clear (a string).\n")
 
-        .def("ClearComputedProps", MolClearComputedProps,
+        .def("ClearComputedProps", MolClearComputedProps<ROMol>,
              "Removes all computed properties from the molecule.\n\n")
 
         .def("UpdatePropertyCache", &ROMol::updatePropertyCache,
@@ -573,6 +700,13 @@ struct mol_wrapper {
              "Returns true or false depending on whether implicit and "
              "explicit "
              "valence of the molecule have already been calculated.\n\n")
+
+        .def("GetStereoGroups", &ROMol::getStereoGroups,
+             "Returns a list of StereoGroups defining the relative "
+             "stereochemistry "
+             "of the atoms.\n",
+             python::return_internal_reference<
+                 1, python::with_custodian_and_ward_postcall<0, 1>>())
 
         .def("GetPropNames", &ROMol::getPropList,
              (python::arg("self"), python::arg("includePrivate") = false,
@@ -669,6 +803,7 @@ struct mol_wrapper {
         "RWMol", rwmolClassDoc.c_str(),
         python::init<const ROMol &>("Construct from a Mol"))
         .def(python::init<>())
+        .def(python::init<const std::string &>())
         .def(python::init<const ROMol &, bool>())
         .def(python::init<const ROMol &, bool, int>())
         .def("__copy__", &generic__copy__<ReadWriteMol>)
@@ -701,8 +836,14 @@ struct mol_wrapper {
              "explicit set on the new bond")
         .def("GetMol", &ReadWriteMol::GetMol,
              "Returns a Mol (a normal molecule)",
-             python::return_value_policy<python::manage_new_object>());
+             python::return_value_policy<python::manage_new_object>())
+
+        .def("SetStereoGroups", &ReadWriteMol::SetStereoGroups,
+             (python::arg("stereo_groups")), "Set the stereo groups")
+
+        // enable pickle support
+        .def_pickle(mol_pickle_suite());
   };
 };
-}  // end of namespace
+}  // namespace RDKit
 void wrap_mol() { RDKit::mol_wrapper::wrap(); }

@@ -1,6 +1,5 @@
-// $Id$
 //
-// Copyright (c) 2003-2006 Greg Landrum and Rational Discovery LLC
+// Copyright (c) 2003-2020 Greg Landrum and Rational Discovery LLC
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -9,9 +8,10 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/test.h>
 #include "QueryObjects.h"
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <boost/lexical_cast.hpp>
 
 using namespace std;
@@ -21,27 +21,31 @@ void test1() {
   cout << "Float" << endl;
   EqualityQuery<double> q(1.0);
 
-  CHECK_INVARIANT(!q.Match(0.0), "");
-  CHECK_INVARIANT(q.Match(1.0), "");
-  CHECK_INVARIANT(!q.Match(1.001), "");
-  CHECK_INVARIANT(!q.Match(1.1), "");
-  CHECK_INVARIANT(!q.Match(-2), "");
+  TEST_ASSERT(!q.Match(0.0));
+  TEST_ASSERT(q.Match(1.0));
+  TEST_ASSERT(!q.Match(1.001));
+  TEST_ASSERT(!q.Match(1.1));
+  TEST_ASSERT(!q.Match(-2));
 
   cout << "With Tolerance" << endl;
   q.setTol(0.002);
-  CHECK_INVARIANT(!q.Match(0.0), "");
-  CHECK_INVARIANT(q.Match(1.0), "");
-  CHECK_INVARIANT(q.Match(1.001), "");
-  CHECK_INVARIANT(!q.Match(1.1), "");
-  CHECK_INVARIANT(!q.Match(-2), "");
+  TEST_ASSERT(!q.Match(0.0));
+  TEST_ASSERT(q.Match(1.0));
+  TEST_ASSERT(q.Match(1.001));
+  TEST_ASSERT(!q.Match(1.1));
+  TEST_ASSERT(!q.Match(-2));
+  TEST_ASSERT(q.getTypeLabel().empty());
+  q.setTypeLabel("FloatEquality");
 
   Query<double> *newQ;
   newQ = q.copy();
-  CHECK_INVARIANT(!newQ->Match(0.0), "");
-  CHECK_INVARIANT(newQ->Match(1.0), "");
-  CHECK_INVARIANT(newQ->Match(1.001), "");
-  CHECK_INVARIANT(!newQ->Match(1.1), "");
-  CHECK_INVARIANT(!newQ->Match(-2), "");
+  TEST_ASSERT(!newQ->Match(0.0));
+  TEST_ASSERT(newQ->Match(1.0));
+  TEST_ASSERT(newQ->Match(1.001));
+  TEST_ASSERT(!newQ->Match(1.1));
+  TEST_ASSERT(!newQ->Match(-2));
+  TEST_ASSERT(newQ->getTypeLabel() == "FloatEquality");
+  delete newQ;
 }
 
 void test2() {
@@ -51,17 +55,18 @@ void test2() {
   q.insert(3);
   q.insert(5);
 
-  CHECK_INVARIANT(!q.Match(0), "");
-  CHECK_INVARIANT(q.Match(1), "");
-  CHECK_INVARIANT(q.Match(3), "");
-  CHECK_INVARIANT(!q.Match(-3), "");
+  TEST_ASSERT(!q.Match(0));
+  TEST_ASSERT(q.Match(1));
+  TEST_ASSERT(q.Match(3));
+  TEST_ASSERT(!q.Match(-3));
 
   Query<int> *newQ;
   newQ = q.copy();
-  CHECK_INVARIANT(!newQ->Match(0), "");
-  CHECK_INVARIANT(newQ->Match(1), "");
-  CHECK_INVARIANT(newQ->Match(3), "");
-  CHECK_INVARIANT(!newQ->Match(-3), "");
+  TEST_ASSERT(!newQ->Match(0));
+  TEST_ASSERT(newQ->Match(1));
+  TEST_ASSERT(newQ->Match(3));
+  TEST_ASSERT(!newQ->Match(-3));
+  delete newQ;
 }
 
 void test3() {
@@ -75,17 +80,20 @@ void test3() {
   q->addChild(Query<int>::CHILD_TYPE(l));
   q->addChild(Query<int>::CHILD_TYPE(g));
 
-  CHECK_INVARIANT(!q->Match(0), "");
-  CHECK_INVARIANT(q->Match(1), "");
-  CHECK_INVARIANT(q->Match(3), "");
-  CHECK_INVARIANT(!q->Match(-3), "");
+  TEST_ASSERT(!q->Match(0));
+  TEST_ASSERT(q->Match(1));
+  TEST_ASSERT(q->Match(3));
+  TEST_ASSERT(!q->Match(-3));
 
   Query<int> *newQ;
   newQ = q->copy();
-  CHECK_INVARIANT(!newQ->Match(0), "");
-  CHECK_INVARIANT(newQ->Match(1), "");
-  CHECK_INVARIANT(newQ->Match(3), "");
-  CHECK_INVARIANT(!newQ->Match(-3), "");
+  TEST_ASSERT(!newQ->Match(0));
+  TEST_ASSERT(newQ->Match(1));
+  TEST_ASSERT(newQ->Match(3));
+  TEST_ASSERT(!newQ->Match(-3));
+
+  delete newQ;
+  delete q;
 }
 
 void test4() {
@@ -99,17 +107,20 @@ void test4() {
   q->addChild(Query<int>::CHILD_TYPE(l));
   q->addChild(Query<int>::CHILD_TYPE(g));
 
-  CHECK_INVARIANT(q->Match(0), "");
-  CHECK_INVARIANT(q->Match(1), "");
-  CHECK_INVARIANT(q->Match(3), "");
-  CHECK_INVARIANT(q->Match(-3), "");
+  TEST_ASSERT(q->Match(0));
+  TEST_ASSERT(q->Match(1));
+  TEST_ASSERT(q->Match(3));
+  TEST_ASSERT(q->Match(-3));
 
   Query<int> *newQ;
   newQ = q->copy();
-  CHECK_INVARIANT(newQ->Match(0), "");
-  CHECK_INVARIANT(newQ->Match(1), "");
-  CHECK_INVARIANT(newQ->Match(3), "");
-  CHECK_INVARIANT(newQ->Match(-3), "");
+  TEST_ASSERT(newQ->Match(0));
+  TEST_ASSERT(newQ->Match(1));
+  TEST_ASSERT(newQ->Match(3));
+  TEST_ASSERT(newQ->Match(-3));
+
+  delete newQ;
+  delete q;
 }
 
 void test5() {
@@ -123,19 +134,22 @@ void test5() {
   q->addChild(Query<int>::CHILD_TYPE(l));
   q->addChild(Query<int>::CHILD_TYPE(g));
 
-  CHECK_INVARIANT(q->Match(-1), "");
-  CHECK_INVARIANT(q->Match(0), "");
-  CHECK_INVARIANT(!q->Match(1), "");
-  CHECK_INVARIANT(!q->Match(3), "");
-  CHECK_INVARIANT(q->Match(-3), "");
+  TEST_ASSERT(q->Match(-1));
+  TEST_ASSERT(q->Match(0));
+  TEST_ASSERT(!q->Match(1));
+  TEST_ASSERT(!q->Match(3));
+  TEST_ASSERT(q->Match(-3));
 
   Query<int> *newQ;
   newQ = q->copy();
-  CHECK_INVARIANT(newQ->Match(-1), "");
-  CHECK_INVARIANT(newQ->Match(0), "");
-  CHECK_INVARIANT(!newQ->Match(1), "");
-  CHECK_INVARIANT(!newQ->Match(3), "");
-  CHECK_INVARIANT(newQ->Match(-3), "");
+  TEST_ASSERT(newQ->Match(-1));
+  TEST_ASSERT(newQ->Match(0));
+  TEST_ASSERT(!newQ->Match(1));
+  TEST_ASSERT(!newQ->Match(3));
+  TEST_ASSERT(newQ->Match(-3));
+
+  delete newQ;
+  delete q;
 }
 
 int foofun(double bar) { return int(floor(bar)); };
@@ -145,26 +159,29 @@ void test6() {
   EqualityQuery<int, double, true> q;
   q.setDataFunc(foofun);
   q.setVal(6);
-  CHECK_INVARIANT(q.Match(6.0), "");
-  CHECK_INVARIANT(q.Match(6.1), "");
-  CHECK_INVARIANT(!q.Match(5.0), "");
+  TEST_ASSERT(q.Match(6.0));
+  TEST_ASSERT(q.Match(6.1));
+  TEST_ASSERT(!q.Match(5.0));
 
   Query<int, double, true> *newQ;
   newQ = q.copy();
-  CHECK_INVARIANT(newQ->Match(6.0), "");
-  CHECK_INVARIANT(newQ->Match(6.1), "");
-  CHECK_INVARIANT(!newQ->Match(5.0), "");
+  TEST_ASSERT(newQ->Match(6.0));
+  TEST_ASSERT(newQ->Match(6.1));
+  TEST_ASSERT(!newQ->Match(5.0));
 
   Query<int, double, true> *newQ2 = &q;
-  CHECK_INVARIANT(newQ2->Match(6.0), "");
-  CHECK_INVARIANT(newQ2->Match(6.1), "");
-  CHECK_INVARIANT(!newQ2->Match(5.0), "");
+  TEST_ASSERT(newQ2->Match(6.0));
+  TEST_ASSERT(newQ2->Match(6.1));
+  TEST_ASSERT(!newQ2->Match(5.0));
 
   Query<int, double, true> *newQ3;
   newQ3 = newQ2->copy();
-  CHECK_INVARIANT(newQ3->Match(6.0), "");
-  CHECK_INVARIANT(newQ3->Match(6.1), "");
-  CHECK_INVARIANT(!newQ3->Match(5.0), "");
+  TEST_ASSERT(newQ3->Match(6.0));
+  TEST_ASSERT(newQ3->Match(6.1));
+  TEST_ASSERT(!newQ3->Match(5.0));
+
+  delete newQ;
+  delete newQ3;
 }
 
 bool matchF(int v) { return v == 3; }
@@ -179,10 +196,10 @@ void basics1() {
   q.setMatchFunc(matchF);
   q.setDataFunc(dataF);
 
-  CHECK_INVARIANT(!q.Match(0.0), "");
-  CHECK_INVARIANT(q.Match(1.0), "");
-  CHECK_INVARIANT(q.Match(1.1), "");
-  CHECK_INVARIANT(!q.Match(-2.0), "");
+  TEST_ASSERT(!q.Match(0.0));
+  TEST_ASSERT(q.Match(1.0));
+  TEST_ASSERT(q.Match(1.1));
+  TEST_ASSERT(!q.Match(-2.0));
 
   TEST_ASSERT(!q.getMatchFunc()(0));
   TEST_ASSERT(q.getMatchFunc()(3));
@@ -191,66 +208,66 @@ void basics1() {
   cout << "Query2" << endl;
   Query<bool, int, true> q2;
   q2.setDataFunc(cmp);
-  CHECK_INVARIANT(q2.Match(0), "");
-  CHECK_INVARIANT(q2.Match(1), "");
-  CHECK_INVARIANT(!q2.Match(3), "");
-  CHECK_INVARIANT(!q2.Match(4), "");
-  CHECK_INVARIANT(!q2.Match(4.0), "");
+  TEST_ASSERT(q2.Match(0));
+  TEST_ASSERT(q2.Match(1));
+  TEST_ASSERT(!q2.Match(3));
+  TEST_ASSERT(!q2.Match(4));
+  TEST_ASSERT(!q2.Match(4.0));
 }
 
 void basics2() {
   cout << "Equality" << endl;
   EqualityQuery<int> q2;
   q2.setVal(3);
-  CHECK_INVARIANT(!q2.Match(0), "");
-  CHECK_INVARIANT(!q2.Match(1), "");
-  CHECK_INVARIANT(q2.Match(3), "");
-  CHECK_INVARIANT(!q2.Match(-3), "");
+  TEST_ASSERT(!q2.Match(0));
+  TEST_ASSERT(!q2.Match(1));
+  TEST_ASSERT(q2.Match(3));
+  TEST_ASSERT(!q2.Match(-3));
 
   cout << "Greater" << endl;
   GreaterQuery<int> q3;
   q3.setVal(3);
-  CHECK_INVARIANT(q3.Match(0), "");
-  CHECK_INVARIANT(q3.Match(1), "");
-  CHECK_INVARIANT(!q3.Match(3), "");
-  CHECK_INVARIANT(!q3.Match(5), "");
+  TEST_ASSERT(q3.Match(0));
+  TEST_ASSERT(q3.Match(1));
+  TEST_ASSERT(!q3.Match(3));
+  TEST_ASSERT(!q3.Match(5));
 
   cout << "GreaterEqual" << endl;
   GreaterEqualQuery<int> q4(3);
-  CHECK_INVARIANT(q4.Match(0), "");
-  CHECK_INVARIANT(q4.Match(1), "");
-  CHECK_INVARIANT(q4.Match(3), "");
-  CHECK_INVARIANT(!q4.Match(5), "");
+  TEST_ASSERT(q4.Match(0));
+  TEST_ASSERT(q4.Match(1));
+  TEST_ASSERT(q4.Match(3));
+  TEST_ASSERT(!q4.Match(5));
 
   cout << "Less" << endl;
   LessQuery<int> q5;
   q5.setVal(3);
-  CHECK_INVARIANT(!q5.Match(0), "");
-  CHECK_INVARIANT(!q5.Match(1), "");
-  CHECK_INVARIANT(!q5.Match(3), "");
-  CHECK_INVARIANT(q5.Match(5), "");
+  TEST_ASSERT(!q5.Match(0));
+  TEST_ASSERT(!q5.Match(1));
+  TEST_ASSERT(!q5.Match(3));
+  TEST_ASSERT(q5.Match(5));
 
   cout << "LessEqual" << endl;
   LessEqualQuery<int> q6(3);
 
-  CHECK_INVARIANT(!q6.Match(0), "");
-  CHECK_INVARIANT(!q6.Match(1), "");
-  CHECK_INVARIANT(q6.Match(3), "");
-  CHECK_INVARIANT(q6.Match(5), "");
+  TEST_ASSERT(!q6.Match(0));
+  TEST_ASSERT(!q6.Match(1));
+  TEST_ASSERT(q6.Match(3));
+  TEST_ASSERT(q6.Match(5));
 
   cout << "Open Range" << endl;
   RangeQuery<int> q7(0, 3);
-  CHECK_INVARIANT(!q7.Match(0), "");
-  CHECK_INVARIANT(q7.Match(1), "");
-  CHECK_INVARIANT(!q7.Match(3), "");
-  CHECK_INVARIANT(!q7.Match(5), "");
+  TEST_ASSERT(!q7.Match(0));
+  TEST_ASSERT(q7.Match(1));
+  TEST_ASSERT(!q7.Match(3));
+  TEST_ASSERT(!q7.Match(5));
 
   cout << "Closed Range" << endl;
   q7.setEndsOpen(false, false);
-  CHECK_INVARIANT(q7.Match(0), "");
-  CHECK_INVARIANT(q7.Match(1), "");
-  CHECK_INVARIANT(q7.Match(3), "");
-  CHECK_INVARIANT(!q7.Match(5), "");
+  TEST_ASSERT(q7.Match(0));
+  TEST_ASSERT(q7.Match(1));
+  TEST_ASSERT(q7.Match(3));
+  TEST_ASSERT(!q7.Match(5));
 }
 
 int convFunc(const char *arg) { return boost::lexical_cast<int>(arg); };
@@ -263,17 +280,19 @@ void test7() {
   q.insert(3);
   q.insert(5);
 
-  CHECK_INVARIANT(!q.Match("0"), "");
-  CHECK_INVARIANT(q.Match("1"), "");
-  CHECK_INVARIANT(q.Match("3"), "");
-  CHECK_INVARIANT(!q.Match("-3"), "");
+  TEST_ASSERT(!q.Match("0"));
+  TEST_ASSERT(q.Match("1"));
+  TEST_ASSERT(q.Match("3"));
+  TEST_ASSERT(!q.Match("-3"));
 
   Query<int, const char *, true> *newQ;
   newQ = q.copy();
-  CHECK_INVARIANT(!newQ->Match("0"), "");
-  CHECK_INVARIANT(newQ->Match("1"), "");
-  CHECK_INVARIANT(newQ->Match("3"), "");
-  CHECK_INVARIANT(!newQ->Match("-3"), "");
+  TEST_ASSERT(!newQ->Match("0"));
+  TEST_ASSERT(newQ->Match("1"));
+  TEST_ASSERT(newQ->Match("3"));
+  TEST_ASSERT(!newQ->Match("-3"));
+
+  delete newQ;
 }
 
 int main() {
@@ -287,5 +306,4 @@ int main() {
   test5();
   test6();
   test7();
-  return 0;
 }

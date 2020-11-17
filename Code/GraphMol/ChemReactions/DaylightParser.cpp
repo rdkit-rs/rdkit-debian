@@ -105,18 +105,29 @@ ROMol *constructMolFromString(const std::string &txt,
 ChemicalReaction *RxnSmartsToChemicalReaction(
     const std::string &text, std::map<std::string, std::string> *replacements,
     bool useSmiles) {
-  std::size_t pos1 = text.find(">");
-  std::size_t pos2 = text.rfind(">");
-  if (pos1 == std::string::npos) {
-    throw ChemicalReactionParserException(
-        "a reaction requires at least one reactant and one product");
+
+  std::vector<std::size_t> pos;
+
+  for (std::size_t i = 0; i < text.length(); ++i) {
+    if (text[i] == '>' && (i == 0 || text[i - 1] != '-')) {
+      pos.push_back(i);
+    }
   }
-  if (text.find(">", pos1 + 1) != pos2) {
+
+  if (pos.size() < 2) {
+    throw ChemicalReactionParserException(
+        "a reaction requires at least two > characters");
+  }
+
+  std::size_t pos1 = pos[0];
+  std::size_t pos2 = pos[1];
+
+  if (pos.size() > 2) {
     throw ChemicalReactionParserException("multi-step reactions not supported");
   }
 
   std::string reactText = text.substr(0, pos1);
-  std::string agentText = "";
+  std::string agentText;
   if (pos2 != pos1 + 1) {
     agentText = text.substr(pos1 + 1, (pos2 - pos1) - 1);
   }
@@ -140,6 +151,7 @@ ChemicalReaction *RxnSmartsToChemicalReaction(
     if (!mol) {
       std::string errMsg = "Problems constructing reactant from SMARTS: ";
       errMsg += txt;
+      delete rxn;
       throw ChemicalReactionParserException(errMsg);
     }
     rxn->addReactantTemplate(ROMOL_SPTR(mol));
@@ -152,6 +164,7 @@ ChemicalReaction *RxnSmartsToChemicalReaction(
     if (!mol) {
       std::string errMsg = "Problems constructing product from SMARTS: ";
       errMsg += txt;
+      delete rxn;
       throw ChemicalReactionParserException(errMsg);
     }
     rxn->addProductTemplate(ROMOL_SPTR(mol));
@@ -166,6 +179,7 @@ ChemicalReaction *RxnSmartsToChemicalReaction(
     if (!agentMol) {
       std::string errMsg = "Problems constructing agent from SMARTS: ";
       errMsg += agentText;
+      delete rxn;
       throw ChemicalReactionParserException(errMsg);
     }
     std::vector<ROMOL_SPTR> agents = MolOps::getMolFrags(*agentMol, false);

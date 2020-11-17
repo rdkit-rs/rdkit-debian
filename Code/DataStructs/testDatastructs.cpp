@@ -8,6 +8,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
@@ -23,8 +24,8 @@
 #include <RDGeneral/RDLog.h>
 #include <RDGeneral/Exceptions.h>
 #include <DataStructs/SparseIntVect.h>
-
-#include <stdlib.h>
+#include <DataStructs/DatastructsStreamOps.h>
+#include <cstdlib>
 
 using namespace std;
 using namespace RDKit;
@@ -115,7 +116,7 @@ void Test(T arg) {
 
   try {
     t3.getBit(4000);
-  } catch (IndexErrorException) {
+  } catch (IndexErrorException &) {
     std::cout << " except " << endl;
   } catch (...) {
     std::cout << " ERROR EXCEPT " << endl;
@@ -184,7 +185,9 @@ void ProbeTest(T &arg) {
   T t1(sz), t2(sz);
   for (int i = 0; i < sz; i += 2) {
     t1.setBit(i);
-    if (i < 3 * sz / 4) t2.setBit(i);
+    if (i < 3 * sz / 4) {
+      t2.setBit(i);
+    }
   }
   std::string pkl = t1.toString();
   TEST_ASSERT(AllProbeBitsMatch(t1, pkl));
@@ -217,7 +220,7 @@ void test1DiscreteVect() {
   try {
     vect1.setVal(28, 2);
   } catch (ValueErrorException &dexp) {
-    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.message() << "\n";
+    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.what() << "\n";
   }
 
   // all these tests should fail if unsigned int changes from being
@@ -234,7 +237,7 @@ void test1DiscreteVect() {
   try {
     vect2.setVal(28, 10);
   } catch (ValueErrorException &dexp) {
-    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.message() << "\n";
+    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.what() << "\n";
   }
 
   DiscreteValueVect vect4(DiscreteValueVect::FOURBITVALUE, 30);
@@ -249,7 +252,7 @@ void test1DiscreteVect() {
   try {
     vect4.setVal(28, 16);
   } catch (ValueErrorException &dexp) {
-    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.message() << "\n";
+    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.what() << "\n";
   }
 
   DiscreteValueVect vect8(DiscreteValueVect::EIGHTBITVALUE, 32);
@@ -264,7 +267,7 @@ void test1DiscreteVect() {
   try {
     vect8.setVal(28, 257);
   } catch (ValueErrorException &dexp) {
-    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.message() << "\n";
+    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.what() << "\n";
   }
 
   DiscreteValueVect vect16(DiscreteValueVect::SIXTEENBITVALUE, 300);
@@ -281,7 +284,7 @@ void test1DiscreteVect() {
   try {
     vect16.setVal(28, 65536);
   } catch (ValueErrorException &dexp) {
-    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.message() << "\n";
+    BOOST_LOG(rdInfoLog) << "Expected failure: " << dexp.what() << "\n";
   }
 }
 
@@ -520,31 +523,31 @@ void test6SparseIntVect() {
   try {
     iVect.setVal(-1, 13);
     TEST_ASSERT(0);
-  } catch (IndexErrorException &dexp) {
+  } catch (IndexErrorException &) {
     ;
   }
   try {
     iVect.setVal(255, 42);
     TEST_ASSERT(0);
-  } catch (IndexErrorException &dexp) {
+  } catch (IndexErrorException &) {
     ;
   }
   try {
     iVect.getVal(-1);
     TEST_ASSERT(0);
-  } catch (IndexErrorException &dexp) {
+  } catch (IndexErrorException &) {
     ;
   }
   try {
     iVect.getVal(255);
     TEST_ASSERT(0);
-  } catch (IndexErrorException &dexp) {
+  } catch (IndexErrorException &) {
     ;
   }
   try {
     iVect[-1];
     TEST_ASSERT(0);
-  } catch (IndexErrorException &dexp) {
+  } catch (IndexErrorException &) {
     ;
   }
 
@@ -606,7 +609,7 @@ void test6SparseIntVect() {
     try {
       iV1 &= iVect;
       TEST_ASSERT(0);
-    } catch (ValueErrorException &dexp) {
+    } catch (ValueErrorException &) {
       ;
     }
   }
@@ -671,7 +674,7 @@ void test6SparseIntVect() {
     try {
       iV2 &= iVect;
       TEST_ASSERT(0);
-    } catch (ValueErrorException &dexp) {
+    } catch (ValueErrorException &) {
       ;
     }
   }
@@ -704,7 +707,7 @@ void test6SparseIntVect() {
     try {
       iV1 |= iVect;
       TEST_ASSERT(0);
-    } catch (ValueErrorException &dexp) {
+    } catch (ValueErrorException &) {
       ;
     }
   }
@@ -880,7 +883,7 @@ void test6SparseIntVect() {
   }
 
   {  // operator== and operator!=
-    SparseIntVect<int> iV1(5), iV2(5), iV3(3);
+    SparseIntVect<int> iV1(5), iV2(5), iV3(3), iV4(5);
     iV1.setVal(0, 2);
     iV1.setVal(2, 1);
     iV1.setVal(3, 4);
@@ -891,6 +894,11 @@ void test6SparseIntVect() {
     iV2.setVal(3, 4);
     iV2.setVal(4, 6);
 
+    iV4.setVal(1, 2);
+    iV4.setVal(2, 3);
+    iV4.setVal(3, 4);
+    iV4.setVal(4, 6);
+
     TEST_ASSERT(iV1 == iV1);
     TEST_ASSERT(iV2 == iV2);
     TEST_ASSERT(iV3 == iV3);
@@ -899,6 +907,8 @@ void test6SparseIntVect() {
     TEST_ASSERT(iV2 != iV1);
     TEST_ASSERT(iV3 != iV1);
     TEST_ASSERT(iV1 != iV3);
+    TEST_ASSERT(iV1 != iV4);
+    TEST_ASSERT(iV2 == iV4);
   }
 
   {  // test negative values (was sf.net Issue 3295215)
@@ -963,7 +973,7 @@ void test7SparseIntVectPickles() {
     try {
       iV2.fromString(pkl);
       TEST_ASSERT(0);
-    } catch (ValueErrorException &dexp) {
+    } catch (ValueErrorException &) {
       ;
     }
   }
@@ -1391,11 +1401,40 @@ void test15BitmapOps() {
   }
 }
 
+void test16BitVectProps() {
+  ExplicitBitVect bv(32);
+  for (int i = 0; i < 32; i += 2) {
+    bv.setBit(i);
+  }
+
+  ExplicitBitVect bv2(bv.toString());
+  TEST_ASSERT(bv == bv2);
+
+  Dict d;
+  d.setVal<ExplicitBitVect>("exp", bv);
+  RDValue &value = d.getData()[0].val;
+
+  DataStructsExplicitBitVecPropHandler bv_handler;
+  std::vector<CustomPropHandler *> handlers = {&bv_handler, bv_handler.clone()};
+  for (auto handler : handlers) {
+    TEST_ASSERT(handler->canSerialize(value));
+    RDValue bad_value = 1;
+    TEST_ASSERT(!handler->canSerialize(bad_value));
+    std::stringstream ss;
+    TEST_ASSERT(handler->write(ss, value));
+    RDValue newValue;
+    TEST_ASSERT(handler->read(ss, newValue));
+    TEST_ASSERT(from_rdvalue<ExplicitBitVect>(newValue) == bv);
+    newValue.destroy();
+  }
+  delete handlers[1];
+}
+
 int main() {
   RDLog::InitLogs();
   try {
     throw IndexErrorException(3);
-  } catch (IndexErrorException) {
+  } catch (IndexErrorException &) {
     BOOST_LOG(rdInfoLog) << "pass" << endl;
   }
 
@@ -1490,5 +1529,9 @@ int main() {
                        << std::endl;
   test15BitmapOps();
 
+  BOOST_LOG(rdInfoLog) << " Test bitmaps as properties "
+                          "-------------------------------"
+                       << std::endl;
+  test16BitVectProps();
   return 0;
 }

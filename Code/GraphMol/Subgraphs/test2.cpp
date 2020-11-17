@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmilesWrite.h>
@@ -18,6 +19,12 @@
 #include <iostream>
 using namespace std;
 using namespace RDKit;
+
+std::string canon(std::string smiles) {
+  unique_ptr<ROMol> m(SmilesToMol(smiles));
+  const bool useStereo = true;
+  return MolToSmiles(*m, useStereo);
+}
 
 void test1() {
   std::cout << "-----------------------\n Test1: pathToSubmol" << std::endl;
@@ -122,7 +129,7 @@ void test2() {
     TEST_ASSERT(pth.size() == 8);
     ROMol *frag = Subgraphs::pathToSubmol(*mol, pth, false);
     smiles = MolToSmiles(*frag, true, false, 0, false);
-    TEST_ASSERT(smiles == "C(C(C(O)C)C(C)C)C");
+    TEST_ASSERT(canon(smiles) == canon("C(C(C(O)C)C(C)C)C"));
     delete frag;
     delete mol;
   }
@@ -143,7 +150,7 @@ void testGithubIssue103() {
     TEST_ASSERT(pth.size() == 5);
     ROMol *frag = Subgraphs::pathToSubmol(*mol, pth, false);
     smiles = MolToSmiles(*frag, true);
-    TEST_ASSERT(smiles == "C=CC(O)C=C");
+    TEST_ASSERT(canon(smiles) == canon("C=CC(O)C=C"));
     delete frag;
     delete mol;
   }
@@ -156,7 +163,7 @@ void testGithubIssue103() {
     TEST_ASSERT(pth.size() == 5);
     ROMol *frag = Subgraphs::pathToSubmol(*mol, pth, false);
     smiles = MolToSmarts(*frag);
-    TEST_ASSERT(smiles == "[#6](-[#6@H](-[#8])-[#6]=[#6])=[#6]");
+    TEST_ASSERT(smiles == "[#6]=[#6]-[#6@H](-[#8])-[#6]=[#6]");
     delete frag;
     delete mol;
   }
@@ -169,11 +176,24 @@ void testGithubIssue103() {
     TEST_ASSERT(pth.size() == 5);
     ROMol *frag = Subgraphs::pathToSubmol(*mol, pth, true);
     smiles = MolToSmarts(*frag);
-    TEST_ASSERT(smiles == "[#6](-[#6@](-[#8])-[#6]=[#6])=[#6]");
+    TEST_ASSERT(smiles == "[#6]=[#6]-[#6@](-[#8])-[#6]=[#6]");
     delete frag;
     delete mol;
   }
 
+  std::cout << "Finished" << std::endl;
+}
+
+void testGithubIssue2647() {
+  std::cout << "-----------------------\n Testing github Issue103: "
+               "more stereochemistry and pathToSubmol (path needs to be in sorted order)"
+            << std::endl;
+  std::string smiles = "I[C@](F)(Br)O";
+  std::unique_ptr<ROMol> mol(SmilesToMol(smiles));
+  std::vector<int> path = { 0, 3, 2, 1 };
+  const bool useQuery=false;
+  std::unique_ptr<ROMol> mol2(Subgraphs::pathToSubmol(*mol, path, useQuery));
+  TEST_ASSERT(MolToSmiles(*mol2) == MolToSmiles(*mol));
   std::cout << "Finished" << std::endl;
 }
 
@@ -182,5 +202,6 @@ int main() {
   test1();
   test2();
   testGithubIssue103();
+  testGithubIssue2647();
   return 0;
 }

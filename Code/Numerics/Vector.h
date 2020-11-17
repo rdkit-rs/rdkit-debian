@@ -7,17 +7,18 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_VECTOR_H__
 #define __RD_VECTOR_H__
 
 #include <RDGeneral/Invariant.h>
 #include <RDGeneral/utils.h>
-#include <math.h>
+#include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <cstdlib>
 #include <cstring>
-#include <time.h>
+#include <ctime>
 #include <boost/random.hpp>
 #include <boost/smart_ptr.hpp>
 

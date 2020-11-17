@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 #	Jan 2011	(markus kossner)	Cleaned up the code, added some documentation
-#	somwhere around Aug 2008	(markus kossner)	created
+#	somewhere around Aug 2008	(markus kossner)	created
 #    
 #    This script extracts the molecular framework for a database of molecules.
 #    You can use two modes (hard coded): 
@@ -15,9 +15,9 @@
 #    Usage: Frames.py <database.sdf>
 #    Output: 
 #    - sd files containing all molecules belonging to one frame (1.sdf, 2.sdf etc)
-#    - frames.smi containing the (caninical) smiles and count of occurrence
+#    - frames.smi containing the (canonical) smiles and count of occurrence
 #
-from __future__ import print_function
+
 
 import os, sys
 from Chem import AllChem as Chem
@@ -34,7 +34,7 @@ def flatten(x):
     [1, 2, 3, 42, None, 4, 5, 6, 7, 8, 9, 10]"""
   result = []
   for el in x:
-    if hasattr(el, "__iter__") and not isinstance(el, basestring):
+    if hasattr(el, "__iter__") and not isinstance(el, str):
       result.extend(flatten(el))
     else:
       result.append(el)

@@ -10,7 +10,7 @@
 #include <map>
 #include <vector>
 #include <algorithm>
-#include <math.h>
+#include <cmath>
 
 #include "../MolOps.h"
 #include "../SmilesParse/SmilesParse.h"
@@ -20,7 +20,7 @@
 #include <GraphMol/MolOps.h>
 #include "MMPA.h"
 
-//#define _DEBUG // enable debug info output
+//#define MMPA_DEBUG // enable debug info output
 
 namespace RDKit {
 namespace MMPA {
@@ -34,7 +34,9 @@ static inline unsigned long long computeMorganCodeHash(const ROMol& mol) {
   std::vector<unsigned long> currCodes(nv);
   std::vector<unsigned long> prevCodes(nv);
   size_t nIterations = mol.getNumBonds();
-  if (nIterations > 5) nIterations = 5;
+  if (nIterations > 5) {
+    nIterations = 5;
+  }
 
   for (unsigned ai = 0; ai < nv; ai++) {
     const Atom& a = *mol.getAtomWithIdx(ai);
@@ -46,7 +48,9 @@ static inline unsigned long long computeMorganCodeHash(const ROMol& mol) {
   }
 
   for (size_t iter = 0; iter < nIterations; iter++) {
-    for (size_t i = 0; i < nv; i++) prevCodes[i] = currCodes[i];
+    for (size_t i = 0; i < nv; i++) {
+      prevCodes[i] = currCodes[i];
+    }
 
     for (size_t bi = 0; bi < ne; bi++) {
       const Bond* bond = mol.getBondWithIdx(bi);
@@ -74,20 +78,20 @@ static inline void convertMatchingToBondVect(
     const std::vector<MatchVectType>& matching_atoms, const ROMol& mol) {
   RDUNUSED_PARAM(mol);
   for (const auto& matching_atom : matching_atoms) {
-    matching_bonds.push_back(BondVector_t());
+    matching_bonds.emplace_back();
     BondVector_t& mb = matching_bonds.back();  // current match
-    // assume patern is only one bond pattern
-    unsigned a1 = (unsigned)matching_atom[0].second;  // mol atom 1 index
-    unsigned a2 = (unsigned)matching_atom[1].second;  // mol atom 2 index
+    // assume pattern is only one bond pattern
+    auto a1 = (unsigned)matching_atom[0].second;  // mol atom 1 index
+    auto a2 = (unsigned)matching_atom[1].second;  // mol atom 2 index
     mb.push_back(std::pair<unsigned, unsigned>(a1, a2));
   }
 }
 
 static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
                           res,  // const SignatureVector& resSignature,
-                      const ROMol& mol,
-                      const BondVector_t& bonds_selected, size_t maxCuts) {
-#ifdef _DEBUG
+                      const ROMol& mol, const BondVector_t& bonds_selected,
+                      size_t maxCuts) {
+#ifdef MMPA_DEBUG
   std::cout << res.size() + 1 << ": ";
 #endif
   RWMol em(mol);
@@ -95,7 +99,7 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
   unsigned isotope = 0;
   std::map<unsigned, unsigned> isotope_track;
   for (const auto& bi : bonds_selected) {
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
     {
       std::string symbol =
           em.getAtomWithIdx(bonds_selected[bi].first)->getSymbol();
@@ -125,7 +129,7 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
     // remove the bond
     em.removeBond(bi.first, bi.second);
 
-    // now add attachement points and set attachment point lables
+    // now add attachment points and set attachment point labels
     auto* a = new Atom(0);
     a->setProp(common_properties::molAtomMapNumber, (int)isotope);
     unsigned newAtomA = em.addAtom(a, true, true);
@@ -139,7 +143,7 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
     isotope_track[newAtomA] = isotope;
     isotope_track[newAtomB] = isotope;
   }
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
   std::cout << "\n";
 #endif
   RWMOL_SPTR core, side_chains;  // core & side_chains output molecules
@@ -147,7 +151,7 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
   if (isotope == 1) {
     side_chains = RWMOL_SPTR(new RWMol(em));  // output = '%s,%s,,%s.%s'
 // DEBUG PRINT
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
 // OK: std::cout<<res.size()+1<<" isotope="<< isotope <<","<<
 // MolToSmiles(*side_chains, true) <<"\n";
 #endif
@@ -163,8 +167,10 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
       for (size_t i = 0; i < nFrags; i++) {
         unsigned nLabels = 0;
         for (int ai : frags[i]) {
-          if (isotope_track.end() != isotope_track.find(ai))  // new added atom
-            ++nLabels;  // found connection point
+          if (isotope_track.end() !=
+              isotope_track.find(ai)) {  // new added atom
+            ++nLabels;                   // found connection point
+          }
         }
         if (nLabels >=
             maxCuts) {  // looks like it should be selected as core !  ??????
@@ -173,7 +179,7 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
         }
       }
       if (!valid) {
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
         std::cout << "isotope>=3: invalid fragments. fragment with maxCut "
                      "connection points not found"
                   << "\n";
@@ -191,10 +197,13 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
       unsigned nAttachments = 0;
       for (int ai : frags[i]) {
         if (isotope_track.end() !=
-            isotope_track.find(ai))  // == if(a->hasProp("molAtomMapNumber"))
+            isotope_track.find(ai)) {  // == if(a->hasProp("molAtomMapNumber"))
           ++nAttachments;
+        }
       }
-      if (maxAttachments < nAttachments) maxAttachments = nAttachments;
+      if (maxAttachments < nAttachments) {
+        maxAttachments = nAttachments;
+      }
       if (1 == nAttachments) {  // build side-chain set of molecules from
                                 // selected fragment
         std::map<unsigned, unsigned>
@@ -211,8 +220,9 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
             const Bond* bond = em[*beg];
             if (newAtomMap.end() == newAtomMap.find(bond->getBeginAtomIdx()) ||
                 newAtomMap.end() == newAtomMap.find(bond->getEndAtomIdx()) ||
-                visitedBonds.end() != visitedBonds.find(bond->getIdx()))
+                visitedBonds.end() != visitedBonds.find(bond->getIdx())) {
               continue;
+            }
             unsigned ai1 = newAtomMap[bond->getBeginAtomIdx()];
             unsigned ai2 = newAtomMap[bond->getEndAtomIdx()];
             unsigned bi = side_chains->addBond(ai1, ai2, bond->getBondType());
@@ -221,15 +231,16 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
         }
       } else {  // select the core fragment
 // DEBUG PRINT
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
         if (iCore != -1)
           std::cout << "Next CORE found. iCore=" << iCore << " New i=" << i
                     << " nAttachments=" << nAttachments << "\n";
 #endif
-        if (nAttachments >= maxAttachments)  // Choose a fragment with maximal
-                                             // number of connection points as a
-                                             // core
+        if (nAttachments >= maxAttachments) {  // Choose a fragment with maximal
+                                               // number of connection points as
+                                               // a core
           iCore = i;
+        }
       }
     }
     // build core molecule from selected fragment
@@ -250,8 +261,9 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
           const Bond* bond = em[*beg];
           if (newAtomMap.end() == newAtomMap.find(bond->getBeginAtomIdx()) ||
               newAtomMap.end() == newAtomMap.find(bond->getEndAtomIdx()) ||
-              visitedBonds.end() != visitedBonds.find(bond->getIdx()))
+              visitedBonds.end() != visitedBonds.find(bond->getIdx())) {
             continue;
+          }
           unsigned ai1 = newAtomMap[bond->getBeginAtomIdx()];
           unsigned ai2 = newAtomMap[bond->getEndAtomIdx()];
           unsigned bi = core->addBond(ai1, ai2, bond->getBondType());
@@ -259,7 +271,7 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
         }
       }
 // DEBUG PRINT
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
 // std::cout<<res.size()+1<<" isotope="<< isotope <<" "<< MolToSmiles(*core,
 // true)<<", "<<MolToSmiles(*side_chains, true)<<"\n";
 #endif
@@ -283,7 +295,7 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
           (nullptr == core ||
            computeMorganCodeHash(*core) == computeMorganCodeHash(*r.first))) {
         // 2. final check to exclude hash collisions
-        // We decided that it does not neccessary to implement
+        // We decided that it is not necessary to implement
         resFound = true;
         break;
       }
@@ -334,7 +346,7 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
           // std::cerr << "atom_idx: " << atom_idx << " rank: " <<
           // ranks[atom_idx] <<
           //    " molAtomMapNumber: " << label << std::endl;
-          rankedAtoms.push_back(std::make_pair(idx, label));
+          rankedAtoms.emplace_back(idx, label);
         }
       }
       std::sort(rankedAtoms.begin(), rankedAtoms.end());
@@ -378,9 +390,9 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
       }
     }
 
-    res.push_back(std::pair<ROMOL_SPTR, ROMOL_SPTR>(core, side_chains));  //
+    res.emplace_back(core, side_chains);  //
   }
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
   else
     std::cout << res.size() + 1 << " --- DUPLICATE Result FOUND --- ri=" << ri
               << "\n";
@@ -390,18 +402,22 @@ static void addResult(std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>&
 //=====================================================================
 static inline void appendBonds(BondVector_t& bonds,
                                const BondVector_t& matching_bonds) {
-  for (const auto& matching_bond : matching_bonds)
+  for (const auto& matching_bond : matching_bonds) {
     bonds.push_back(matching_bond);
+  }
 }
 
 static inline void processCuts(
     size_t i, size_t minCuts, size_t maxCuts, BondVector_t& bonds_selected,
     const std::vector<BondVector_t>& matching_bonds, const ROMol& mol,
     std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>& res) {
-  if (maxCuts < minCuts)
+  if (maxCuts < minCuts) {
     throw ValueErrorException("supplied maxCuts is less than minCuts");
+  }
 
-  if (minCuts == 0) throw ValueErrorException("minCuts must be greater than 0");
+  if (minCuts == 0) {
+    throw ValueErrorException("minCuts must be greater than 0");
+  }
 
   for (size_t x = i; x < matching_bonds.size(); x++) {
     appendBonds(bonds_selected, matching_bonds[x]);
@@ -432,7 +448,7 @@ bool fragmentMol(const ROMol& mol,
                  std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>>& res,
                  unsigned int minCuts, unsigned int maxCuts,
                  unsigned int maxCutBonds, const std::string& pattern) {
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
   for (size_t i = 0; i < mol.getNumAtoms(); i++) {
     std::string symbol = mol.getAtomWithIdx(i)->getSymbol();
     int label = 0;
@@ -449,17 +465,18 @@ bool fragmentMol(const ROMol& mol,
 #endif
 
   res.clear();
-  std::auto_ptr<const ROMol> smarts((const ROMol*)SmartsToMol(pattern));
+  std::unique_ptr<const ROMol> smarts((const ROMol*)SmartsToMol(pattern));
   std::vector<MatchVectType>
       matching_atoms;  // one bond per match ! with default pattern
   unsigned int total = SubstructMatch(mol, *smarts, matching_atoms);
-#ifdef _DEBUG
+#ifdef MMPA_DEBUG
   std::cout << "total substructs =" << total
             << "\nmatching bonds (atom1, atom2):\n";
 #endif
-  if (0 == total)  // Not found.  Return empty set of molecules
+  if (0 == total) {  // Not found.  Return empty set of molecules
     return false;
-#ifdef _DEBUG
+  }
+#ifdef MMPA_DEBUG
   for (size_t i = 0; i < matching_atoms.size(); i++) {
     std::string symbol =
         mol.getAtomWithIdx(matching_atoms[i][0].second)->getSymbol();
@@ -488,8 +505,10 @@ bool fragmentMol(const ROMol& mol,
 
   std::vector<BondVector_t> matching_bonds;  // List of matched query's bonds
   convertMatchingToBondVect(matching_bonds, matching_atoms, mol);
-  if (matching_bonds.size() > maxCutBonds) return false;
-#ifdef _DEBUG
+  if (matching_bonds.size() > maxCutBonds) {
+    return false;
+  }
+#ifdef MMPA_DEBUG
   std::cout << "total matching_bonds = " << matching_bonds.size() << "\n";
 #endif
 
@@ -519,5 +538,5 @@ bool fragmentMol(const ROMol& mol,
   processCuts(0, minCuts, maxCuts, bonds_selected, matching_bonds, mol, res);
   return true;
 }
-}
+}  // namespace MMPA
 }  // namespace RDKit

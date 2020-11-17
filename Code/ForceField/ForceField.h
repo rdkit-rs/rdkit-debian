@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_FORCEFIELD_H__
 #define __RD_FORCEFIELD_H__
 
@@ -15,6 +16,28 @@
 #include <boost/foreach.hpp>
 #include <Geometry/point.h>
 #include <GraphMol/Trajectory/Snapshot.h>
+
+namespace RDKit {
+namespace ForceFieldsHelper {
+void RDKIT_FORCEFIELD_EXPORT normalizeAngleDeg(double &angleDeg);
+void RDKIT_FORCEFIELD_EXPORT computeDihedral(
+    const RDGeom::PointPtrVect &pos, unsigned int idx1, unsigned int idx2,
+    unsigned int idx3, unsigned int idx4, double *dihedral = nullptr,
+    double *cosPhi = nullptr, RDGeom::Point3D r[4] = nullptr,
+    RDGeom::Point3D t[2] = nullptr, double d[2] = nullptr);
+void RDKIT_FORCEFIELD_EXPORT computeDihedral(
+    const double *pos, unsigned int idx1, unsigned int idx2, unsigned int idx3,
+    unsigned int idx4, double *dihedral = nullptr, double *cosPhi = nullptr,
+    RDGeom::Point3D r[4] = nullptr, RDGeom::Point3D t[2] = nullptr,
+    double d[2] = nullptr);
+void RDKIT_FORCEFIELD_EXPORT
+computeDihedral(const RDGeom::Point3D *p1, const RDGeom::Point3D *p2,
+                const RDGeom::Point3D *p3, const RDGeom::Point3D *p4,
+                double *dihedral = nullptr, double *cosPhi = nullptr,
+                RDGeom::Point3D r[4] = nullptr, RDGeom::Point3D t[2] = nullptr,
+                double d[2] = nullptr);
+}  // namespace ForceFieldsHelper
+}  // namespace RDKit
 
 namespace ForceFields {
 class ForceFieldContrib;
@@ -54,11 +77,12 @@ typedef std::vector<ContribPtr> ContribPtrVect;
        this is almost certainly inefficient.
 
 */
-class ForceField {
+class RDKIT_FORCEFIELD_EXPORT ForceField {
  public:
   //! construct with a dimension
   ForceField(unsigned int dimension = 3)
-      : d_dimension(dimension), df_init(false), d_numPoints(0), dp_distMat(0){};
+      : d_dimension(dimension)
+        {};
 
   ~ForceField();
 
@@ -79,7 +103,7 @@ class ForceField {
   double *
       the positions need to be converted to double * here
   */
-  double calcEnergy(std::vector<double> *contribs = NULL) const;
+  double calcEnergy(std::vector<double> *contribs = nullptr) const;
 
   // these next two aren't const because they may update our
   // distance matrix
@@ -178,7 +202,7 @@ class ForceField {
       - if the distance between i and j has not previously been calculated,
         our internal distance matrix will be updated.
   */
-  double distance(unsigned int i, unsigned int j, double *pos = 0);
+  double distance(unsigned int i, unsigned int j, double *pos = nullptr);
 
   //! returns the distance between two points
   /*!
@@ -193,7 +217,7 @@ class ForceField {
     <b>Note:</b>
       The internal distance matrix is not updated in this case
   */
-  double distance(unsigned int i, unsigned int j, double *pos = 0) const;
+  double distance(unsigned int i, unsigned int j, double *pos = nullptr) const;
 
   //! returns the dimension of the forcefield
   unsigned int dimension() const { return d_dimension; }
@@ -206,13 +230,13 @@ class ForceField {
 
  protected:
   unsigned int d_dimension;
-  bool df_init;                      //!< whether or not we've been initialized
-  unsigned int d_numPoints;          //!< the number of active points
-  double *dp_distMat;                //!< our internal distance matrix
+  bool df_init{false};                      //!< whether or not we've been initialized
+  unsigned int d_numPoints{0};          //!< the number of active points
+  double *dp_distMat{nullptr};                //!< our internal distance matrix
   RDGeom::PointPtrVect d_positions;  //!< pointers to the points we're using
   ContribPtrVect d_contribs;         //!< contributions to the energy
   INT_VECT d_fixedPoints;
-  unsigned int d_matSize;
+  unsigned int d_matSize = 0;
   //! scatter our positions into an array
   /*!
       \param pos     should be \c 3*this->numPoints() long;
@@ -228,5 +252,5 @@ class ForceField {
   //! initializes our internal distance matrix
   void initDistanceMatrix();
 };
-}
+}  // namespace ForceFields
 #endif

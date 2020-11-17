@@ -9,10 +9,11 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/export.h>
 #ifndef __RD_INVARIANT_H__
 #define __RD_INVARIANT_H__
 
-#include <assert.h>
+#include <cassert>
 #include <string>
 #include <iostream>
 #include <stdexcept>
@@ -47,7 +48,7 @@
 
 namespace Invar {
 
-class Invariant : public std::runtime_error {
+class RDKIT_RDGENERAL_EXPORT Invariant : public std::runtime_error {
  public:
   Invariant(const char* prefix, const char* mess, const char* expr,
             const char* const file, int line)
@@ -65,9 +66,9 @@ class Invariant : public std::runtime_error {
         prefix_d(prefix),
         file_dp(file),
         line_d(line) {}
-  ~Invariant() throw(){};
+  ~Invariant() noexcept {};
 
-  std::string getMessage() const { return mess_d; }
+  const char* what() const noexcept override { return mess_d.c_str(); }
 
   const char* getFile() const { return file_dp; }
 
@@ -76,7 +77,7 @@ class Invariant : public std::runtime_error {
   int getLine() const { return line_d; }
 
   std::string toString() const;
-  std::string toUserString() const; // strips build info, adds version
+  std::string toUserString() const;  // strips build info, adds version
 
  private:
   std::string mess_d, expr_d, prefix_d;
@@ -85,7 +86,8 @@ class Invariant : public std::runtime_error {
 
   int line_d;
 };
-std::ostream& operator<<(std::ostream& s, const Invariant& inv);
+RDKIT_RDGENERAL_EXPORT std::ostream& operator<<(std::ostream& s,
+                                                const Invariant& inv);
 }  // end of namespace Invar
 
 #define ASSERT_INVARIANT(expr, mess) assert(expr)
@@ -191,6 +193,6 @@ std::ostream& operator<<(std::ostream& s, const Invariant& inv);
 
 // Silence warnings for unused params while
 //   still indicating that they are unused
-#define RDUNUSED_PARAM(x) (void) x;
+#define RDUNUSED_PARAM(x) (void)x;
 
 #endif

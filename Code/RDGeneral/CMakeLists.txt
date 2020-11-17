@@ -2,11 +2,14 @@ CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/versions.cpp.cmake
                ${CMAKE_CURRENT_SOURCE_DIR}/versions.cpp )
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/versions.h.cmake
                ${CMAKE_CURRENT_SOURCE_DIR}/versions.h )
+CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/RDConfig.h.cmake
+              ${CMAKE_CURRENT_SOURCE_DIR}/RDConfig.h )
+
 
 rdkit_library(RDGeneral
-              Invariant.cpp types.cpp utils.cpp RDLog.cpp Dict.cpp
-              LocaleSwitcher.cpp versions.cpp SHARED
-              LINK_LIBRARIES ${RDKit_THREAD_LIBS})
+              Invariant.cpp types.cpp utils.cpp RDLog.cpp 
+              LocaleSwitcher.cpp versions.cpp SHARED)
+target_compile_definitions(RDGeneral PRIVATE RDKIT_RDGENERAL_BUILD)
 
 if(MINGW)
   set(hasMSVCRuntime "FALSE")
@@ -30,7 +33,12 @@ if(MINGW)
   endif()
 endif(MINGW)
 
-target_link_libraries(RDGeneral PUBLIC ${RDKit_THREAD_LIBS} ${MSVC_RUNTIME_DLL})
+if(RDK_USE_BOOST_STACKTRACE AND UNIX AND NOT APPLE)
+set(EXTRA_STACKTRACE_LIBS dl)
+endif()
+
+target_link_libraries(RDGeneral PUBLIC ${RDKit_THREAD_LIBS} ${MSVC_RUNTIME_DLL} ${EXTRA_STACKTRACE_LIBS})
+
 
 rdkit_headers(Exceptions.h
               BadFileException.h
@@ -50,13 +58,23 @@ rdkit_headers(Exceptions.h
               types.h
               utils.h
               versions.h
+              RDConfig.h
               LocaleSwitcher.h
               Ranking.h
               hanoiSort.h
+              export.h
+              test.h
+              ConcurrentQueue.h
               DEST RDGeneral)
+
 if (NOT RDK_INSTALL_INTREE)
-  install(DIRECTORY hash DESTINATION ${RDKit_HdrDir}/RDGeneral/hash
-        PATTERN ".svn" EXCLUDE)
+  install(DIRECTORY hash DESTINATION ${RDKit_HdrDir}/RDGeneral)
 endif (NOT RDK_INSTALL_INTREE)
+
 rdkit_test(testDict testDict.cpp LINK_LIBRARIES RDGeneral)
 rdkit_test(testRDValue testRDValue.cpp LINK_LIBRARIES RDGeneral)
+
+if(RDK_BUILD_THREADSAFE_SSS)
+rdkit_test(testConcurrentQueue testConcurrentQueue.cpp LINK_LIBRARIES RDGeneral)
+endif(RDK_BUILD_THREADSAFE_SSS)
+

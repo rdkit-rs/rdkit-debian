@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_ANGLEBEND_H__
 #define __RD_ANGLEBEND_H__
 
@@ -18,9 +19,9 @@ namespace UFF {
 class AtomicParams;
 
 //! The angle-bend term for the Universal Force Field
-class AngleBendContrib : public ForceFieldContrib {
+class RDKIT_FORCEFIELD_EXPORT AngleBendContrib : public ForceFieldContrib {
  public:
-  AngleBendContrib() : d_at1Idx(-1), d_at2Idx(-1), d_at3Idx(-1), d_order(0){};
+  AngleBendContrib(){};
   //! Constructor
   /*!
     The angle is between atom1 - atom2 - atom3
@@ -54,8 +55,10 @@ class AngleBendContrib : public ForceFieldContrib {
   };
 
  private:
-  int d_at1Idx, d_at2Idx, d_at3Idx;
-  unsigned int d_order;
+  int d_at1Idx{-1};
+  int d_at2Idx{-1};
+  int d_at3Idx{-1};
+  unsigned int d_order{0};
   double d_forceConstant, d_C0, d_C1, d_C2;
 
   double getEnergyTerm(double cosTheta, double sinThetaSq) const;
@@ -75,13 +78,15 @@ namespace Utils {
   \param at3Params   pointer to the parameters for atom 3
 
 */
-double calcAngleForceConstant(double theta0, double bondOrder12,
-                              double bondOrder23, const AtomicParams *at1Params,
-                              const AtomicParams *at2Params,
-                              const AtomicParams *at3Params);
-void calcAngleBendGrad(RDGeom::Point3D *r, double *dist, double **g,
-                       double &dE_dTheta, double &cosTheta, double &sinTheta);
-}
-}
-}
+RDKIT_FORCEFIELD_EXPORT double calcAngleForceConstant(
+    double theta0, double bondOrder12, double bondOrder23,
+    const AtomicParams *at1Params, const AtomicParams *at2Params,
+    const AtomicParams *at3Params);
+RDKIT_FORCEFIELD_EXPORT void calcAngleBendGrad(RDGeom::Point3D *r, double *dist,
+                                               double **g, double &dE_dTheta,
+                                               double &cosTheta,
+                                               double &sinTheta);
+}  // namespace Utils
+}  // namespace UFF
+}  // namespace ForceFields
 #endif

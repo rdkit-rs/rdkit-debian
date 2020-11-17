@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2003-2008 Greg Landrum and Rational Discovery LLC
+// Copyright (c) 2003-2020 Greg Landrum and Rational Discovery LLC
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -7,8 +7,9 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
-#ifndef __RD_SETQUERY_H__
-#define __RD_SETQUERY_H__
+#include <RDGeneral/export.h>
+#ifndef RD_SETQUERY_H
+#define RD_SETQUERY_H
 #include <set>
 #include "Query.h"
 #include <sstream>
@@ -52,6 +53,7 @@ class SetQuery
     }
     res->setNegation(this->getNegation());
     res->d_description = this->d_description;
+    res->d_queryType = this->d_queryType;
     return res;
   };
 
@@ -79,5 +81,5 @@ class SetQuery
  protected:
   CONTAINER_TYPE d_set;
 };
-}
+}  // namespace Queries
 #endif

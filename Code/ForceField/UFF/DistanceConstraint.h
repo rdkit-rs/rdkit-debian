@@ -9,6 +9,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_UFFDISTANCECONSTRAINT_H__
 #define __RD_UFFDISTANCECONSTRAINT_H__
 #include <iostream>
@@ -18,9 +19,10 @@ namespace ForceFields {
 namespace UFF {
 
 //! A distance range constraint modelled after a BondStretchContrib
-class DistanceConstraintContrib : public ForceFieldContrib {
+class RDKIT_FORCEFIELD_EXPORT DistanceConstraintContrib
+    : public ForceFieldContrib {
  public:
-  DistanceConstraintContrib() : d_end1Idx(-1), d_end2Idx(-1){};
+  DistanceConstraintContrib(){};
   //! Constructor
   /*!
     \param owner       pointer to the owning ForceField
@@ -50,10 +52,11 @@ class DistanceConstraintContrib : public ForceFieldContrib {
   };
 
  private:
-  int d_end1Idx, d_end2Idx;   //!< indices of end points
+  int d_end1Idx{-1};          //!< indices of end points
+  int d_end2Idx{-1};          //!< indices of end points
   double d_minLen, d_maxLen;  //!< rest length of the bond
   double d_forceConstant;     //!< force constant of the bond
 };
-}
-}
+}  // namespace UFF
+}  // namespace ForceFields
 #endif

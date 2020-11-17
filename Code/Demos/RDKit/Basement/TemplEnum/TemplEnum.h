@@ -16,8 +16,8 @@ class EnumException : public std::exception {
  public:
   EnumException(const char *msg) : _msg(msg){};
   EnumException(const std::string msg) : _msg(msg){};
-  const char *message() const { return _msg.c_str(); };
-  ~EnumException() throw(){};
+  const char *what() const noexcept override { return _msg.c_str(); };
+  ~EnumException() noexcept {};
 
  private:
   std::string _msg;
@@ -35,5 +35,5 @@ RWMOL_SPTR_VECT enumerateLibrary(RWMol *mol, VECT_RWMOL_SPTR_VECT &sidechains,
 RWMOL_SPTR_VECT enumFromFiles(const char *templateName,
                               std::vector<const char *> &sidechainName);
 
-}  // end of TemplateEnum namespace
+}  // namespace TemplateEnum
 #endif

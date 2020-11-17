@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef _RD_QUERYATOM_H_
 #define _RD_QUERYATOM_H_
 
@@ -23,24 +24,45 @@ namespace RDKit {
   querying capabilities.
 
  */
-class QueryAtom : public Atom {
+class RDKIT_GRAPHMOL_EXPORT QueryAtom : public Atom {
  public:
   typedef Queries::Query<int, Atom const *, true> QUERYATOM_QUERY;
 
-  QueryAtom() : Atom(), dp_query(NULL){};
+  QueryAtom() : Atom(){};
   explicit QueryAtom(int num) : Atom(num), dp_query(makeAtomNumQuery(num)){};
   explicit QueryAtom(const Atom &other)
-      : Atom(other), dp_query(makeAtomNumQuery(other.getAtomicNum())){};
+      : Atom(other), dp_query(makeAtomNumQuery(other.getAtomicNum())) {
+    if (other.getIsotope()) {
+      this->expandQuery(makeAtomIsotopeQuery(other.getIsotope()),
+                        Queries::CompositeQueryType::COMPOSITE_AND);
+    }
+    if (other.getFormalCharge()) {
+      this->expandQuery(makeAtomFormalChargeQuery(other.getFormalCharge()),
+                        Queries::CompositeQueryType::COMPOSITE_AND);
+    }
+    if (other.getNumRadicalElectrons()) {
+      this->expandQuery(
+          makeAtomNumRadicalElectronsQuery(other.getNumRadicalElectrons()),
+          Queries::CompositeQueryType::COMPOSITE_AND);
+    }
+  };
   QueryAtom(const QueryAtom &other) : Atom(other) {
     dp_query = other.dp_query->copy();
   };
+  QueryAtom &operator=(const QueryAtom &other) {
+    if (this == &other) return *this;
+    Atom::operator=(other);
+    delete dp_query;
+    dp_query = other.dp_query->copy();
+    return *this;
+  }
   ~QueryAtom();
 
   //! returns a copy of this query, owned by the caller
   Atom *copy() const;
 
   // This method can be used to distinguish query atoms from standard atoms:
-  bool hasQuery() const { return dp_query != 0; };
+  bool hasQuery() const { return dp_query != nullptr; };
 
   //! replaces our current query with the value passed in
   void setQuery(QUERYATOM_QUERY *what) {
@@ -52,7 +74,10 @@ class QueryAtom : public Atom {
 
   //! expands our current query
   /*!
-    \param what          the Queries::Query to be added
+    \param what          the Queries::Query to be added. The ownership of
+                         the query is passed to the current object, where it
+                         might be deleted, so that the pointer should not be
+                         used again in the calling code.
     \param how           the operator to be used in the expansion
     \param maintainOrder (optional) flags whether the relative order of
                          the queries needs to be maintained, if this is
@@ -75,7 +100,7 @@ class QueryAtom : public Atom {
   bool QueryMatch(QueryAtom const *what) const;
 
  private:
-  QUERYATOM_QUERY *dp_query;
+  QUERYATOM_QUERY *dp_query{nullptr};
 
 };  // end o' class
 
@@ -92,7 +117,7 @@ inline std::string qhelper(Atom::QUERYATOM_QUERY *q, unsigned int depth) {
   }
   return res;
 }
-}  // end of detail namespace
+}  // namespace detail
 inline std::string describeQuery(const Atom *atom) {
   PRECONDITION(atom, "bad atom");
   std::string res = "";
@@ -102,6 +127,6 @@ inline std::string describeQuery(const Atom *atom) {
   return res;
 }
 
-};  // end o' namespace
+};  // namespace RDKit
 
 #endif

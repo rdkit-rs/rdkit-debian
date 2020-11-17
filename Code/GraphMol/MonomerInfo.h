@@ -12,6 +12,7 @@
   \brief Defines Monomer information classes
 
 */
+#include <RDGeneral/export.h>
 #ifndef _RD_MONOMERINFO_H
 #define _RD_MONOMERINFO_H
 
@@ -21,13 +22,13 @@
 namespace RDKit {
 
 //! The abstract base class for atom-level monomer info
-class AtomMonomerInfo {
+class RDKIT_GRAPHMOL_EXPORT AtomMonomerInfo {
  public:
   typedef enum { UNKNOWN = 0, PDBRESIDUE, OTHER } AtomMonomerType;
 
   virtual ~AtomMonomerInfo(){};
 
-  AtomMonomerInfo() : d_monomerType(UNKNOWN), d_name(""){};
+  AtomMonomerInfo() :  d_name(""){};
   AtomMonomerInfo(AtomMonomerType typ, const std::string &nm = "")
       : d_monomerType(typ), d_name(nm){};
   AtomMonomerInfo(const AtomMonomerInfo &other)
@@ -41,12 +42,12 @@ class AtomMonomerInfo {
   virtual AtomMonomerInfo *copy() const { return new AtomMonomerInfo(*this); }
 
  private:
-  AtomMonomerType d_monomerType;
+  AtomMonomerType d_monomerType{UNKNOWN};
   std::string d_name;
 };
 
 //! Captures atom-level information about peptide residues
-class AtomPDBResidueInfo : public AtomMonomerInfo {
+class RDKIT_GRAPHMOL_EXPORT AtomPDBResidueInfo : public AtomMonomerInfo {
  public:
   AtomPDBResidueInfo() : AtomMonomerInfo(PDBRESIDUE){};
   AtomPDBResidueInfo(const AtomPDBResidueInfo &other)
@@ -117,22 +118,22 @@ class AtomPDBResidueInfo : public AtomMonomerInfo {
   // (http://www.wwpdb.org/documentation/format33/sect9.html#ATOM) [9 Aug, 2013]
   // element and charge are not present since the atom itself stores that
   // information
-  unsigned int d_serialNumber;
-  std::string d_altLoc;
-  std::string d_residueName;
-  int d_residueNumber;
-  std::string d_chainId;
-  std::string d_insertionCode;
-  double d_occupancy;
-  double d_tempFactor;
+  unsigned int d_serialNumber = 0;
+  std::string d_altLoc = "";
+  std::string d_residueName = "";
+  int d_residueNumber = 0;
+  std::string d_chainId = "";
+  std::string d_insertionCode = "";
+  double d_occupancy = 1.0;
+  double d_tempFactor = 0.0;
   // additional, non-PDB fields:
-  bool df_heteroAtom;  // is this from a HETATM record?
-  unsigned int d_secondaryStructure;
-  unsigned int d_segmentNumber;
+  bool df_heteroAtom = false;  // is this from a HETATM record?
+  unsigned int d_secondaryStructure = 0;
+  unsigned int d_segmentNumber = 0;
 };
-};
+};  // namespace RDKit
 //! allows AtomPDBResidueInfo objects to be dumped to streams
-std::ostream &operator<<(std::ostream &target,
-                         const RDKit::AtomPDBResidueInfo &apri);
+RDKIT_GRAPHMOL_EXPORT std::ostream &operator<<(
+    std::ostream &target, const RDKit::AtomPDBResidueInfo &apri);
 
 #endif

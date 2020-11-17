@@ -9,6 +9,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_UFFPOSITIONCONSTRAINT_H__
 #define __RD_UFFPOSITIONCONSTRAINT_H__
 #include <iostream>
@@ -19,9 +20,10 @@ namespace ForceFields {
 namespace UFF {
 
 //! A position constraint of the type 0.5k * deltaX^2
-class PositionConstraintContrib : public ForceFieldContrib {
+class RDKIT_FORCEFIELD_EXPORT PositionConstraintContrib
+    : public ForceFieldContrib {
  public:
-  PositionConstraintContrib() : d_atIdx(-1){};
+  PositionConstraintContrib()  {};
   //! Constructor
   /*!
     \param owner       pointer to the owning ForceField
@@ -43,11 +45,11 @@ class PositionConstraintContrib : public ForceFieldContrib {
   };
 
  private:
-  int d_atIdx;             //!< index of the restrained atom
+  int d_atIdx{-1};             //!< index of the restrained atom
   double d_maxDispl;       //!< maximum allowed displacement
   RDGeom::Point3D d_pos0;  //!< reference position
   double d_forceConstant;  //!< force constant of the bond
 };
-}
-}
+}  // namespace UFF
+}  // namespace ForceFields
 #endif

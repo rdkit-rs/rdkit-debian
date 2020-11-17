@@ -7,8 +7,11 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef RD_MOLINTERCHANGEDETAILS_H_FEB2018
 #define RD_MOLINTERCHANGEDETAILS_H_FEB2018
+#include <GraphMol/Atom.h>
+#include <GraphMol/Bond.h>
 namespace RDKit {
 namespace MolInterchange {
 static const int currentMolJSONVersion = 10;
@@ -40,6 +43,6 @@ static const std::map<Bond::BondStereo, std::string> inv_stereolookup = {
     {Bond::STEREONONE, "unspecified"}, {Bond::STEREOCIS, "cis"},
     {Bond::STEREOTRANS, "trans"},      {Bond::STEREOZ, "cis"},
     {Bond::STEREOE, "trans"},          {Bond::STEREOANY, "either"}};
-}
-}
+}  // namespace MolInterchange
+}  // namespace RDKit
 #endif

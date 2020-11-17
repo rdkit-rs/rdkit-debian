@@ -24,64 +24,148 @@
 namespace RDKit {
 namespace MMFF {
 using namespace ForceFields::MMFF;
+namespace DefaultParameters {
 
+const MMFFPropCollection *getMMFFProp() {
+  static MMFFPropCollection ds_instance("");
+  return &ds_instance;
+}
+
+const MMFFAromCollection *getMMFFArom() {
+  static MMFFAromCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFBndkCollection *getMMFFBndk() {
+  static MMFFBndkCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFBondCollection *getMMFFBond() {
+  static MMFFBondCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFChgCollection *getMMFFChg() {
+  static MMFFChgCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFDefCollection *getMMFFDef() {
+  static MMFFDefCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFHerschbachLaurieCollection *getMMFFHerschbachLaurie() {
+  static MMFFHerschbachLaurieCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFPBCICollection *getMMFFPBCI() {
+  static MMFFPBCICollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFAngleCollection *getMMFFAngle() {
+  static MMFFAngleCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFStbnCollection *getMMFFStbn() {
+  static MMFFStbnCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFDfsbCollection *getMMFFDfsb() {
+  static MMFFDfsbCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFCovRadPauEleCollection *getMMFFCovRadPauEle() {
+  static MMFFCovRadPauEleCollection ds_instance;
+  return &ds_instance;
+}
+
+const MMFFTorCollection *getMMFFTor(const bool isMMFFs) {
+  static MMFFTorCollection MMFF94(false, "");
+  static MMFFTorCollection MMFF94s(true, "");
+  return (isMMFFs) ? &MMFF94s : &MMFF94;
+}
+
+const MMFFOopCollection *getMMFFOop(const bool isMMFFs) {
+  static MMFFOopCollection MMFF94(false, "");
+  static MMFFOopCollection MMFF94s(true, "");
+  return (isMMFFs) ? &MMFF94s : &MMFF94;
+}
+
+const MMFFVdWCollection *getMMFFVdW() {
+  static MMFFVdWCollection ds_instance;
+  return &ds_instance;
+}
+
+}  // namespace DefaultParameters
 class RingMembership {
  public:
-  RingMembership() : d_isInAromaticRing(false) {};
-  bool getIsInAromaticRing() const {
-    return d_isInAromaticRing;
-  }
+  RingMembership()  {};
+  bool getIsInAromaticRing() const { return d_isInAromaticRing; }
   void setIsInAromaticRing(bool isInAromaticRing) {
     d_isInAromaticRing = isInAromaticRing;
   }
-  const std::set<boost::uint32_t>& getRingIdxSet() const {
-    return d_ringIdxSet;
-  }
-  std::set<boost::uint32_t>& getRingIdxSet() {
-    return d_ringIdxSet;
-  }
+  const std::set<std::uint32_t> &getRingIdxSet() const { return d_ringIdxSet; }
+  std::set<std::uint32_t> &getRingIdxSet() { return d_ringIdxSet; }
+
  private:
-  bool d_isInAromaticRing;
-  std::set<boost::uint32_t> d_ringIdxSet;
+  bool d_isInAromaticRing{false};
+  std::set<std::uint32_t> d_ringIdxSet;
 };
 
 class RingMembershipSize {
- typedef std::map<unsigned int, RingMembership> RingMembershipMap;
- typedef std::map<unsigned int, RingMembershipMap> RingSizeMembershipMap;
+  typedef std::map<unsigned int, RingMembership> RingMembershipMap;
+  typedef std::map<unsigned int, RingMembershipMap> RingSizeMembershipMap;
+
  public:
-  static const boost::uint32_t IS_AROMATIC_BIT;
+  static const std::uint32_t IS_AROMATIC_BIT;
   RingMembershipSize(const ROMol &mol);
-  bool isAtomInAromaticRingOfSize(const Atom *atom, const unsigned int ringSize) const;
+  bool isAtomInAromaticRingOfSize(const Atom *atom,
+                                  const unsigned int ringSize) const;
   bool areAtomsInSameAromaticRing(const Atom *atom1, const Atom *atom2) const;
-  bool areAtomsInSameRingOfSize(const unsigned int ringSize, const unsigned int numAtoms, ...) const;
+  bool areAtomsInSameRingOfSize(const unsigned int ringSize,
+                                const unsigned int numAtoms, ...) const;
+
  private:
   RingSizeMembershipMap d_ringSizeMembershipMap;
 };
 
-const boost::uint32_t RingMembershipSize::IS_AROMATIC_BIT = (1 << 31);
+const std::uint32_t RingMembershipSize::IS_AROMATIC_BIT = (1 << 31);
 
 RingMembershipSize::RingMembershipSize(const ROMol &mol) {
   static const unsigned int MAX_NUM_RINGS = (0xFFFFFFFF >> 1);
   const RingInfo *ringInfo = mol.getRingInfo();
   const VECT_INT_VECT &atomRings = ringInfo->atomRings();
   PRECONDITION(atomRings.size() < MAX_NUM_RINGS, "Too many rings");
-  for (boost::uint32_t ringIdx = 0; ringIdx < atomRings.size(); ++ringIdx) {
+  for (std::uint32_t ringIdx = 0; ringIdx < atomRings.size(); ++ringIdx) {
     unsigned int ringSize = atomRings[ringIdx].size();
-    boost::uint32_t ringIdxWithAromaticFlag = ringIdx;
+    std::uint32_t ringIdxWithAromaticFlag = ringIdx;
     bool ringIsAromatic = isRingAromatic(mol, atomRings[ringIdx]);
-    if (ringIsAromatic) 
+    if (ringIsAromatic) {
       ringIdxWithAromaticFlag |= IS_AROMATIC_BIT;
+    }
     auto it = d_ringSizeMembershipMap.find(ringSize);
-    if (it == d_ringSizeMembershipMap.end())
-      it = d_ringSizeMembershipMap.insert(std::make_pair(ringSize, RingMembershipMap())).first;
+    if (it == d_ringSizeMembershipMap.end()) {
+      it = d_ringSizeMembershipMap
+               .insert(std::make_pair(ringSize, RingMembershipMap()))
+               .first;
+    }
     for (int atomIdxIt : atomRings[ringIdx]) {
       auto it2 = it->second.find(atomIdxIt);
-      if (it2 == it->second.end())
+      if (it2 == it->second.end()) {
         it2 = it->second.insert(std::make_pair(atomIdxIt, RingMembership()))
                   .first;
+      }
       it2->second.getRingIdxSet().insert(ringIdxWithAromaticFlag);
-      if (ringIsAromatic)
+      if (ringIsAromatic) {
         it2->second.setIsInAromaticRing(true);
+      }
     }
   }
 }
@@ -94,37 +178,43 @@ bool RingMembershipSize::isAtomInAromaticRingOfSize(
   if (isAromatic) {
     auto it2 = it->second.find(atom->getIdx());
     isAromatic = (it2 != it->second.end());
-    if (isAromatic)
+    if (isAromatic) {
       isAromatic = it2->second.getIsInAromaticRing();
+    }
   }
-    
+
   return isAromatic;
 }
 
-bool RingMembershipSize::areAtomsInSameAromaticRing(
-    const Atom *atom1, const Atom *atom2) const {
+bool RingMembershipSize::areAtomsInSameAromaticRing(const Atom *atom1,
+                                                    const Atom *atom2) const {
   bool areInSameAromaticRing = false;
 
   for (auto it = d_ringSizeMembershipMap.begin();
        !areInSameAromaticRing && (it != d_ringSizeMembershipMap.end()); ++it) {
-    std::vector<boost::uint32_t> intersectVect;
+    std::vector<std::uint32_t> intersectVect;
     auto it1 = it->second.find(atom1->getIdx());
     auto it2 = it->second.find(atom2->getIdx());
     if ((it1 != it->second.end()) && (it2 != it->second.end())) {
       std::set_intersection(it1->second.getRingIdxSet().begin(),
-        it1->second.getRingIdxSet().end(), it2->second.getRingIdxSet().begin(),
-        it2->second.getRingIdxSet().end(), std::back_inserter(intersectVect));
-      for (std::vector<boost::uint32_t>::const_iterator ivIt = intersectVect.begin();
-        !areInSameAromaticRing && (ivIt != intersectVect.end()); ++ ivIt)
+                            it1->second.getRingIdxSet().end(),
+                            it2->second.getRingIdxSet().begin(),
+                            it2->second.getRingIdxSet().end(),
+                            std::back_inserter(intersectVect));
+      for (std::vector<std::uint32_t>::const_iterator ivIt =
+               intersectVect.begin();
+           !areInSameAromaticRing && (ivIt != intersectVect.end()); ++ivIt) {
         areInSameAromaticRing = *ivIt & IS_AROMATIC_BIT;
+      }
     }
   }
 
   return areInSameAromaticRing;
 }
 
-bool RingMembershipSize::areAtomsInSameRingOfSize(
-    const unsigned int ringSize, const unsigned int numAtoms, ...) const {
+bool RingMembershipSize::areAtomsInSameRingOfSize(const unsigned int ringSize,
+                                                  const unsigned int numAtoms,
+                                                  ...) const {
   va_list atoms;
   bool areInSameRingOfSize = false;
 
@@ -134,16 +224,19 @@ bool RingMembershipSize::areAtomsInSameRingOfSize(
     unsigned int idx1 = va_arg(atoms, const Atom *)->getIdx();
     auto it1 = it->second.find(idx1);
     if (it1 != it->second.end()) {
-      std::set<boost::uint32_t> commonSet = it1->second.getRingIdxSet();
+      std::set<std::uint32_t> commonSet = it1->second.getRingIdxSet();
       for (unsigned int i = 1; !commonSet.empty() && (i < numAtoms); ++i) {
         areInSameRingOfSize = false;
         unsigned int idx2 = va_arg(atoms, const Atom *)->getIdx();
         auto it2 = it->second.find(idx2);
-        if (it2 == it->second.end()) break;
-        std::set<boost::uint32_t> intersect;
+        if (it2 == it->second.end()) {
+          break;
+        }
+        std::set<std::uint32_t> intersect;
         std::set_intersection(commonSet.begin(), commonSet.end(),
-          it2->second.getRingIdxSet().begin(), it2->second.getRingIdxSet().end(),
-          std::inserter(intersect, intersect.end()));
+                              it2->second.getRingIdxSet().begin(),
+                              it2->second.getRingIdxSet().end(),
+                              std::inserter(intersect, intersect.end()));
         commonSet = intersect;
         areInSameRingOfSize = !commonSet.empty();
       }
@@ -201,8 +294,8 @@ unsigned int getPeriodicTableRowHL(const int atomicNum) {
 // given the MMFF atom type, this function returns true
 // if it is aromatic
 bool isAromaticAtomType(const unsigned int atomType) {
-  static const unsigned int aromatic_array[] = {37, 38, 39, 44, 58, 59, 63, 64, 65,
-                                         66, 69, 76, 78, 79, 80, 81, 82};
+  static const unsigned int aromatic_array[] = {
+      37, 38, 39, 44, 58, 59, 63, 64, 65, 66, 69, 76, 78, 79, 80, 81, 82};
   const std::set<unsigned int> aromaticTypes(
       aromatic_array,
       aromatic_array + sizeof(aromatic_array) / sizeof(aromatic_array[0]));
@@ -212,9 +305,10 @@ bool isAromaticAtomType(const unsigned int atomType) {
 
 bool isRingAromatic(const ROMol &mol, const INT_VECT &ringIndxVect) {
   bool isAromatic = true;
-  for (unsigned int i = 0; isAromatic && (i < ringIndxVect.size() - 1); ++i)
-    isAromatic = (mol.getBondBetweenAtoms(
-      ringIndxVect[i], ringIndxVect[i + 1])->getBondType() == Bond::AROMATIC);
+  for (unsigned int i = 0; isAromatic && (i < ringIndxVect.size() - 1); ++i) {
+    isAromatic = (mol.getBondBetweenAtoms(ringIndxVect[i], ringIndxVect[i + 1])
+                      ->getBondType() == Bond::AROMATIC);
+  }
   return isAromatic;
 }
 
@@ -582,8 +676,8 @@ void setMMFFAromaticity(RWMol &mol) {
 }
 
 // sets the MMFF atomType for a heavy atom
-void MMFFMolProperties::setMMFFHeavyAtomType(
-    const RingMembershipSize &rmSize, const Atom *atom) {
+void MMFFMolProperties::setMMFFHeavyAtomType(const RingMembershipSize &rmSize,
+                                             const Atom *atom) {
   unsigned int atomType = 0;
   unsigned int i;
   unsigned int j;
@@ -719,8 +813,7 @@ void MMFFMolProperties::setMMFFHeavyAtomType(
           }
           // if there are neither alpha nor beta heteroatoms
           // or if there are both, but they belong to different rings
-          if (((!(alphaHet.size())) && (!(betaHet.size()))) ||
-              (alphaHet.size() && betaHet.size())) {
+          if (alphaHet.size() == betaHet.size()) {
             bool surroundedByBenzeneC = true;
             bool surroundedByArom = true;
             // loop over neighbors
@@ -798,8 +891,7 @@ void MMFFMolProperties::setMMFFHeavyAtomType(
             break;
           }
           if ((atom->getTotalDegree() == 3) &&
-              ((alphaHet.size() && (!(betaHet.size()))) ||
-               (betaHet.size() && (!(alphaHet.size()))))) {
+              alphaHet.size() != betaHet.size()) {
             // NIM+
             // Aromatic nitrogen in imidazolium
             // N5A+
@@ -1632,7 +1724,7 @@ void MMFFMolProperties::setMMFFHeavyAtomType(
           unsigned int nObondedToCorNorS = 0;
           unsigned int nSbondedToCorNorS = 0;
           bool isOxideOBondedToH =
-              atom->getNumExplicitHs() + atom->getNumImplicitHs();
+              atom->getNumExplicitHs() + atom->getNumImplicitHs() > 0;
           bool isCarboxylateO = false;
           bool isCarbonylO = false;
           bool isOxideOBondedToC = false;
@@ -1647,11 +1739,11 @@ void MMFFMolProperties::setMMFFHeavyAtomType(
           // loop over neighbors
           boost::tie(nbrIdx, endNbrs) = mol.getAtomNeighbors(atom);
           for (; (nbrIdx != endNbrs) && (!isOxideOBondedToC) &&
-                     (!isOxideOBondedToN) && (!isOxideOBondedToH) &&
-                     (!isCarboxylateO) && (!isNitroO) && (!isNOxideO) &&
-                     (!isThioSulfinateO) && (!isSulfateO) &&
-                     (!isPhosphateOrPerchlorateO) && (!isCarbonylO) &&
-                     (!isNitrosoO) && (!isSulfoxideO);
+                 (!isOxideOBondedToN) && (!isOxideOBondedToH) &&
+                 (!isCarboxylateO) && (!isNitroO) && (!isNOxideO) &&
+                 (!isThioSulfinateO) && (!isSulfateO) &&
+                 (!isPhosphateOrPerchlorateO) && (!isCarbonylO) &&
+                 (!isNitrosoO) && (!isSulfoxideO);
                ++nbrIdx) {
             const Atom *nbrAtom = mol[*nbrIdx];
             const Bond *bond =
@@ -2346,7 +2438,7 @@ void MMFFMolProperties::setMMFFHydrogenType(const Atom *atom) {
               atomType = 33;
               break;
             }
-
+            /* FALLTHRU */
           default:
             // HO
             // Generic hydroxyl hydrogen
@@ -2395,7 +2487,7 @@ unsigned int sanitizeMMFFMol(RWMol &mol) {
     if (!(mol.hasProp(common_properties::_MMFFSanitized))) {
       mol.setProp(common_properties::_MMFFSanitized, 1, true);
     }
-  } catch (MolSanitizeException &e) {
+  } catch (MolSanitizeException &) {
   }
 
   return error;
@@ -2406,7 +2498,7 @@ unsigned int sanitizeMMFFMol(RWMol &mol) {
 // in case atom types are missing, d_valid is set to false,
 // charges are set to 0.0 and the force-field is unusable
 MMFFMolProperties::MMFFMolProperties(ROMol &mol, const std::string &mmffVariant,
-                                     boost::uint8_t verbosity,
+                                     std::uint8_t verbosity,
                                      std::ostream &oStream)
     : d_valid(true),
       d_mmffs(mmffVariant == "MMFF94s" ? true : false),
@@ -2439,7 +2531,7 @@ MMFFMolProperties::MMFFMolProperties(ROMol &mol, const std::string &mmffVariant,
         MMFFAtomPropertiesPtr(new MMFFAtomProperties());
   }
   unsigned int idx;
-  boost::uint8_t atomType = 1;
+  std::uint8_t atomType = 1;
 
   setMMFFAromaticity((RWMol &)mol);
   RingMembershipSize rmSize(mol);
@@ -2461,7 +2553,8 @@ MMFFMolProperties::MMFFMolProperties(ROMol &mol, const std::string &mmffVariant,
                "A T O M   T Y P E S   A N D   C H A R G E S\n\n"
                "          ATOM    FORMAL   PARTIAL\n"
                " ATOM     TYPE    CHARGE    CHARGE\n"
-               "-----------------------------------" << std::endl;
+               "-----------------------------------"
+            << std::endl;
     for (idx = 0; idx < mol.getNumAtoms(); ++idx) {
       oStream << std::left << std::setw(2)
               << mol.getAtomWithIdx(idx)->getSymbol() << std::left << " #"
@@ -2529,7 +2622,7 @@ unsigned int MMFFMolProperties::getMMFFBondType(const Bond *bond) {
   PRECONDITION(this->isValid(), "missing atom types - invalid force-field");
   PRECONDITION(bond, "invalid bond");
 
-  MMFFPropCollection *mmffProp = MMFFPropCollection::getMMFFProp();
+  const MMFFPropCollection *mmffProp = DefaultParameters::getMMFFProp();
   const ForceFields::MMFF::MMFFProp *mmffPropAtom1 =
       (*mmffProp)(this->getMMFFAtomType(bond->getBeginAtomIdx()));
   const ForceFields::MMFF::MMFFProp *mmffPropAtom2 =
@@ -2654,12 +2747,12 @@ MMFFMolProperties::getMMFFBondStretchEmpiricalRuleParams(const ROMol &mol,
   const MMFFHerschbachLaurie *mmffHerschbachLaurieParams;
   const MMFFProp *mmffAtomPropParams[2];
   const MMFFCovRadPauEle *mmffAtomCovRadPauEleParams[2];
-  MMFFBndkCollection *mmffBndk = MMFFBndkCollection::getMMFFBndk();
-  MMFFHerschbachLaurieCollection *mmffHerschbachLaurie =
-      MMFFHerschbachLaurieCollection::getMMFFHerschbachLaurie();
-  MMFFCovRadPauEleCollection *mmffCovRadPauEle =
-      MMFFCovRadPauEleCollection::getMMFFCovRadPauEle();
-  MMFFPropCollection *mmffProp = MMFFPropCollection::getMMFFProp();
+  const MMFFBndkCollection *mmffBndk = DefaultParameters::getMMFFBndk();
+  const MMFFHerschbachLaurieCollection *mmffHerschbachLaurie =
+      DefaultParameters::getMMFFHerschbachLaurie();
+  const MMFFCovRadPauEleCollection *mmffCovRadPauEle =
+      DefaultParameters::getMMFFCovRadPauEle();
+  const MMFFPropCollection *mmffProp = DefaultParameters::getMMFFProp();
 
   unsigned int atomicNum1 = bond->getBeginAtom()->getAtomicNum();
   unsigned int atomicNum2 = bond->getEndAtom()->getAtomicNum();
@@ -2788,7 +2881,7 @@ MMFFMolProperties::getMMFFBondStretchEmpiricalRuleParams(const ROMol &mol,
   } else {
     // MMFF.V, page 627
     // Herschbach-Laurie version of Badger's rule
-    // J. Chem. Phys. 35, 458 (1961); http://dx.doi.org/10.1063/1.1731952
+    // J. Chem. Phys. 35, 458 (1961); https://doi.org/10.1063/1.1731952
     // equation (8), page 5
     mmffHerschbachLaurieParams = (*mmffHerschbachLaurie)(
         getPeriodicTableRowHL(atomicNum1), getPeriodicTableRowHL(atomicNum2));
@@ -2954,8 +3047,8 @@ MMFFMolProperties::getMMFFTorsionEmpiricalRuleParams(const ROMol &mol,
                                                      unsigned int idx3) {
   PRECONDITION(this->isValid(), "missing atom types - invalid force-field");
 
-  MMFFPropCollection *mmffProp = MMFFPropCollection::getMMFFProp();
-  MMFFAromCollection *mmffArom = MMFFAromCollection::getMMFFArom();
+  const MMFFPropCollection *mmffProp = DefaultParameters::getMMFFProp();
+  const MMFFAromCollection *mmffArom = DefaultParameters::getMMFFArom();
   auto *mmffTorParams = new ForceFields::MMFF::MMFFTor();
   unsigned int jAtomType = this->getMMFFAtomType(idx2);
   unsigned int kAtomType = this->getMMFFAtomType(idx3);
@@ -2967,7 +3060,7 @@ MMFFMolProperties::getMMFFTorsionEmpiricalRuleParams(const ROMol &mol,
   double W[2] = {0.0, 0.0};
   double beta = 0.0;
   double pi_jk = 0.0;
-  const double N_jk = (double)((jMMFFProp->crd - 1) * (kMMFFProp->crd - 1));
+  const auto N_jk = (double)((jMMFFProp->crd - 1) * (kMMFFProp->crd - 1));
   int atomicNum[2] = {mol.getAtomWithIdx(idx2)->getAtomicNum(),
                       mol.getAtomWithIdx(idx3)->getAtomicNum()};
 
@@ -3150,7 +3243,6 @@ void MMFFMolProperties::computeMMFFCharges(const ROMol &mol) {
   unsigned int nbrAtomType;
   unsigned int nConj = 0;
   unsigned int old_nConj = 0;
-  std::pair<int, double> bci;
   double pChg = 0.0;
   double fChg = 0.0;
   boost::dynamic_bitset<> conjNBitVect(mol.getNumAtoms());
@@ -3159,9 +3251,9 @@ void MMFFMolProperties::computeMMFFCharges(const ROMol &mol) {
   ROMol::ADJ_ITER endNbrs;
   ROMol::ADJ_ITER nbr2Idx;
   ROMol::ADJ_ITER end2Nbrs;
-  MMFFPropCollection *mmffProp = MMFFPropCollection::getMMFFProp();
-  MMFFPBCICollection *mmffPBCI = MMFFPBCICollection::getMMFFPBCI();
-  MMFFChgCollection *mmffChg = MMFFChgCollection::getMMFFChg();
+  const MMFFPropCollection *mmffProp = DefaultParameters::getMMFFProp();
+  const MMFFPBCICollection *mmffPBCI = DefaultParameters::getMMFFPBCI();
+  const MMFFChgCollection *mmffChg = DefaultParameters::getMMFFChg();
 
   // We need to set formal charges upfront
   for (idx = 0; idx < mol.getNumAtoms(); ++idx) {
@@ -3494,12 +3586,12 @@ void MMFFMolProperties::computeMMFFCharges(const ROMol &mol) {
   }
   // now we compute partial charges
   // See Halgren, T. MMFF.V, J. Comput. Chem. 1996, 17, 616-641
-  // http://dx.doi.org/10.1002/(SICI)1096-987X(199604)17:5/6<616::AID-JCC5>3.0.CO;2-X
+  // https://doi.org/10.1002/(SICI)1096-987X(199604)17:5/6<616::AID-JCC5>3.0.CO;2-X
   for (idx = 0; idx < mol.getNumAtoms(); ++idx) {
     const Atom *atom = mol.getAtomWithIdx(idx);
     atomType = this->getMMFFAtomType(idx);
     double q0 = this->getMMFFFormalCharge(idx);
-    double M = (double)((*mmffProp)(atomType)->crd);
+    auto M = (double)((*mmffProp)(atomType)->crd);
     double v = (*mmffPBCI)(atomType)->fcadj;
     double sumFormalCharge = 0.0;
     double sumPartialCharge = 0.0;
@@ -3563,7 +3655,7 @@ void MMFFMolProperties::computeMMFFCharges(const ROMol &mol) {
 bool MMFFMolProperties::getMMFFBondStretchParams(
     const ROMol &mol, const unsigned int idx1, const unsigned int idx2,
     unsigned int &bondType, MMFFBond &mmffBondStretchParams) {
-  MMFFBondCollection *mmffBond = MMFFBondCollection::getMMFFBond();
+  const MMFFBondCollection *mmffBond = DefaultParameters::getMMFFBond();
   bool res = false;
   if (isValid()) {
     unsigned int iAtomType = getMMFFAtomType(idx1);
@@ -3599,8 +3691,8 @@ bool MMFFMolProperties::getMMFFAngleBendParams(const ROMol &mol,
   bool res = false;
   if (isValid() && mol.getBondBetweenAtoms(idx1, idx2) &&
       mol.getBondBetweenAtoms(idx2, idx3)) {
-    MMFFAngleCollection *mmffAngle = MMFFAngleCollection::getMMFFAngle();
-    MMFFPropCollection *mmffProp = MMFFPropCollection::getMMFFProp();
+    const MMFFAngleCollection *mmffAngle = DefaultParameters::getMMFFAngle();
+    const MMFFPropCollection *mmffProp = DefaultParameters::getMMFFProp();
     unsigned int idx[3] = {idx1, idx2, idx3};
     MMFFBond mmffBondParams[2];
     unsigned int atomType[3];
@@ -3611,7 +3703,8 @@ bool MMFFMolProperties::getMMFFAngleBendParams(const ROMol &mol,
       atomType[i] = getMMFFAtomType(idx[i]);
     }
     const MMFFAngle *mmffAngleParams =
-        (*mmffAngle)(angleType, atomType[0], atomType[1], atomType[2]);
+        (*mmffAngle)(DefaultParameters::getMMFFDef(), angleType, atomType[0],
+                     atomType[1], atomType[2]);
     const MMFFProp *mmffPropParamsCentralAtom = (*mmffProp)(atomType[1]);
     if ((!mmffAngleParams) || (isDoubleZero(mmffAngleParams->ka))) {
       areMMFFAngleParamsEmpirical = true;
@@ -3644,9 +3737,9 @@ bool MMFFMolProperties::getMMFFStretchBendParams(
     MMFFAngle &mmffAngleBendParams) {
   bool res = false;
   if (isValid()) {
-    MMFFPropCollection *mmffProp = MMFFPropCollection::getMMFFProp();
-    MMFFStbnCollection *mmffStbn = MMFFStbnCollection::getMMFFStbn();
-    MMFFDfsbCollection *mmffDfsb = MMFFDfsbCollection::getMMFFDfsb();
+    const MMFFPropCollection *mmffProp = DefaultParameters::getMMFFProp();
+    const MMFFStbnCollection *mmffStbn = DefaultParameters::getMMFFStbn();
+    const MMFFDfsbCollection *mmffDfsb = DefaultParameters::getMMFFDfsb();
     unsigned int idx[3] = {idx1, idx2, idx3};
     unsigned int atomType[3];
     unsigned int bondType[2];
@@ -3708,8 +3801,8 @@ bool MMFFMolProperties::getMMFFTorsionParams(
     unsigned int i;
     unsigned int idx[4] = {idx1, idx2, idx3, idx4};
     unsigned int atomType[4];
-    MMFFTorCollection *mmffTor =
-        MMFFTorCollection::getMMFFTor(getMMFFVariant() == "MMFF94s");
+    const MMFFTorCollection *mmffTor =
+        DefaultParameters::getMMFFTor(getMMFFVariant() == "MMFF94s");
     for (i = 0; i < 4; ++i) {
       atomType[i] = getMMFFAtomType(idx[i]);
     }
@@ -3717,8 +3810,9 @@ bool MMFFMolProperties::getMMFFTorsionParams(
         getMMFFTorsionType(mol, idx1, idx2, idx3, idx4);
     bool areMMFFTorParamsEmpirical = false;
     const std::pair<const unsigned int, const MMFFTor *> mmffTorPair =
-        mmffTor->getMMFFTorParams(torTypePair, atomType[0], atomType[1],
-                                  atomType[2], atomType[3]);
+        mmffTor->getMMFFTorParams(DefaultParameters::getMMFFDef(), torTypePair,
+                                  atomType[0], atomType[1], atomType[2],
+                                  atomType[3]);
     torsionType = (mmffTorPair.first ? mmffTorPair.first : torTypePair.first);
     const MMFFTor *mmffTorParams = mmffTorPair.second;
     if (!mmffTorParams) {
@@ -3753,13 +3847,14 @@ bool MMFFMolProperties::getMMFFOopBendParams(const ROMol &mol,
     unsigned int idx[4] = {idx1, idx2, idx3, idx4};
     unsigned int atomType[4];
 
-    MMFFOopCollection *mmffOop =
-        MMFFOopCollection::getMMFFOop(getMMFFVariant() == "MMFF94s");
+    const MMFFOopCollection *mmffOop =
+        DefaultParameters::getMMFFOop(getMMFFVariant() == "MMFF94s");
     for (i = 0; i < 4; ++i) {
       atomType[i] = getMMFFAtomType(idx[i]);
     }
     const MMFFOop *mmffOopParams =
-        (*mmffOop)(atomType[0], atomType[1], atomType[2], atomType[3]);
+        (*mmffOop)(DefaultParameters::getMMFFDef(), atomType[0], atomType[1],
+                   atomType[2], atomType[3]);
     // if no parameters could be found, we exclude this term (SURDOX02)
     if (mmffOopParams) {
       mmffOopBendParams = *mmffOopParams;
@@ -3774,7 +3869,7 @@ bool MMFFMolProperties::getMMFFVdWParams(const unsigned int idx1,
                                          MMFFVdWRijstarEps &mmffVdWParams) {
   bool res = false;
   if (isValid()) {
-    MMFFVdWCollection *mmffVdW = MMFFVdWCollection::getMMFFVdW();
+    const MMFFVdWCollection *mmffVdW = DefaultParameters::getMMFFVdW();
     const unsigned int iAtomType = getMMFFAtomType(idx1);
     const unsigned int jAtomType = getMMFFAtomType(idx2);
     const MMFFVdW *mmffVdWParamsIAtom = (*mmffVdW)(iAtomType);
@@ -3787,12 +3882,13 @@ bool MMFFMolProperties::getMMFFVdWParams(const unsigned int idx1,
           mmffVdWParamsJAtom);
       mmffVdWParams.R_ij_star = mmffVdWParams.R_ij_starUnscaled;
       mmffVdWParams.epsilon = mmffVdWParams.epsilonUnscaled;
-      MMFF::Utils::scaleVdWParams(mmffVdWParams.R_ij_star, mmffVdWParams.epsilon,
-                            mmffVdW, mmffVdWParamsIAtom, mmffVdWParamsJAtom);
+      MMFF::Utils::scaleVdWParams(mmffVdWParams.R_ij_star,
+                                  mmffVdWParams.epsilon, mmffVdW,
+                                  mmffVdWParamsIAtom, mmffVdWParamsJAtom);
       res = true;
     }
   }
   return res;
 }
-}
-}
+}  // namespace MMFF
+}  // namespace RDKit

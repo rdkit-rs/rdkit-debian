@@ -11,7 +11,7 @@ import re
 from rdkit.Chem import Descriptors as DescriptorsMod
 from rdkit.ML.Descriptors import Descriptors
 from rdkit.RDLogger import logger
-from rdkit.six.moves import cPickle
+import pickle
 
 logger = logger()
 
@@ -67,7 +67,7 @@ class MolecularDescriptorCalculator(Descriptors.DescriptorCalculator):
     except Exception:
       logger.error('cannot open output file %s for writing' % (fileName))
       return
-    cPickle.dump(self, f)
+    pickle.dump(self, f)
     f.close()
 
   def CalcDescriptors(self, mol, *args, **kwargs):
@@ -106,7 +106,7 @@ class MolecularDescriptorCalculator(Descriptors.DescriptorCalculator):
       fn = getattr(DescriptorsMod, nm, lambda x: 777)
       if hasattr(fn, '__doc__') and fn.__doc__:
         doc = fn.__doc__.split('\n\n')[0].strip()
-        doc = re.sub('\ *\n\ *', ' ', doc)
+        doc = re.sub(' *\n *', ' ', doc)
       else:
         doc = 'N/A'
       res.append(doc)

@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef _RD_EXCEPTIONS_H
 #define _RD_EXCEPTIONS_H
 #include <stdexcept>
@@ -18,12 +19,18 @@
 class IndexErrorException : public std::runtime_error {
  public:
   IndexErrorException(int i)
-      : std::runtime_error("IndexErrorException"), _idx(i){};
+      : std::runtime_error("IndexErrorException"),
+        _idx(i),
+        _msg("Index Error: " + std::to_string(_idx)){};
   int index() const { return _idx; };
-  ~IndexErrorException() throw(){};
+
+  const char* what() const noexcept override { return _msg.c_str(); };
+
+  ~IndexErrorException() noexcept {};
 
  private:
   int _idx;
+  std::string _msg;
 };
 
 //! \brief Class to allow us to throw a \c ValueError from C++ and have
@@ -31,12 +38,12 @@ class IndexErrorException : public std::runtime_error {
 //!
 class ValueErrorException : public std::runtime_error {
  public:
-  ValueErrorException(const std::string &i)
+  ValueErrorException(const std::string& i)
       : std::runtime_error("ValueErrorException"), _value(i){};
-  ValueErrorException(const char *msg)
+  ValueErrorException(const char* msg)
       : std::runtime_error("ValueErrorException"), _value(msg){};
-  std::string message() const { return _value; };
-  ~ValueErrorException() throw(){};
+  const char* what() const noexcept override { return _value.c_str(); };
+  ~ValueErrorException() noexcept {};
 
  private:
   std::string _value;
@@ -48,12 +55,18 @@ class ValueErrorException : public std::runtime_error {
 class KeyErrorException : public std::runtime_error {
  public:
   KeyErrorException(std::string key)
-      : std::runtime_error("KeyErrorException"), _key(key){};
+      : std::runtime_error("KeyErrorException"),
+        _key(key),
+        _msg("Key Error: " + key){};
   std::string key() const { return _key; };
-  ~KeyErrorException() throw(){};
+
+  const char* what() const noexcept override { return _msg.c_str(); };
+
+  ~KeyErrorException() noexcept {};
 
  private:
   std::string _key;
+  std::string _msg;
 };
 
 #endif

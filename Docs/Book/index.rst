@@ -16,9 +16,17 @@ The RDKit Documentation
   Cookbook
   Cartridge
   BackwardsIncompatibleChanges
+  api-docs
+  GettingStartedInC++
 
 Additional Information
 ======================
 
-  * `Python API Documentation <api/index.html>`_
   * `C++ API Documentation <cppapi/index.html>`_
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

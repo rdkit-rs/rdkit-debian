@@ -36,7 +36,7 @@
 #include "WHIM.h"
 #include "MolData3Ddescriptors.h"
 
-#include <math.h>
+#include <cmath>
 #include <Eigen/Dense>
 #include <Eigen/SVD>
 
@@ -49,7 +49,7 @@ namespace {
 MolData3Ddescriptors moldata3D;
 
 double roundn(double in, int factor) {
-  return round(in * pow(10., factor)) / pow(10., factor);
+  return std::round(in * pow(10., factor)) / pow(10., factor);
 }
 
 MatrixXd GetCenterMatrix(MatrixXd &Mat) {
@@ -58,8 +58,8 @@ MatrixXd GetCenterMatrix(MatrixXd &Mat) {
   return X;
 }
 
-MatrixXd GetCovMatrix(MatrixXd &X, MatrixXd &Weigth, double weigth) {
-  return X.transpose() * Weigth * X / weigth;
+MatrixXd GetCovMatrix(MatrixXd &X, MatrixXd &Weight, double weight) {
+  return X.transpose() * Weight * X / weight;
 }
 
 JacobiSVD<MatrixXd> *getSVD(MatrixXd &Mat) {
@@ -67,19 +67,27 @@ JacobiSVD<MatrixXd> *getSVD(MatrixXd &Mat) {
   return svd;
 }
 
-std::vector<double> getWhimD(std::vector<double> weigthvector,
+std::vector<double> getWhimD(std::vector<double> weightvector,
                              MatrixXd MatOrigin, int numAtoms, double th) {
-  double *weigtharray = &weigthvector[0];
+  double *weightarray = &weightvector[0];
 
-  Map<VectorXd> Weigth(weigtharray, numAtoms);
+  Map<VectorXd> Weight(weightarray, numAtoms);
+  // std::cerr << "Weight:\n" << Weight << "\n";
 
-  MatrixXd WeigthMat = Weigth.asDiagonal();
+  MatrixXd WeightMat = Weight.asDiagonal();
 
-  double weigth = WeigthMat.diagonal().sum();
+  double weight = WeightMat.diagonal().sum();
+  // fix issue if the sum is close to zeros
+  // only for the charges cases normally
+  if (fabs(weight) < 1e-4) {
+    weight = 1.0;
+    // std::cerr << "fix weight sum:\n";
+  }
 
   MatrixXd Xmean = GetCenterMatrix(MatOrigin);
+  // std::cerr << "Xmean:\n" << Xmean << "\n";
 
-  MatrixXd covmat = GetCovMatrix(Xmean, WeigthMat, weigth);
+  MatrixXd covmat = GetCovMatrix(Xmean, WeightMat, weight);
 
   JacobiSVD<MatrixXd> *svd = getSVD(covmat);
 
@@ -103,7 +111,7 @@ std::vector<double> getWhimD(std::vector<double> weigthvector,
 
   double res = 0.0;
   for (int i = 0; i < 3; i++) {
-    res += std::abs(w[i] / w[3] - 1.0 / 3.0);
+    res += std::fabs(w[i] / w[3] - 1.0 / 3.0);
   }
 
   w[9] = 3.0 / 4.0 * res;  // K
@@ -140,9 +148,9 @@ std::vector<double> getWhimD(std::vector<double> weigthvector,
   // Index and/or Sphericity !
 
   double gamma[3];  // Gamma values
-  double nAT = (double)numAtoms;
+  auto nAT = (double)numAtoms;
 
-  // check if two atoms are symetric versus the new axis ie newx,newy,newz a
+  // check if two atoms are symmetric versus the new axis ie newx,newy,newz a
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < numAtoms; j++) {
       Scores(j, i) = roundn(Scores(j, i),
@@ -151,9 +159,9 @@ std::vector<double> getWhimD(std::vector<double> weigthvector,
   }
 
   // we should take into account atoms that are in the axis too!!! which is not
-  //trivial
+  // trivial
   for (int i = 0; i < 3; i++) {
-    std::vector<double> Symetric(2 * numAtoms, 0.0);
+    std::vector<double> Symmetric(2 * numAtoms, 0.0);
     double ns = 0.0;
     double na = 0.0;
     for (int j = 0; j < numAtoms; j++) {
@@ -162,27 +170,28 @@ std::vector<double> getWhimD(std::vector<double> weigthvector,
         if (j == k) {
           continue;
         }
-        if (std::abs(Scores(j, i) + Scores(k, i)) <= th) {
-          // those that are close opposite & not close to the axis!
-          ns += 1;  // check only once the symetric none null we need to add +2!
+        // those that are close opposite & not close to the axis!
+        if (std::fabs(Scores(j, i) + Scores(k, i)) <= th) {
+          // check only once the symmetric none null we need to add +2!
           // (reduce the loop duration)
+          ns += 1;
           amatch = true;
-          Symetric[j] = 1.0;
-          Symetric[j + numAtoms] = 2.0;
-          Symetric[k] = 1.0;
-          Symetric[k + numAtoms] = 2.0;
+          Symmetric[j] = 1.0;
+          Symmetric[j + numAtoms] = 2.0;
+          Symmetric[k] = 1.0;
+          Symmetric[k + numAtoms] = 2.0;
           break;
         }
       }
       if (!amatch) {
         na += 1;
-        Symetric[j] = 0.0;
-        Symetric[j + numAtoms] = std::abs(Scores(j, i));
+        Symmetric[j] = 0.0;
+        Symmetric[j + numAtoms] = std::fabs(Scores(j, i));
       }
     }
     // take into account the atoms close to the axis
     for (int aj = 0; aj < numAtoms; aj++) {
-      if (Symetric[aj + numAtoms] < th && Symetric[aj] < 1.0) {
+      if (Symmetric[aj + numAtoms] < th && Symmetric[aj] < 1.0) {
         ns += 1;
         na -= 1;
       }
@@ -220,30 +229,30 @@ void GetWHIMs(const Conformer &conf, std::vector<double> &result,
   int numAtoms = conf.getNumAtoms();
   Map<MatrixXd> matorigin(Vpoints, 3, numAtoms);
   MatrixXd MatOrigin = matorigin.transpose();
-  std::vector<double> weigthvector;
+  std::vector<double> weightvector;
 
   // intermediate 18 values stored in this order per weighted vector :
   // "L1","L2","L3","T","A","V","P1","P2","P3","K","E1","E2","E3","D","G1","G2","G3","G"
-  weigthvector = moldata3D.GetUn(numAtoms);
-  wu = getWhimD(weigthvector, MatOrigin, numAtoms, th);
+  weightvector = moldata3D.GetUn(numAtoms);
+  wu = getWhimD(weightvector, MatOrigin, numAtoms, th);
 
-  weigthvector = moldata3D.GetRelativeMW(conf.getOwningMol());
-  wm = getWhimD(weigthvector, MatOrigin, numAtoms, th);
+  weightvector = moldata3D.GetRelativeMW(conf.getOwningMol());
+  wm = getWhimD(weightvector, MatOrigin, numAtoms, th);
 
-  weigthvector = moldata3D.GetRelativeVdW(conf.getOwningMol());
-  wv = getWhimD(weigthvector, MatOrigin, numAtoms, th);
+  weightvector = moldata3D.GetRelativeVdW(conf.getOwningMol());
+  wv = getWhimD(weightvector, MatOrigin, numAtoms, th);
 
-  weigthvector = moldata3D.GetRelativeENeg(conf.getOwningMol());
-  we = getWhimD(weigthvector, MatOrigin, numAtoms, th);
+  weightvector = moldata3D.GetRelativeENeg(conf.getOwningMol());
+  we = getWhimD(weightvector, MatOrigin, numAtoms, th);
 
-  weigthvector = moldata3D.GetRelativePol(conf.getOwningMol());
-  wp = getWhimD(weigthvector, MatOrigin, numAtoms, th);
+  weightvector = moldata3D.GetRelativePol(conf.getOwningMol());
+  wp = getWhimD(weightvector, MatOrigin, numAtoms, th);
 
-  weigthvector = moldata3D.GetRelativeIonPol(conf.getOwningMol());
-  wi = getWhimD(weigthvector, MatOrigin, numAtoms, th);
+  weightvector = moldata3D.GetRelativeIonPol(conf.getOwningMol());
+  wi = getWhimD(weightvector, MatOrigin, numAtoms, th);
 
-  weigthvector = moldata3D.GetIState(conf.getOwningMol());
-  ws = getWhimD(weigthvector, MatOrigin, numAtoms, th);
+  weightvector = moldata3D.GetIState(conf.getOwningMol());
+  ws = getWhimD(weightvector, MatOrigin, numAtoms, th);
 
   result.clear();
   result.resize(126);
@@ -264,6 +273,31 @@ void GetWHIMs(const Conformer &conf, std::vector<double> &result,
   wp.clear();
   wi.clear();
   ws.clear();
+}
+
+void GetWHIMsCustom(const Conformer &conf, std::vector<double> &result,
+                    double *Vpoints, double th,
+                    const std::string &customAtomPropName) {
+  std::vector<double> wc(18);
+
+  result.clear();
+  result.resize(18);
+
+  int numAtoms = conf.getNumAtoms();
+  Map<MatrixXd> matorigin(Vpoints, 3, numAtoms);
+  MatrixXd MatOrigin = matorigin.transpose();
+
+  // intermediate 18 values stored in this order per weighted vector :
+  // "L1","L2","L3","T","A","V","P1","P2","P3","K","E1","E2","E3","D","G1","G2","G3","G"
+  std::vector<double> weightvector =
+      moldata3D.GetCustomAtomProp(conf.getOwningMol(), customAtomPropName);
+
+  wc = getWhimD(weightvector, MatOrigin, numAtoms, th);
+
+  for (int i = 0; i < 18; i++) {
+    result[i] = wc[i];
+  }
+  wc.clear();
 }
 
 void getWHIM(const ROMol &mol, std::vector<double> &res, int confId,
@@ -315,21 +349,48 @@ void getWHIM(const ROMol &mol, std::vector<double> &res, int confId,
   }
 }
 
+void getWHIMone(const ROMol &mol, std::vector<double> &res, int confId,
+                double th, const std::string &customAtomPropName) {
+  int numAtoms = mol.getNumAtoms();
+  const Conformer &conf = mol.getConformer(confId);
+  auto *Vpoints = new double[3 * numAtoms];
+
+  for (int i = 0; i < numAtoms; ++i) {
+    Vpoints[3 * i] = conf.getAtomPos(i).x;
+    Vpoints[3 * i + 1] = conf.getAtomPos(i).y;
+    Vpoints[3 * i + 2] = conf.getAtomPos(i).z;
+  }
+
+  std::vector<double> w(18);
+  GetWHIMsCustom(conf, w, Vpoints, th, customAtomPropName);
+  delete[] Vpoints;
+
+  // Dragon extract only this list in this order : L1 L2 L3 P1 P2 G1 G2 G3 E1 E2
+  // E3
+  // "L1","L2","L3","T","A","V","P1","P2","P3","K","E1","E2","E3","D","G1","G2","G3","G"
+  int map1[17] = {0, 1, 2, 6, 7, 14, 15, 16, 10, 11, 12, 3, 4, 17, 9, 13, 5};
+
+  for (int i = 0; i < 17; i++) {
+    res[i] = roundn(w[map1[i]], 3);
+  }
+}
+
 }  // end of anonymous namespace
 
-void WHIM(const ROMol &mol, std::vector<double> &res, int confId, double th) {
+void WHIM(const ROMol &mol, std::vector<double> &res, int confId, double th,
+          const std::string &customAtomPropName) {
   PRECONDITION(mol.getNumConformers() >= 1, "molecule has no conformers")
-  // Dragon final list is: L1u L2u L3u P1u P2u G1u G2u G3u E1u E2u E3u L1m L2m
-  // L3m P1m P2m G1m G2m G3m E1m E2m E3m L1v L2v L3v P1v P2v G1v G2v G3v E1v E2v
-  // E3v L1e L2e L3e P1e P2e G1e G2e G3e E1e E2e E3e L1p L2p L3p P1p P2p G1p G2p
-  // G3p E1p E2p E3p L1i L2i L3i P1i P2i G1i G2i G3i E1i E2i E3i L1s L2s L3s P1s
-  // P2s G1s G2s G3s E1s E2s E3s Tu  Tm  Tv  Te  Tp  Ti  Ts  Au  Am  Av  Ae  Ap
-  // Ai  As  Gu  Gm  Ku  Km  Kv  Ke  Kp  Ki  Ks  Du  Dm  Dv  De  Dp  Di  Ds  Vu
-  // Vm  Vv  Ve  Vp  Vi  Vs
-
-  res.clear();
-  res.resize(114);
-  getWHIM(mol, res, confId, th);
+  // Dragon final list is: L1u L2u L3u P1u P2u G1u G2u G3u E1u E2u E3u
+  // Tu   Au    Gu   Ku    Du   Vu
+  if (customAtomPropName != "") {
+    res.clear();
+    res.resize(17);
+    getWHIMone(mol, res, confId, th, customAtomPropName);
+  } else {
+    res.clear();
+    res.resize(114);
+    getWHIM(mol, res, confId, th);
+  }
 }
-}  // end of Descriptors namespace
-}  // end of RDKit namespace
+}  // namespace Descriptors
+}  // namespace RDKit

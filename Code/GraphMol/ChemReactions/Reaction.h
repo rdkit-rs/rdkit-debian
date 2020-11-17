@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2007-2014, Novartis Institutes for BioMedical Research Inc.
+//  Copyright (c) 2007-2018, Novartis Institutes for BioMedical Research Inc.
 //  All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,10 +30,12 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef __RD_REACTION_H_17Aug2006__
-#define __RD_REACTION_H_17Aug2006__
+#include <RDGeneral/export.h>
+#ifndef RD_REACTION_H_17Aug2006
+#define RD_REACTION_H_17Aug2006
 
 #include <GraphMol/RDKitBase.h>
+#include <RDGeneral/RDProps.h>
 #include <GraphMol/Substruct/SubstructMatch.h>
 #include <vector>
 
@@ -41,15 +43,16 @@ namespace RDKit {
 class ReactionPickler;
 
 //! used to indicate an error in the chemical reaction engine
-class ChemicalReactionException : public std::exception {
+class RDKIT_CHEMREACTIONS_EXPORT ChemicalReactionException
+    : public std::exception {
  public:
   //! construct with an error message
   explicit ChemicalReactionException(const char *msg) : _msg(msg){};
   //! construct with an error message
   explicit ChemicalReactionException(const std::string msg) : _msg(msg){};
   //! get the error message
-  const char *message() const { return _msg.c_str(); };
-  ~ChemicalReactionException() throw(){};
+  const char *what() const noexcept override { return _msg.c_str(); };
+  ~ChemicalReactionException() noexcept {};
 
  private:
   std::string _msg;
@@ -113,29 +116,30 @@ class ChemicalReactionException : public std::exception {
        \endverbatim
 
 */
-class ChemicalReaction {
+class RDKIT_CHEMREACTIONS_EXPORT ChemicalReaction : public RDProps {
   friend class ReactionPickler;
 
  public:
-  ChemicalReaction() : df_needsInit(true), df_implicitProperties(false){};
-  ChemicalReaction(const ChemicalReaction &other) {
+  ChemicalReaction() : RDProps(){};
+  ChemicalReaction(const ChemicalReaction &other) : RDProps() {
     df_needsInit = other.df_needsInit;
     df_implicitProperties = other.df_implicitProperties;
     for (MOL_SPTR_VECT::const_iterator iter = other.beginReactantTemplates();
-             iter != other.endReactantTemplates(); ++iter) {
+         iter != other.endReactantTemplates(); ++iter) {
       ROMol *reactant = new ROMol(**iter);
       m_reactantTemplates.push_back(ROMOL_SPTR(reactant));
     }
     for (MOL_SPTR_VECT::const_iterator iter = other.beginProductTemplates();
-             iter != other.endProductTemplates(); ++iter) {
+         iter != other.endProductTemplates(); ++iter) {
       ROMol *product = new ROMol(**iter);
       m_productTemplates.push_back(ROMOL_SPTR(product));
     }
     for (MOL_SPTR_VECT::const_iterator iter = other.beginAgentTemplates();
-           iter != other.endAgentTemplates(); ++iter) {
+         iter != other.endAgentTemplates(); ++iter) {
       ROMol *agent = new ROMol(**iter);
       m_agentTemplates.push_back(ROMOL_SPTR(agent));
     }
+    d_props = other.d_props;
   }
   //! construct a reaction from a pickle string
   ChemicalReaction(const std::string &binStr);
@@ -180,7 +184,7 @@ class ChemicalReaction {
   */
   void removeUnmappedReactantTemplates(double thresholdUnmappedAtoms = 0.2,
                                        bool moveToAgentTemplates = true,
-                                       MOL_SPTR_VECT *targetVector = NULL);
+                                       MOL_SPTR_VECT *targetVector = nullptr);
 
   //! Removes the product templates from a reaction if its atom mapping ratio is
   // below a given threshold
@@ -191,28 +195,29 @@ class ChemicalReaction {
   */
   void removeUnmappedProductTemplates(double thresholdUnmappedAtoms = 0.2,
                                       bool moveToAgentTemplates = true,
-                                      MOL_SPTR_VECT *targetVector = NULL);
+                                      MOL_SPTR_VECT *targetVector = nullptr);
 
   /*! Removes the agent templates from a reaction if a pointer to a
       molecule vector is provided the agents are stored therein.*/
-  void removeAgentTemplates(MOL_SPTR_VECT *targetVector = NULL);
+  void removeAgentTemplates(MOL_SPTR_VECT *targetVector = nullptr);
 
   //! Runs the reaction on a set of reactants
   /*!
 
     \param reactants  the reactants to be used. The length of this must be equal
-    to
-                      this->getNumReactantTemplates()
+    to this->getNumReactantTemplates()
+    \param maxProducts:  if non zero, the maximum number of products to generate
+    before stopping.  If hit a warning will be generated.
 
     \return a vector of vectors of products. Each subvector will be
             this->getNumProductTemplates() long.
 
     We return a vector of vectors of products because each individual template
-    may
-    map multiple times onto its reactant. This leads to multiple possible result
-    sets.
+    may map multiple times onto its reactant. This leads to multiple possible
+    result sets.
   */
-  std::vector<MOL_SPTR_VECT> runReactants(const MOL_SPTR_VECT reactants) const;
+  std::vector<MOL_SPTR_VECT> runReactants(
+      const MOL_SPTR_VECT reactants, unsigned int numProducts = 1000) const;
 
   //! Runs a single reactant against a single reactant template
   /*!
@@ -284,8 +289,12 @@ class ChemicalReaction {
   /*!
       This must be called after adding reactants and before calling
       runReactants.
+
+      \param silent: If this bool is true, no messages will be logged during the
+      validation. By default, validation problems are reported to the warning
+      and error logs depending on their severity.
   */
-  void initReactantMatchers();
+  void initReactantMatchers(bool silent = false);
 
   bool isInitialized() const { return !df_needsInit; };
 
@@ -293,17 +302,14 @@ class ChemicalReaction {
   //"reasonable"
   /*!
       \return   true if the reaction validates without errors (warnings do not
-     stop
-                validation)
+      stop validation)
 
       \param numWarnings used to return the number of validation warnings
       \param numErrors   used to return the number of validation errors
 
       \param silent: If this bool is true, no messages will be logged during the
-     validation.
-                     By default, validation problems are reported to the warning
-     and error
-                     logs depending on their severity.
+      validation. By default, validation problems are reported to the warning
+      and error logs depending on their severity.
 
   */
   bool validate(unsigned int &numWarnings, unsigned int &numErrors,
@@ -335,8 +341,8 @@ class ChemicalReaction {
   void setImplicitPropertiesFlag(bool val) { df_implicitProperties = val; };
 
  private:
-  bool df_needsInit;
-  bool df_implicitProperties;
+  bool df_needsInit{true};
+  bool df_implicitProperties{false};
   MOL_SPTR_VECT m_reactantTemplates, m_productTemplates, m_agentTemplates;
   ChemicalReaction &operator=(const ChemicalReaction &);  // disable assignment
 };
@@ -346,31 +352,33 @@ class ChemicalReaction {
 //! the \c which argument is used to return which of the reactants
 //! the molecule matches. If there's no match, it is equal to the number
 //! of reactants on return
-bool isMoleculeReactantOfReaction(const ChemicalReaction &rxn, const ROMol &mol,
-                                  unsigned int &which);
+RDKIT_CHEMREACTIONS_EXPORT bool isMoleculeReactantOfReaction(
+    const ChemicalReaction &rxn, const ROMol &mol, unsigned int &which);
 //! \overload
-bool isMoleculeReactantOfReaction(const ChemicalReaction &rxn,
-                                  const ROMol &mol);
+RDKIT_CHEMREACTIONS_EXPORT bool isMoleculeReactantOfReaction(
+    const ChemicalReaction &rxn, const ROMol &mol);
 
 //! tests whether or not the molecule has a substructure match
 //! to any of the reaction's products
 //! the \c which argument is used to return which of the products
 //! the molecule matches. If there's no match, it is equal to the number
 //! of products on return
-bool isMoleculeProductOfReaction(const ChemicalReaction &rxn, const ROMol &mol,
-                                 unsigned int &which);
+RDKIT_CHEMREACTIONS_EXPORT bool isMoleculeProductOfReaction(
+    const ChemicalReaction &rxn, const ROMol &mol, unsigned int &which);
 //! \overload
-bool isMoleculeProductOfReaction(const ChemicalReaction &rxn, const ROMol &mol);
+RDKIT_CHEMREACTIONS_EXPORT bool isMoleculeProductOfReaction(
+    const ChemicalReaction &rxn, const ROMol &mol);
 
 //! tests whether or not the molecule has a substructure match
 //! to any of the reaction's agents
 //! the \c which argument is used to return which of the agents
 //! the molecule matches. If there's no match, it is equal to the number
 //! of agents on return
-bool isMoleculeAgentOfReaction(const ChemicalReaction &rxn, const ROMol &mol,
-                               unsigned int &which);
+RDKIT_CHEMREACTIONS_EXPORT bool isMoleculeAgentOfReaction(
+    const ChemicalReaction &rxn, const ROMol &mol, unsigned int &which);
 //! \overload
-bool isMoleculeAgentOfReaction(const ChemicalReaction &rxn, const ROMol &mol);
+RDKIT_CHEMREACTIONS_EXPORT bool isMoleculeAgentOfReaction(
+    const ChemicalReaction &rxn, const ROMol &mol);
 
 //! returns indices of the atoms in each reactant that are changed
 //! in the reaction
@@ -378,8 +386,7 @@ bool isMoleculeAgentOfReaction(const ChemicalReaction &rxn, const ROMol &mol);
   \param rxn the reaction we are interested in
 
   \param mappedAtomsOnly if set, atoms that are not mapped will not be included
-  in
-       the list of changed atoms (otherwise they are automatically included)
+  in the list of changed atoms (otherwise they are automatically included)
 
    How are changed atoms recognized?
        1) Atoms whose degree changes
@@ -399,8 +406,8 @@ bool isMoleculeAgentOfReaction(const ChemicalReaction &rxn, const ROMol &mol);
      When coming from RXN: the atomic number of the atom in the rxn file sets
         the value.
  */
-VECT_INT_VECT getReactingAtoms(const ChemicalReaction &rxn,
-                               bool mappedAtomsOnly = false);
+RDKIT_CHEMREACTIONS_EXPORT VECT_INT_VECT
+getReactingAtoms(const ChemicalReaction &rxn, bool mappedAtomsOnly = false);
 
 //! add the recursive queries to the reactants of a reaction
 /*!
@@ -423,13 +430,13 @@ VECT_INT_VECT getReactingAtoms(const ChemicalReaction &rxn,
         in \c queries
 
  */
-void addRecursiveQueriesToReaction(
+RDKIT_CHEMREACTIONS_EXPORT void addRecursiveQueriesToReaction(
     ChemicalReaction &rxn, const std::map<std::string, ROMOL_SPTR> &queries,
     const std::string &propName,
-    std::vector<std::vector<std::pair<unsigned int, std::string> > > *
-        reactantLabels = NULL);
+    std::vector<std::vector<std::pair<unsigned int, std::string>>>
+        *reactantLabels = nullptr);
 
-}  // end of RDKit namespace
+}  // namespace RDKit
 
 namespace RDDepict {
 //! \brief Generate 2D coordinates (a depiction) for a reaction
@@ -460,13 +467,12 @@ namespace RDDepict {
   for the other parameters see the documentation for compute2DCoords()
 
 */
-void compute2DCoordsForReaction(RDKit::ChemicalReaction &rxn,
-                                double spacing = 2.0, bool updateProps = true,
-                                bool canonOrient = false,
-                                unsigned int nFlipsPerSample = 0,
-                                unsigned int nSamples = 0, int sampleSeed = 0,
-                                bool permuteDeg4Nodes = false);
+RDKIT_CHEMREACTIONS_EXPORT void compute2DCoordsForReaction(
+    RDKit::ChemicalReaction &rxn, double spacing = 2.0, bool updateProps = true,
+    bool canonOrient = false, unsigned int nFlipsPerSample = 0,
+    unsigned int nSamples = 0, int sampleSeed = 0,
+    bool permuteDeg4Nodes = false);
 
-}  // end of RDDepict namespace
+}  // namespace RDDepict
 
 #endif

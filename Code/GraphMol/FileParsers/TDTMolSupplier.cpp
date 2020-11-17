@@ -1,6 +1,5 @@
-// $Id$
 //
-//  Copyright (C) 2005-2008 Greg Landrum and Rational Discovery LLC
+//  Copyright (C) 2005-2020 Greg Landrum and Rational Discovery LLC
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -22,7 +21,6 @@
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <RDGeneral/LocaleSwitcher.h>
 
-
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -30,7 +28,7 @@
 
 namespace RDKit {
 namespace TDTParseUtils {
-typedef boost::tokenizer<boost::escaped_list_separator<char> > CommaTokenizer;
+typedef boost::tokenizer<boost::escaped_list_separator<char>> CommaTokenizer;
 
 /*
  * if inStream is valid, we'll allow the numbers to be broken across multiple
@@ -80,20 +78,9 @@ TDTMolSupplier::TDTMolSupplier(const std::string &fileName,
   d_confId2D = confId2D;
   d_confId3D = confId3D;
   d_nameProp = nameRecord;
-  // FIX: this binary moe of opening file is here because of a bug in VC++ 6.0
-  // the function "tellg" does not work correctly if we do not open it this way
-  // Need to check if this has been fixed in VC++ 7.0
-  std::istream *tmpStream = nullptr;
-  tmpStream = static_cast<std::istream *>(
-      new std::ifstream(fileName.c_str(), std::ios_base::binary));
-  if (!tmpStream || (!(*tmpStream)) || (tmpStream->bad())) {
-    std::ostringstream errout;
-    errout << "Bad input file " << fileName;
-    throw BadFileException(errout.str());
-  }
-
-  dp_inStream = tmpStream;
+  dp_inStream = openAndCheckStream(fileName);
   df_owner = true;
+
   this->advanceToNextRecord();
   d_molpos.push_back(dp_inStream->tellg());
   df_sanitize = sanitize;
@@ -134,7 +121,9 @@ TDTMolSupplier::~TDTMolSupplier() {
 void TDTMolSupplier::setData(const std::string &text,
                              const std::string &nameRecord, int confId2D,
                              int confId3D, bool sanitize) {
-  if (dp_inStream && df_owner) delete dp_inStream;
+  if (dp_inStream && df_owner) {
+    delete dp_inStream;
+  }
   init();
   d_confId2D = confId2D;
   d_confId3D = confId3D;
@@ -156,7 +145,9 @@ bool TDTMolSupplier::advanceToNextRecord() {
   std::streampos pos;
   bool res = false;
   while (1) {
-    if (dp_inStream->eof()) return false;
+    if (dp_inStream->eof() || dp_inStream->bad()) {
+      return false;
+    }
     pos = dp_inStream->tellg();
     std::string inL;
     std::getline(*dp_inStream, inL);
@@ -172,7 +163,7 @@ bool TDTMolSupplier::advanceToNextRecord() {
 
 void TDTMolSupplier::checkForEnd() {
   PRECONDITION(dp_inStream, "no stream");
-  if (dp_inStream->eof()) {
+  if (dp_inStream->eof() || dp_inStream->bad()) {
     df_end = true;
     // the -1 here is because by the time we get here we've already pushed on
     // the
@@ -220,7 +211,8 @@ ROMol *TDTMolSupplier::parseMol(std::string inLine) {
     //   Process the properties:
     d_line++;
     std::getline(*dp_inStream, inLine);
-    while (!dp_inStream->eof() && inLine.find("|") != 0) {
+    while (!dp_inStream->eof() && !dp_inStream->fail() &&
+           inLine.find("|") != 0) {
       endP = inLine.find("<");
       std::string propName = inLine.substr(0, endP);
       boost::trim_if(propName, boost::is_any_of(" \t"));
@@ -271,8 +263,9 @@ ROMol *TDTMolSupplier::parseMol(std::string inLine) {
         } else {
           std::string propVal = inLine.substr(startP, endP - startP);
           res->setProp(propName, propVal);
-          if (propName == d_nameProp)
+          if (propName == d_nameProp) {
             res->setProp(common_properties::_Name, propVal);
+          }
         }
       }
       std::getline(*dp_inStream, inLine);
@@ -302,7 +295,8 @@ ROMol *TDTMolSupplier::next() {
   std::string tempp;
   d_line++;
   std::getline(*dp_inStream, tempp);
-  while (tempp.find("$SMI<") != 0 && !dp_inStream->eof()) {
+  while (tempp.find("$SMI<") != 0 && !dp_inStream->eof() &&
+         !dp_inStream->fail()) {
     d_line++;
     std::getline(*dp_inStream, tempp);
   }
@@ -315,8 +309,9 @@ ROMol *TDTMolSupplier::next() {
       BOOST_LOG(rdErrorLog)
           << "ERROR: Could not sanitize molecule ending on line " << d_line
           << std::endl;
-      BOOST_LOG(rdErrorLog) << "ERROR: " << se.message() << "\n";
-      while (!(dp_inStream->eof()) && tempStr.find("|") != 0) {
+      BOOST_LOG(rdErrorLog) << "ERROR: " << se.what() << "\n";
+      while (!dp_inStream->eof() && !dp_inStream->fail() &&
+             tempStr.find("|") != 0) {
         d_line++;
         std::getline(*dp_inStream, tempStr);
       }
@@ -370,7 +365,8 @@ void TDTMolSupplier::moveTo(unsigned int idx) {
     std::string tempStr;
     d_last = d_molpos.size() - 1;
     dp_inStream->seekg(d_molpos.back());
-    while ((d_last < static_cast<int>(idx)) && (!dp_inStream->eof())) {
+    while (d_last < static_cast<int>(idx) && !dp_inStream->eof() &&
+           !dp_inStream->fail()) {
       d_line++;
       std::getline(*dp_inStream, tempStr);
 
@@ -413,7 +409,7 @@ unsigned int TDTMolSupplier::length() {
       d_len++;
       std::getline(*dp_inStream, inL);
     }
-    // now remember to set the stream to the last postion we want to read
+    // now remember to set the stream to the last position we want to read
     dp_inStream->clear();
     dp_inStream->seekg(d_molpos[d_last]);
     return d_len;
@@ -424,4 +420,4 @@ bool TDTMolSupplier::atEnd() {
   PRECONDITION(dp_inStream, "no stream");
   return df_end;
 }
-}
+}  // namespace RDKit

@@ -10,7 +10,7 @@
 #define PY_ARRAY_UNIQUE_SYMBOL Py_Array_API_Clustering
 
 #include <RDBoost/Wrap.h>
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 namespace python = boost::python;
 
@@ -38,6 +38,7 @@ void clusterit(real *dataP, boost::int64_t n, boost::int64_t m,
   double tmp;
   len = (n * (n - 1)) / 2;
   dists = (real *)calloc(len, sizeof(real));
+  CHECK_INVARIANT(dists, "failed to allocate memory");
   for (i = 1; i < n; i++) {
     iTab = i * m;
     for (j = 0; j < i; j++) {

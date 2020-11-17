@@ -49,16 +49,25 @@ const std::string SASA = "SASA";
 const std::string SASAClass = "SASAClass";  // Class type, 0,1,2... etc
 const std::string SASAClassName =
     "SASAClassName";  // Class name, Polar, APolar etc...
-}
+}  // namespace Atom
 namespace Molecule {
 const std::string SASA =
     "SASA";  // Total Solvent Accessible Surface area for molecule;
 }
-}
-}
+}  // namespace common_properties
+}  // namespace RDKit
 
 namespace FreeSASA {
 using namespace RDKit;
+
+SASAOpts::SASAOpts()
+    : algorithm(SASAOpts::LeeRichards),
+      classifier(SASAOpts::Protor),
+      probeRadius(FREESASA_DEF_PROBE_RADIUS) {}
+SASAOpts::SASAOpts(SASAOpts::Algorithm alg, SASAOpts::Classifier cls)
+    : algorithm(alg), classifier(cls), probeRadius(FREESASA_DEF_PROBE_RADIUS) {}
+SASAOpts::SASAOpts(SASAOpts::Algorithm alg, SASAOpts::Classifier cls, double pr)
+    : algorithm(alg), classifier(cls), probeRadius(pr) {}
 
 bool classifyAtoms(ROMol &mol, std::vector<double> &radii,
                    const SASAOpts &opts) {
@@ -96,8 +105,8 @@ bool classifyAtoms(ROMol &mol, std::vector<double> &radii,
         radius = freesasa_classifier_radius(classifier, res_name, atom_name);
 
         if (radius == 0.0) {
-          BOOST_LOG(rdWarningLog) << "Atom " << atom->getIdx()
-                                  << " has zero radius" << std::endl;
+          BOOST_LOG(rdWarningLog)
+              << "Atom " << atom->getIdx() << " has zero radius" << std::endl;
         }
 
         cls = freesasa_classifier_class(classifier, res_name, atom_name);
@@ -123,12 +132,11 @@ namespace {
 double internalCalcSASA(const ROMol &mol, const std::vector<double> &radii,
                         int confIdx, const SASAOpts &opts) {
   PRECONDITION(mol.getNumConformers(), "No conformers in molecule");
-  PRECONDITION(confIdx < rdcast<int>(mol.getNumConformers()),
-               "Conformer index out of range");
   PRECONDITION(mol.getNumAtoms(), "Empty molecule");
 
   freesasa_parameters params = freesasa_default_parameters;
   params.n_threads = 1;
+  params.probe_radius = opts.probeRadius;
   switch (opts.algorithm) {
     case SASAOpts::LeeRichards:
       params.alg = FREESASA_LEE_RICHARDS;
@@ -151,7 +159,9 @@ double internalCalcSASA(const ROMol &mol, const std::vector<double> &radii,
 
   freesasa_result *res =
       freesasa_calc_coord(&coords[0], &radii[0], mol.getNumAtoms(), &params);
-  if (!res) return 0.0;
+  if (!res) {
+    return 0.0;
+  }
   CHECK_INVARIANT(res->n_atoms == rdcast<int>(mol.getNumAtoms()),
                   "freesasa didn't return the correct number of atoms");
 
@@ -166,7 +176,7 @@ double internalCalcSASA(const ROMol &mol, const std::vector<double> &radii,
   freesasa_result_free(res);
   return sasa;
 }
-}
+}  // namespace
 
 double calcSASA(const RDKit::ROMol &mol, const std::vector<double> &radii,
                 int confIdx, const RDKit::QueryAtom *query,
@@ -194,4 +204,4 @@ const RDKit::QueryAtom *makeFreeSasaPolarAtomQuery() {
   qa->setQuery(makePropQuery<Atom, std::string>("SASAClassName", "Polar"));
   return qa;
 }
-}
+}  // namespace FreeSASA

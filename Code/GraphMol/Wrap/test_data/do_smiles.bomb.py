@@ -1,7 +1,7 @@
-from __future__ import print_function
+
 
 import re
-splitExpr = re.compile('[\t\ ]')
+splitExpr = re.compile('[\t ]')
 
 from Chem import rdmol
 

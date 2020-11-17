@@ -9,6 +9,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_MMFFSTRETCHBEND_H__
 #define __RD_MMFFSTRETCHBEND_H__
 
@@ -23,9 +24,9 @@ class MMFFStbn;
 class MMFFProp;
 
 //! The angle-bend term for MMFF
-class StretchBendContrib : public ForceFieldContrib {
+class RDKIT_FORCEFIELD_EXPORT StretchBendContrib : public ForceFieldContrib {
  public:
-  StretchBendContrib() : d_at1Idx(-1), d_at2Idx(-1), d_at3Idx(-1){};
+  StretchBendContrib()  {};
   //! Constructor
   /*!
     The angle is between atom1 - atom2 - atom3
@@ -51,19 +52,19 @@ class StretchBendContrib : public ForceFieldContrib {
   };
 
  private:
-  int d_at1Idx, d_at2Idx, d_at3Idx;
+  int d_at1Idx{-1}, d_at2Idx{-1}, d_at3Idx{-1};
   double d_restLen1, d_restLen2, d_theta0;
   std::pair<double, double> d_forceConstants;
 };
 namespace Utils {
 //! returns the std::pair of stretch-bend force constants for an angle
-std::pair<double, double> calcStbnForceConstants(
+RDKIT_FORCEFIELD_EXPORT std::pair<double, double> calcStbnForceConstants(
     const MMFFStbn *mmffStbnParams);
 //! calculates and returns the stretch-bending MMFF energy
-std::pair<double, double> calcStretchBendEnergy(
+RDKIT_FORCEFIELD_EXPORT std::pair<double, double> calcStretchBendEnergy(
     const double deltaDist1, const double deltaDist2, const double deltaTheta,
     const std::pair<double, double> forceConstants);
-}
-}
-}
+}  // namespace Utils
+}  // namespace MMFF
+}  // namespace ForceFields
 #endif

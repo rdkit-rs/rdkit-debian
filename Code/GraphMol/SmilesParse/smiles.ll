@@ -90,6 +90,15 @@ size_t setup_smiles_string(const std::string &text,yyscan_t yyscanner){
 %s IN_ATOM_STATE
 %%
 
+%{
+  if (start_token)
+    {
+      int t = start_token;
+      start_token = 0;
+      return t;
+    }
+%}
+
 @[' ']*TH |
 @[' ']*AL |
 @[' ']*SQ |
@@ -322,11 +331,13 @@ s		    {	yylval->atom = new Atom( 16 );
 	  yylval->bond->setQuery(makeBondNullQuery());
 	  return BOND_TOKEN;  }
 
-[\\]{1,2}    { yylval->bond = new Bond(Bond::SINGLE);
+[\\]{1,2}    { yylval->bond = new Bond(Bond::UNSPECIFIED);
+	yylval->bond->setProp(RDKit::common_properties::_unspecifiedOrder,1);
 	yylval->bond->setBondDir(Bond::ENDDOWNRIGHT);
 	return BOND_TOKEN;  }
 
-[\/]    { yylval->bond = new Bond(Bond::SINGLE);
+[\/]    { yylval->bond = new Bond(Bond::UNSPECIFIED);
+	yylval->bond->setProp(RDKit::common_properties::_unspecifiedOrder,1);
 	yylval->bond->setBondDir(Bond::ENDUPRIGHT);
 	return BOND_TOKEN;  }
 

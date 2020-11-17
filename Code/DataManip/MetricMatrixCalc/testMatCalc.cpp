@@ -8,11 +8,12 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include "MetricFuncs.h"
 #include "MetricMatrixCalc.h"
 
 #include <cstdlib>
-#include <time.h>
+#include <ctime>
 
 using namespace RDDataManip;
 int main() {

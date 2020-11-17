@@ -8,8 +8,9 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <iostream>
-#include <math.h>
+#include <cmath>
 #include <RDGeneral/Invariant.h>
 
 #include "BFGSOpt.h"

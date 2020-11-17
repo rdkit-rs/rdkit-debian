@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2003-2013 Greg Landrum and Rational Discovery LLC
+//  Copyright (C) 2003-2019 Greg Landrum and Rational Discovery LLC
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -21,13 +21,8 @@
 namespace python = boost::python;
 using namespace RDKit;
 
-void rdSanitExceptionTranslator(RDKit::MolSanitizeException const& x) {
-  std::ostringstream ss;
-  ss << "Sanitization error: " << x.message();
-  PyErr_SetString(PyExc_ValueError, ss.str().c_str());
-}
-
 void wrap_molops();
+void wrap_chiralityops();
 
 BOOST_PYTHON_MODULE(rdmolops) {
   python::scope().attr("__doc__") =
@@ -38,4 +33,5 @@ BOOST_PYTHON_MODULE(rdmolops) {
   // Functions from MolOps
   //****************************
   wrap_molops();
+  wrap_chiralityops();
 }

@@ -16,7 +16,7 @@
 #include <GraphMol/MolPickler.h>
 #include <iostream>
 #include <sstream>
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 namespace RDKit {
 
@@ -26,6 +26,7 @@ MolCatalogEntry::MolCatalogEntry(const ROMol *omol) {
   dp_props = new Dict();
   d_descrip = "";
   dp_mol = omol;
+  d_order = 0;
 }
 
 MolCatalogEntry::MolCatalogEntry(const MolCatalogEntry &other) {
@@ -39,6 +40,7 @@ MolCatalogEntry::MolCatalogEntry(const MolCatalogEntry &other) {
   if (other.dp_mol) {
     dp_mol = new ROMol(*other.dp_mol);
   }
+  d_order = other.d_order;
 }
 
 MolCatalogEntry::~MolCatalogEntry() {
@@ -62,7 +64,7 @@ void MolCatalogEntry::toStream(std::ostream &ss) const {
   PRECONDITION(dp_mol, "bad mol");
   MolPickler::pickleMol(*dp_mol, ss);
 
-  boost::int32_t tmpInt;
+  std::int32_t tmpInt;
   tmpInt = getBitId();
   streamWrite(ss, tmpInt);
 
@@ -93,7 +95,7 @@ void MolCatalogEntry::initFromStream(std::istream &ss) {
 
   dp_props = new Dict();
 
-  boost::int32_t tmpInt;
+  std::int32_t tmpInt;
   // the bitId:
   streamRead(ss, tmpInt);
   setBitId(tmpInt);
@@ -119,4 +121,4 @@ void MolCatalogEntry::initFromString(const std::string &text) {
   // now start reading out values:
   initFromStream(ss);
 }
-}
+}  // namespace RDKit

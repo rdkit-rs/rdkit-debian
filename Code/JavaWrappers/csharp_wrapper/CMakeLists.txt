@@ -2,12 +2,12 @@ project (GraphMolCSharp)
 
 include_directories( ${RDKit_ExternalDir} )
 
-# find the gmcs executables on non-windows systems:
+# find the mcs executables on non-windows systems:
 if(NOT WIN32)
-  find_program(GMCS_EXE gmcs)
+  find_program(GMCS_EXE mcs)
   if (NOT GMCS_EXE)
-	MESSAGE ("gmcs (executable) is not found. Please add it to PATH and rerun cmake.")
-	MESSAGE(FATAL_ERROR "Cannot find required executable gmcs")
+	MESSAGE ("mcs (executable) is not found. Please add it to PATH and rerun cmake.")
+	MESSAGE(FATAL_ERROR "Cannot find required executable mcs")
   endif (NOT GMCS_EXE)
 endif(NOT WIN32)
 
@@ -41,10 +41,13 @@ endif()
 SET(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_SOURCE_DIR}/swig_csharp )
 
 if(RDK_BUILD_INCHI_SUPPORT)
-  SET(CMAKE_SWIG_FLAGS "-DBUILD_INCHI_SUPPORT" ${CMAKE_SWIG_FLAGS} )
+  SET(CMAKE_SWIG_FLAGS "-DRDK_BUILD_INCHI_SUPPORT" ${CMAKE_SWIG_FLAGS} )
 endif()
 if(RDK_BUILD_AVALON_SUPPORT)
-  SET(CMAKE_SWIG_FLAGS "-DBUILD_AVALON_SUPPORT" ${CMAKE_SWIG_FLAGS} )
+  SET(CMAKE_SWIG_FLAGS "-DRDK_BUILD_AVALON_SUPPORT" ${CMAKE_SWIG_FLAGS} )
+endif()
+if(RDK_USE_BOOST_IOSTREAMS)
+  SET(CMAKE_SWIG_FLAGS "-DRDK_USE_BOOST_IOSTREAMS" ${CMAKE_SWIG_FLAGS} )
 endif()
 
 FILE(GLOB SWIG_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../*.i")

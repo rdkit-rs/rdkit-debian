@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2003-2015 Greg Landrum and Rational Discovery LLC
+//  Copyright (C) 2003-2018 Greg Landrum and Rational Discovery LLC
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -14,6 +14,7 @@
 
 */
 
+#include <RDGeneral/export.h>
 #ifndef __RD_ROMOL_H__
 #define __RD_ROMOL_H__
 
@@ -32,10 +33,12 @@
 #include <RDGeneral/RDProps.h>
 #include "Atom.h"
 #include "Bond.h"
-
 #include "Conformer.h"
+#include "SubstanceGroup.h"
+#include "StereoGroup.h"
 
 namespace RDKit {
+class SubstanceGroup;
 class Atom;
 class Bond;
 //! This is the BGL type used to store the topology:
@@ -62,9 +65,9 @@ class QueryAtomIterator_;
 template <class T1, class T2>
 class MatchingAtomIterator_;
 
-extern const int ci_RIGHTMOST_ATOM;
-extern const int ci_LEADING_BOND;
-extern const int ci_ATOM_HOLDER;
+RDKIT_GRAPHMOL_EXPORT extern const int ci_RIGHTMOST_ATOM;
+RDKIT_GRAPHMOL_EXPORT extern const int ci_LEADING_BOND;
+RDKIT_GRAPHMOL_EXPORT extern const int ci_ATOM_HOLDER;
 
 //! ROMol is a molecule class that is intended to have a fixed topology
 /*!
@@ -165,7 +168,7 @@ struct CXXBondIterator {
   CXXBondIter end() { return {graph, vend}; }
 };
 
-class ROMol : public RDProps {
+class RDKIT_GRAPHMOL_EXPORT ROMol : public RDProps {
  public:
   friend class MolPickler;
   friend class RWMol;
@@ -264,7 +267,7 @@ class ROMol : public RDProps {
     return {&d_graph};
   }
 
-  ROMol() : RDProps(), numBonds(0) { initMol(); }
+  ROMol() : RDProps() { initMol(); }
 
   //! copy constructor with a twist
   /*!
@@ -279,7 +282,7 @@ class ROMol : public RDProps {
   */
   ROMol(const ROMol &other, bool quickCopy = false, int confId = -1)
       : RDProps() {
-    dp_ringInfo = 0;
+    dp_ringInfo = nullptr;
     initFromOther(other, quickCopy, confId);
     numBonds = rdcast<unsigned int>(boost::num_edges(d_graph));
   };
@@ -293,7 +296,10 @@ class ROMol : public RDProps {
   //@{
 
   //! returns our number of atoms
-  unsigned int getNumAtoms(bool onlyExplicit = 1) const;
+  inline unsigned int getNumAtoms() const {
+    return rdcast<unsigned int>(boost::num_vertices(d_graph));
+  };
+  unsigned int getNumAtoms(bool onlyExplicit) const;
   //! returns our number of heavy atoms (atomic number > 1)
   unsigned int getNumHeavyAtoms() const;
   //! returns a pointer to a particular Atom
@@ -366,12 +372,15 @@ class ROMol : public RDProps {
   };
   //! returns the first Atom associated with the \c bookmark provided
   Atom *getAtomWithBookmark(int mark);
+  //! returns the Atom associated with the \c bookmark provided
+  //! a check is made to ensure it is the only atom with that bookmark
+  Atom *getUniqueAtomWithBookmark(int mark);
   //! returns all Atoms associated with the \c bookmark provided
   ATOM_PTR_LIST &getAllAtomsWithBookmark(int mark);
   //! removes a \c bookmark from our collection
-  void clearAtomBookmark(const int mark);
+  void clearAtomBookmark(int mark);
   //! removes a particular Atom from the list associated with the \c bookmark
-  void clearAtomBookmark(const int mark, const Atom *atom);
+  void clearAtomBookmark(int mark, const Atom *atom);
 
   //! blows out all atomic \c bookmarks
   void clearAllAtomBookmarks() { d_atomBookmarks.clear(); };
@@ -386,6 +395,9 @@ class ROMol : public RDProps {
   };
   //! returns the first Bond associated with the \c bookmark provided
   Bond *getBondWithBookmark(int mark);
+  //! returns the Bond associated with the \c bookmark provided
+  //! a check is made to ensure it is the only bond with that bookmark
+  Bond *getUniqueBondWithBookmark(int mark);
   //! returns all bonds associated with the \c bookmark provided
   BOND_PTR_LIST &getAllBondsWithBookmark(int mark);
   //! removes a \c bookmark from our collection
@@ -424,7 +436,7 @@ class ROMol : public RDProps {
     \param conf - conformation to be added to the molecule, this molecule takes
     ownership
                   of the conformer
-    \param assignId - a unique ID will be assigned to the the conformation if
+    \param assignId - a unique ID will be assigned to the conformation if
     true
                       otherwise it is assumed that the conformation already has
     an (unique) ID set
@@ -434,8 +446,6 @@ class ROMol : public RDProps {
   inline unsigned int getNumConformers() const {
     return rdcast<unsigned int>(d_confs.size());
   }
-
-  //@}
 
   //! \name Topology
   //@{
@@ -647,17 +657,34 @@ class ROMol : public RDProps {
   Bond *operator[](const edge_descriptor &e) { return d_graph[e]; };
   const Bond *operator[](const edge_descriptor &e) const { return d_graph[e]; };
 
+  //! Gets a reference to the groups of atoms with relative stereochemistry
+  /*!
+    Stereo groups are also called enhanced stereochemistry in the SDF/Mol3000
+    file format.
+  */
+  const std::vector<StereoGroup> &getStereoGroups() const {
+    return d_stereo_groups;
+  }
+
  private:
   MolGraph d_graph;
   ATOM_BOOKMARK_MAP d_atomBookmarks;
   BOND_BOOKMARK_MAP d_bondBookmarks;
   RingInfo *dp_ringInfo;
   CONF_SPTR_LIST d_confs;
+  std::vector<SubstanceGroup> d_sgroups;
+  friend RDKIT_GRAPHMOL_EXPORT std::vector<SubstanceGroup> &getSubstanceGroups(
+      ROMol &);
+  friend RDKIT_GRAPHMOL_EXPORT const std::vector<SubstanceGroup>
+      &getSubstanceGroups(const ROMol &);
+  void clearSubstanceGroups() { d_sgroups.clear(); }
+  std::vector<StereoGroup> d_stereo_groups;
+
   ROMol &operator=(
       const ROMol &);  // disable assignment, RWMol's support assignment
 
  protected:
-  unsigned int numBonds;
+  unsigned int numBonds{0};
 #ifndef WIN32
  private:
 #endif
@@ -686,6 +713,15 @@ class ROMol : public RDProps {
     \return the new number of bonds
   */
   unsigned int addBond(Bond *bond, bool takeOwnership = false);
+
+  //! Sets groups of atoms with relative stereochemistry
+  /*!
+    \param stereo_groups the new set of stereo groups. All will be replaced.
+
+    Stereo groups are also called enhanced stereochemistry in the SDF/Mol3000
+    file format. stereo_groups should be std::move()ed into this function.
+  */
+  void setStereoGroups(std::vector<StereoGroup> stereo_groups);
   //! adds a Bond to our collection
   /*!
     \param bond          pointer to the Bond to add
@@ -707,5 +743,5 @@ typedef std::vector<ROMOL_SPTR> MOL_SPTR_VECT;
 typedef MOL_PTR_VECT::const_iterator MOL_PTR_VECT_CI;
 typedef MOL_PTR_VECT::iterator MOL_PTR_VECT_I;
 
-};  // end of RDKit namespace
+};  // namespace RDKit
 #endif

@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_FFCONTRIB_H__
 #define __RD_FFCONTRIB_H__
 
@@ -14,11 +15,11 @@ namespace ForceFields {
 class ForceField;
 
 //! abstract base class for contributions to ForceFields
-class ForceFieldContrib {
+class RDKIT_FORCEFIELD_EXPORT ForceFieldContrib {
  public:
   friend class ForceField;
 
-  ForceFieldContrib() : dp_forceField(0){};
+  ForceFieldContrib()  {};
   ForceFieldContrib(ForceFields::ForceField *owner) : dp_forceField(owner){};
   virtual ~ForceFieldContrib(){};
 
@@ -32,8 +33,8 @@ class ForceFieldContrib {
   virtual ForceFieldContrib *copy() const = 0;
 
  protected:
-  ForceField *dp_forceField;  //!< our owning ForceField
+  ForceField *dp_forceField{nullptr};  //!< our owning ForceField
 };
-}
+}  // namespace ForceFields
 
 #endif

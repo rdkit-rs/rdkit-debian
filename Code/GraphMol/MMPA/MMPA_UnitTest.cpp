@@ -31,6 +31,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 #ifndef _MSC_VER
+#include <RDGeneral/test.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
@@ -41,9 +42,9 @@
 #include <sys/resource.h>
 #endif
 
-#include <stdio.h>
-#include <string.h>
-#include <time.h>
+#include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <string>
 #include <iostream>
 #include <RDGeneral/RDLog.h>
@@ -77,7 +78,7 @@ static inline int gettimeofday(struct timeval* tv, struct timezone* tz) {
   unsigned __int64 tmpres = 0;
   static int tzflag;
 
-  if (NULL != tv) {
+  if (nullptr != tv) {
     GetSystemTimeAsFileTime(&ft);
 
     tmpres |= ft.dwHighDateTime;
@@ -91,7 +92,7 @@ static inline int gettimeofday(struct timeval* tv, struct timezone* tz) {
     tv->tv_usec = (long)(tmpres % 1000000UL);
   }
 
-  if (NULL != tz) {
+  if (nullptr != tz) {
     if (!tzflag) {
       _tzset();
       tzflag++;
@@ -122,12 +123,14 @@ std::string getSmilesOnly(
     std::string* id = nullptr) {  // remove label, because RDKit parse FAILED
   const char* sp = strchr(smiles, ' ');
   unsigned n = (sp ? sp - smiles + 1 : strlen(smiles));
-  if (id) *id = std::string(smiles + (n--));
+  if (id) {
+    *id = std::string(smiles + (n--));
+  }
   return std::string(smiles, n);
 }
 
 void debugTest1(const char* init_mol) {
-  std::auto_ptr<RWMol> m(SmilesToMol(init_mol));
+  std::unique_ptr<RWMol> m(SmilesToMol(init_mol));
   std::cout << "INIT MOL: " << init_mol << "\n";
   std::cout << "CONV MOL: " << MolToSmiles(*m, true) << "\n";
 }
@@ -135,7 +138,7 @@ void debugTest1(const char* init_mol) {
  * Work-around functions for RDKit canonical
  */
 std::string createCanonicalFromSmiles(const char* smiles) {
-  std::auto_ptr<RWMol> m(SmilesToMol(smiles));
+  std::unique_ptr<RWMol> m(SmilesToMol(smiles));
   std::string res = MolToSmiles(*m, true);
   //    replaceAllMap(res);
   return res;
@@ -166,25 +169,40 @@ void test1() {
 
   const char* fs_sm[] = {
       // 15 reference result's SMILES.
-      "", "C[*:1].O=C(NCCO)c1c(n([O-])c2ccccc2[n+]1=O)[*:1]",
+      "",
+      "C[*:1].O=C(NCCO)c1c(n([O-])c2ccccc2[n+]1=O)[*:1]",
       // ORIGINAL:        "","[*:1]C.[*:1]c1c(C(=O)NCCO)[n+](=O)c2ccccc2n1[O-]",
 
-      "[*:1]c1c([*:2])[n+](=O)c2ccccc2n1[O-]", "[*:1]C.[*:2]C(=O)NCCO",
-      "[*:2]CNC([*:1])=O", "[*:2]CO.[*:1]c1c(C)n([O-])c2ccccc2[n+]1=O",
-      "[*:2]C[*:1]", "[*:2]CO.[*:1]NC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O",
-      "[*:2]NC([*:1])=O", "[*:2]CCO.[*:1]c1c(C)n([O-])c2ccccc2[n+]1=O",
-      "[*:2]NC(=O)c1c([*:1])n([O-])c2ccccc2[n+]1=O", "[*:1]C.[*:2]CCO",
-      "[*:2]CNC(=O)c1c([*:1])n([O-])c2ccccc2[n+]1=O", "[*:1]C.[*:2]CO",
-      "[*:2]CCNC(=O)c1c([*:1])n([O-])c2ccccc2[n+]1=O", "[*:1]C.[*:2]O",
+      "[*:1]c1c([*:2])[n+](=O)c2ccccc2n1[O-]",
+      "[*:1]C.[*:2]C(=O)NCCO",
+      "[*:2]CNC([*:1])=O",
+      "[*:2]CO.[*:1]c1c(C)n([O-])c2ccccc2[n+]1=O",
+      "[*:2]C[*:1]",
+      "[*:2]CO.[*:1]NC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O",
+      "[*:2]NC([*:1])=O",
+      "[*:2]CCO.[*:1]c1c(C)n([O-])c2ccccc2[n+]1=O",
+      "[*:2]NC(=O)c1c([*:1])n([O-])c2ccccc2[n+]1=O",
+      "[*:1]C.[*:2]CCO",
+      "[*:2]CNC(=O)c1c([*:1])n([O-])c2ccccc2[n+]1=O",
+      "[*:1]C.[*:2]CO",
+      "[*:2]CCNC(=O)c1c([*:1])n([O-])c2ccccc2[n+]1=O",
+      "[*:1]C.[*:2]O",
 
-      "", "Cc1c([n+](=O)c2ccccc2n1[O-])[*:1].O=C(NCCO)[*:1]",
+      "",
+      "Cc1c([n+](=O)c2ccccc2n1[O-])[*:1].O=C(NCCO)[*:1]",
       // ORIGINAL:        "","[*:1]C(=O)NCCO.[*:1]c1c(C)n([O-])c2ccccc2[n+]1=O",
 
-      "", "[*:1]CCO.[*:1]NC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O", "",
-      "[*:1]CO.[*:1]CNC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O", "",
-      "[*:1]O.[*:1]CCNC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O", "[*:2]CC[*:1]",
-      "[*:2]O.[*:1]NC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O", "[*:2]CCNC([*:1])=O",
-      "[*:2]O.[*:1]c1c(C)n([O-])c2ccccc2[n+]1=O", "[*:2]C[*:1]",
+      "",
+      "[*:1]CCO.[*:1]NC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O",
+      "",
+      "[*:1]CO.[*:1]CNC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O",
+      "",
+      "[*:1]O.[*:1]CCNC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O",
+      "[*:2]CC[*:1]",
+      "[*:2]O.[*:1]NC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O",
+      "[*:2]CCNC([*:1])=O",
+      "[*:2]O.[*:1]c1c(C)n([O-])c2ccccc2[n+]1=O",
+      "[*:2]C[*:1]",
       "[*:2]O.[*:1]CNC(=O)c1c(C)n([O-])c2ccccc2[n+]1=O",
   };
   char fs[15][256];  // 15 reference results with updated RDKit's SMARTS Writer
@@ -278,7 +296,7 @@ void test1() {
     std::string id;
     std::string smiles = getSmilesOnly(smi[i], &id);
     ROMol* mol = SmilesToMol(smiles);
-    std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR> > res;
+    std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>> res;
     t0 = nanoClock();
     RDKit::MMPA::fragmentMol(*mol, res, 3);
     printTime();
@@ -312,14 +330,17 @@ void test1() {
           break;
         }
       }
-      if (j < 9) std::cout << " ";
+      if (j < 9) {
+        std::cout << " ";
+      }
       if (failed) {
         test_failed = true;
         std::cout << j + 1 << ": NOREF. Reference data NOT LISTED in test case."
                   << ss.str() << "\n";  // << "FS: " << fs[j] <<"\n";
-      } else
+      } else {
         std::cout << j + 1 << ": PASSED. matchedRefRes = " << matchedRefRes + 1
                   << "\n";  // ok: << "ss: " << ss.str() <<"\n";
+      }
       std::cout.flush();
     }
     std::cout << "\n --- UNMATCHED Reference RESULTS: --- \n";
@@ -331,7 +352,9 @@ void test1() {
     }
     std::cout << " -----------------------------------\n"
               << "DO TEST_ASSERT():\n";
-    if (test_failed) n_failed++;
+    if (test_failed) {
+      n_failed++;
+    }
     TEST_ASSERT(!test_failed);
   }
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
@@ -382,9 +405,9 @@ void test2() {
     static const std::string es("NULL");
     std::string id;
     std::string smiles = getSmilesOnly(smi[i], &id);
-    std::auto_ptr<ROMol> mol(SmilesToMol(smiles));
+    std::unique_ptr<ROMol> mol(SmilesToMol(smiles));
 
-    std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR> > res;
+    std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>> res;
 
     t0 = nanoClock();
     /*
@@ -406,10 +429,12 @@ void test2() {
       int token_num = 0;
       ref_str.str("");
       while (getline(ss_token, s_token, ',')) {
-        if (token_num == 2)
+        if (token_num == 2) {
           ref_str << createCanonicalFromSmiles(s_token.c_str()) << ",";
-        if (token_num == 3)
+        }
+        if (token_num == 3) {
           ref_str << createCanonicalFromSmiles(s_token.c_str());
+        }
         token_num++;
       }
       ref_map[ref_str.str()] = r;
@@ -438,7 +463,9 @@ void test2() {
       std::stringstream res_str;
       res_str << first_res << "," << second_res;
 
-      if (res_idx < 9) std::cout << " ";
+      if (res_idx < 9) {
+        std::cout << " ";
+      }
 
       if (ref_map.find(res_str.str()) != ref_map.end()) {
         size_t matchedRefRes = ref_map[res_str.str()];
@@ -458,8 +485,9 @@ void test2() {
       n_failed++;
       std::cout << "\n --- UNMATCHED Reference RESULTS: --- \n";
       for (size_t r = 0; r < sizeof(fs) / sizeof(fs[0]); r++) {
-        if (fs2res.end() == fs2res.find(r))
+        if (fs2res.end() == fs2res.find(r)) {
           std::cout << (r < 9 ? " " : "") << r + 1 << ": " << fs[r] << "\n";
+        }
       }
     } else {
       std::cout << "\n --- ALL PASSED --- \n";
@@ -475,8 +503,8 @@ void doTest(const char* smi, const char* fs[], unsigned fs_size) {
   static const std::string es("NULL");
   std::string id;
   std::string smiles = getSmilesOnly(smi, &id);
-  std::auto_ptr<ROMol> mol(SmilesToMol(smiles));
-  std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR> > res;
+  std::unique_ptr<ROMol> mol(SmilesToMol(smiles));
+  std::vector<std::pair<ROMOL_SPTR, ROMOL_SPTR>> res;
 
   std::cout << "\nTEST mol: " << id << " " << smi << "\n";
   t0 = nanoClock();
@@ -494,9 +522,12 @@ void doTest(const char* smi, const char* fs[], unsigned fs_size) {
     int token_num = 0;
     ref_str.str("");
     while (getline(ss_token, s_token, ',')) {
-      if (token_num == 2)
+      if (token_num == 2) {
         ref_str << createCanonicalFromSmiles(s_token.c_str()) << ",";
-      if (token_num == 3) ref_str << createCanonicalFromSmiles(s_token.c_str());
+      }
+      if (token_num == 3) {
+        ref_str << createCanonicalFromSmiles(s_token.c_str());
+      }
       token_num++;
     }
     ref_map[ref_str.str()] = r;
@@ -504,13 +535,15 @@ void doTest(const char* smi, const char* fs[], unsigned fs_size) {
 
   bool has_failed = false;
   for (size_t res_idx = 0; res_idx < res.size(); res_idx++) {
-    if (res_idx < 9) std::cout << " ";
+    if (res_idx < 9) {
+      std::cout << " ";
+    }
     std::cout << res_idx + 1 << ": res= ";
     /*
-        * Somehow canonical smiles does not return the same result after just
+     * Somehow canonical smiles does not return the same result after just
      * saving.
-        * Workaround is: save -> load -> save
-        */
+     * Workaround is: save -> load -> save
+     */
     std::string first_res =
         (res[res_idx].first.get()
              ? createCanonicalFromSmiles(MolToSmiles(*res[res_idx].first, true))
@@ -526,7 +559,9 @@ void doTest(const char* smi, const char* fs[], unsigned fs_size) {
     std::stringstream res_str;
     res_str << first_res << "," << second_res;
 
-    if (res_idx < 9) std::cout << " ";
+    if (res_idx < 9) {
+      std::cout << " ";
+    }
 
     if (ref_map.find(res_str.str()) != ref_map.end()) {
       size_t matchedRefRes = ref_map[res_str.str()];
@@ -546,8 +581,9 @@ void doTest(const char* smi, const char* fs[], unsigned fs_size) {
     n_failed++;
     std::cout << "\n --- UNMATCHED Reference RESULTS: --- \n";
     for (size_t r = 0; r < fs_size; r++) {
-      if (fs2res.end() == fs2res.find(r))
+      if (fs2res.end() == fs2res.find(r)) {
         std::cout << (r < 9 ? " " : "") << r + 1 << ": " << fs[r] << "\n";
+      }
     }
   } else {
     std::cout << "\n --- ALL PASSED --- \n";
@@ -701,8 +737,9 @@ int main() {
   if (0 != n_failed) {
     std::cout << n_failed << " TEST CASES FAILED \n";
     TEST_ASSERT(0 != n_failed);
-  } else
+  } else {
     std::cout << " --- ALL TEST CASES PASSED --- \n";
+  }
   BOOST_LOG(rdInfoLog)
       << "*******************************************************\n";
   return 0;

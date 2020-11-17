@@ -9,14 +9,16 @@
 //  of the RDKit source tree.
 //
 #include <GraphMol/QueryBond.h>
+#include <Query/NullQueryAlgebra.h>
 
 namespace RDKit {
 
 QueryBond::QueryBond(BondType bT) : Bond(bT) {
-  if (bT != Bond::UNSPECIFIED)
+  if (bT != Bond::UNSPECIFIED) {
     dp_query = makeBondOrderEqualsQuery(bT);
-  else
+  } else {
     dp_query = makeBondNullQuery();
+  }
 };
 
 QueryBond::~QueryBond() {
@@ -30,7 +32,7 @@ QueryBond &QueryBond::operator=(const QueryBond &other) {
   dp_mol = nullptr;
   d_bondType = other.d_bondType;
   dp_query = other.dp_query->copy();
-  dp_props = other.dp_props;
+  d_props = other.d_props;
   return *this;
 }
 
@@ -57,7 +59,7 @@ void QueryBond::setBondDir(BondDir bD) {
   //   situations, whatever those may be.
   //
   d_dirTag = bD;
-#if 0  
+#if 0
   delete dp_query;
   dp_query = NULL;
   dp_query = makeBondDirEqualsQuery(bD);
@@ -67,6 +69,15 @@ void QueryBond::setBondDir(BondDir bD) {
 void QueryBond::expandQuery(QUERYBOND_QUERY *what,
                             Queries::CompositeQueryType how,
                             bool maintainOrder) {
+  bool thisIsNullQuery = dp_query->getDescription() == "BondNull";
+  bool otherIsNullQuery = what->getDescription() == "BondNull";
+
+  if (thisIsNullQuery || otherIsNullQuery) {
+    mergeNullQueries(dp_query, thisIsNullQuery, what, otherIsNullQuery, how);
+    delete what;
+    return;
+  }
+
   QUERYBOND_QUERY *origQ = dp_query;
   std::string descrip;
   switch (how) {
@@ -136,7 +147,9 @@ bool queriesMatch(QueryBond::QUERYBOND_QUERY const *q1,
           res = true;
         }
       }
-      if (res) break;
+      if (res) {
+        break;
+      }
     }
   } else if (d1 == "BondAnd") {
     res = true;
@@ -185,7 +198,7 @@ bool queriesMatch(QueryBond::QUERYBOND_QUERY const *q1,
   }
   return res;
 }
-}  // end of local namespace
+}  // namespace
 
 bool QueryBond::Match(Bond const *what) const {
   PRECONDITION(what, "bad query bond");
@@ -202,4 +215,4 @@ bool QueryBond::QueryMatch(QueryBond const *what) const {
   }
 }
 
-}  // end o' namespace
+}  // namespace RDKit

@@ -14,6 +14,7 @@
    <b>WARNING:</b> If you go changing the molecule underneath one of
    these iterators you will be sad...
 */
+#include <RDGeneral/export.h>
 #ifndef _RD_BOND_ITERATORS_H
 #define _RD_BOND_ITERATORS_H
 
@@ -23,11 +24,11 @@ namespace RDKit {
 
 //! \brief iterator for a molecule's bonds, currently BiDirectional,
 //! but it theoretically ought to be RandomAccess.
-class BondIterator_ {
+class RDKIT_GRAPHMOL_EXPORT BondIterator_ {
   // FIX: I'm not pleased with the lack of internal testing code
   //  (PREs and the like) in here
  public:
-  BondIterator_() : _mol(NULL){};
+  BondIterator_()  {};
   BondIterator_(ROMol *mol);
   BondIterator_(ROMol *mol, ROMol::EDGE_ITER pos);
   BondIterator_(const BondIterator_ &other);
@@ -44,13 +45,13 @@ class BondIterator_ {
 
  private:
   ROMol::EDGE_ITER _beg, _end, _pos;
-  ROMol *_mol;
+  ROMol *_mol{nullptr};
 };
 //! \brief const iterator for a molecule's bonds, currently BiDirectional,
 //! but it theoretically ought to be RandomAccess.
-class ConstBondIterator_ {
+class RDKIT_GRAPHMOL_EXPORT ConstBondIterator_ {
  public:
-  ConstBondIterator_() : _mol(NULL){};
+  ConstBondIterator_()  {};
   ConstBondIterator_(ROMol const *mol);
   ConstBondIterator_(ROMol const *mol, ROMol::EDGE_ITER pos);
   ConstBondIterator_(const ConstBondIterator_ &other);
@@ -67,8 +68,8 @@ class ConstBondIterator_ {
 
  private:
   ROMol::EDGE_ITER _beg, _end, _pos;
-  ROMol const *_mol;
+  ROMol const *_mol{nullptr};
 };
-}
+}  // namespace RDKit
 
 #endif

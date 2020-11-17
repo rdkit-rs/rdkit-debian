@@ -6,6 +6,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <RDGeneral/RDLog.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/MolPickler.h>
@@ -420,6 +421,44 @@ void test6() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testGithub2046() {
+  BOOST_LOG(rdInfoLog) << "testing github #2046: CIPRank values from "
+                          "JSONDataToMols are not unsigned"
+                       << std::endl;
+  roundtripSmi("C1CCO[C@H]1F");
+  {
+    std::unique_ptr<RWMol> mol(SmilesToMol("C1CCO[C@H]1F"));
+    TEST_ASSERT(mol);
+    mol->setProp("_Name", "mol1 name");
+    auto jsond = MolInterchange::MolToJSONData(*mol);
+    auto mols = MolInterchange::JSONDataToMols(jsond);
+    TEST_ASSERT(mols[0]->getAtomWithIdx(3)->getProp<unsigned int>(
+                    RDKit::common_properties::_CIPRank) > 0);
+  }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testEitherStereo() {
+  BOOST_LOG(rdInfoLog) << "testing 'either' stereochemistry" << std::endl;
+  {
+    auto mol = "CC=CC/C=C/C"_smiles;
+    TEST_ASSERT(mol);
+    mol->getBondWithIdx(1)->setStereo(Bond::STEREOANY);
+    auto jsond = MolInterchange::MolToJSONData(*mol);
+    auto mols = MolInterchange::JSONDataToMols(jsond);
+    TEST_ASSERT(mols[0]->getBondWithIdx(1)->getStereo() == Bond::STEREOANY);
+  }
+  {
+    auto mol = "CC=CC"_smiles;
+    TEST_ASSERT(mol);
+    mol->getBondWithIdx(1)->setStereo(Bond::STEREOANY);
+    auto jsond = MolInterchange::MolToJSONData(*mol);
+    auto mols = MolInterchange::JSONDataToMols(jsond);
+    TEST_ASSERT(mols[0]->getBondWithIdx(1)->getStereo() == Bond::STEREOANY);
+  }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 void RunTests() {
 #if 1
   test1();
@@ -428,9 +467,11 @@ void RunTests() {
   test4();
   test5();
   test6();
-
-// benchmarking();
 #endif
+  testGithub2046();
+  testEitherStereo();
+
+  // benchmarking();
   // test2();
 }
 

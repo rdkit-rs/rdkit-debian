@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 //
+#include <RDGeneral/export.h>
 #ifndef _RD_STREAMOPS_H
 #define _RD_STREAMOPS_H
 
@@ -18,18 +19,20 @@
 #include <sstream>
 #include <iostream>
 #include <boost/cstdint.hpp>
-#include <boost/detail/endian.hpp>
+#include <boost/predef.h>
 
 namespace RDKit {
-// this code block for handling endian problems is from :
+// this code block for handling endian problems is adapted from :
 // http://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
 enum EEndian {
   LITTLE_ENDIAN_ORDER,
   BIG_ENDIAN_ORDER,
-#if defined(BOOST_LITTLE_ENDIAN)
+#if defined(BOOST_ENDIAN_LITTLE_BYTE) || defined(BOOST_ENDIAN_LITTLE_WORD)
   HOST_ENDIAN_ORDER = LITTLE_ENDIAN_ORDER
-#elif defined(BOOST_BIG_ENDIAN)
+#elif defined(BOOST_ENDIAN_BIG_BYTE)
   HOST_ENDIAN_ORDER = BIG_ENDIAN_ORDER
+#elif defined(BOOST_ENDIAN_BIG_WORD)
+#error "Cannot compile on word-swapped big-endian systems"
 #else
 #error "Failed to determine the system endian value"
 #endif
@@ -39,8 +42,7 @@ enum EEndian {
 // parameter (could sizeof be used?).
 template <class T, unsigned int size>
 inline T SwapBytes(T value) {
-  if (size < 2)
-    return value;
+  if (size < 2) return value;
 
   union {
     T value;
@@ -57,9 +59,9 @@ inline T SwapBytes(T value) {
 }
 
 // Here is the function you will use. Again there is two compile-time assertion
-// that use the boost librarie. You could probably comment them out, but if you
+// that use the boost libraries. You could probably comment them out, but if you
 // do be cautious not to use this function for anything else than integers
-// types. This function need to be calles like this :
+// types. This function need to be called like this :
 //
 //     int x = someValue;
 //     int i = EndianSwapBytes<HOST_ENDIAN_ORDER, BIG_ENDIAN_ORDER>(x);
@@ -143,28 +145,56 @@ inline boost::uint32_t readPackedIntFromStream(std::stringstream &ss) {
   int shift, offset;
   char tmp;
   ss.read(&tmp, sizeof(tmp));
+  if (ss.fail()) {
+    throw std::runtime_error("failed to read from stream");
+  }
+
   val = UCHAR(tmp);
   offset = 0;
   if ((val & 1) == 0) {
     shift = 1;
   } else if ((val & 3) == 1) {
     ss.read((char *)&tmp, sizeof(tmp));
+    if (ss.fail()) {
+      throw std::runtime_error("failed to read from stream");
+    }
+
     val |= (UCHAR(tmp) << 8);
     shift = 2;
     offset = (1 << 7);
   } else if ((val & 7) == 3) {
     ss.read((char *)&tmp, sizeof(tmp));
+    if (ss.fail()) {
+      throw std::runtime_error("failed to read from stream");
+    }
+
     val |= (UCHAR(tmp) << 8);
     ss.read((char *)&tmp, sizeof(tmp));
+    if (ss.fail()) {
+      throw std::runtime_error("failed to read from stream");
+    }
+
     val |= (UCHAR(tmp) << 16);
     shift = 3;
     offset = (1 << 7) + (1 << 14);
   } else {
     ss.read((char *)&tmp, sizeof(tmp));
+    if (ss.fail()) {
+      throw std::runtime_error("failed to read from stream");
+    }
+
     val |= (UCHAR(tmp) << 8);
     ss.read((char *)&tmp, sizeof(tmp));
+    if (ss.fail()) {
+      throw std::runtime_error("failed to read from stream");
+    }
+
     val |= (UCHAR(tmp) << 16);
     ss.read((char *)&tmp, sizeof(tmp));
+    if (ss.fail()) {
+      throw std::runtime_error("failed to read from stream");
+    }
+
     val |= (UCHAR(tmp) << 24);
     shift = 3;
     offset = (1 << 7) + (1 << 14) + (1 << 21);
@@ -244,6 +274,9 @@ template <typename T>
 void streamRead(std::istream &ss, T &loc) {
   T tloc;
   ss.read((char *)&tloc, sizeof(T));
+  if (ss.fail()) {
+    throw std::runtime_error("failed to read from stream");
+  }
   loc = EndianSwapBytes<LITTLE_ENDIAN_ORDER, HOST_ENDIAN_ORDER>(tloc);
 }
 
@@ -258,10 +291,15 @@ inline void streamRead(std::istream &ss, std::string &what, int version) {
   RDUNUSED_PARAM(version);
   unsigned int l;
   ss.read((char *)&l, sizeof(l));
-  char *buff = new char[l + 1];
+  if (ss.fail()) {
+    throw std::runtime_error("failed to read from stream");
+  }
+  char *buff = new char[l];
   ss.read(buff, sizeof(char) * l);
-  buff[l] = 0;
-  what = buff;
+  if (ss.fail()) {
+    throw std::runtime_error("failed to read from stream");
+  }
+  what = std::string(buff, l);
   delete[] buff;
 };
 
@@ -300,22 +338,38 @@ inline std::string getLine(std::istream &inStream) {
 // n.b. We can't use RDTypeTag directly, they are implementation
 //  specific
 namespace DTags {
-  const unsigned char StringTag = 0;
-  const unsigned char IntTag = 1;
-  const unsigned char UnsignedIntTag = 2;
-  const unsigned char BoolTag = 3;
-  const unsigned char FloatTag = 4;
-  const unsigned char DoubleTag = 5;
-  const unsigned char VecStringTag = 6;
-  const unsigned char VecIntTag = 7;
-  const unsigned char VecUIntTag = 8;
-  const unsigned char VecBoolTag = 9;
-  const unsigned char VecFloatTag = 10;
-  const unsigned char VecDoubleTag = 11;
-  const unsigned char EndTag = 0xFF;
-}
+const unsigned char StringTag = 0;
+const unsigned char IntTag = 1;
+const unsigned char UnsignedIntTag = 2;
+const unsigned char BoolTag = 3;
+const unsigned char FloatTag = 4;
+const unsigned char DoubleTag = 5;
+const unsigned char VecStringTag = 6;
+const unsigned char VecIntTag = 7;
+const unsigned char VecUIntTag = 8;
+const unsigned char VecBoolTag = 9;
+const unsigned char VecFloatTag = 10;
+const unsigned char VecDoubleTag = 11;
 
-inline bool isSerializable(const Dict::Pair &pair) {
+const unsigned char CustomTag = 0xFE;  // custom data
+const unsigned char EndTag = 0xFF;
+}  // namespace DTags
+
+class CustomPropHandler {
+ public:
+  virtual ~CustomPropHandler(){};
+  virtual const char *getPropName() const = 0;
+  virtual bool canSerialize(const RDValue &value) const = 0;
+  virtual bool read(std::istream &ss, RDValue &value) const = 0;
+  virtual bool write(std::ostream &ss, const RDValue &value) const = 0;
+  virtual CustomPropHandler *clone() const = 0;
+};
+
+typedef std::vector<std::shared_ptr<const CustomPropHandler>>
+    CustomPropHandlerVec;
+
+inline bool isSerializable(const Dict::Pair &pair,
+                           const CustomPropHandlerVec &handlers = {}) {
   switch (pair.val.getTag()) {
     case RDTypeTag::StringTag:
     case RDTypeTag::IntTag:
@@ -329,15 +383,24 @@ inline bool isSerializable(const Dict::Pair &pair) {
     case RDTypeTag::VecUnsignedIntTag:
     case RDTypeTag::VecFloatTag:
     case RDTypeTag::VecDoubleTag:
-
       return true;
+    case RDTypeTag::AnyTag:
+      for (auto &handler : handlers) {
+        if (handler->canSerialize(pair.val)) {
+          return true;
+        }
+      }
+      return false;
     default:
       return false;
   }
 }
 
-inline bool streamWriteProp(std::ostream &ss, const Dict::Pair &pair) {
-  if (!isSerializable(pair)) return false;
+inline bool streamWriteProp(std::ostream &ss, const Dict::Pair &pair,
+                            const CustomPropHandlerVec &handlers = {}) {
+  if (!isSerializable(pair, handlers)) {
+    return false;
+  }
 
   streamWrite(ss, pair.key);
   switch (pair.val.getTag()) {
@@ -387,48 +450,63 @@ inline bool streamWriteProp(std::ostream &ss, const Dict::Pair &pair) {
       streamWriteVec(ss, rdvalue_cast<std::vector<unsigned int>>(pair.val));
       break;
     default:
-      std::cerr << "Failed to write " << pair.key << std::endl;
+      for (auto &handler : handlers) {
+        if (handler->canSerialize(pair.val)) {
+          // The form of a custom tag is
+          //  CustomTag
+          //  customPropName (must be unique)
+          //  custom serialization
+          streamWrite(ss, DTags::CustomTag);
+          streamWrite(ss, std::string(handler->getPropName()));
+          handler->write(ss, pair.val);
+          return true;
+        }
+      }
+
       return false;
   }
   return true;
 }
 
 inline bool streamWriteProps(std::ostream &ss, const RDProps &props,
-                             bool savePrivate=false, bool saveComputed=false) {
+                             bool savePrivate = false,
+                             bool saveComputed = false,
+                             const CustomPropHandlerVec &handlers = {}) {
   STR_VECT propsToSave = props.getPropList(savePrivate, saveComputed);
   std::set<std::string> propnames(propsToSave.begin(), propsToSave.end());
-  
+
   const Dict &dict = props.getDict();
   unsigned int count = 0;
-  for(Dict::DataType::const_iterator it = dict.getData().begin();
-      it != dict.getData().end();
-      ++it) {
-    if(isSerializable(*it) && propnames.find(it->key) != propnames.end()) {
-      count ++;
+  for (Dict::DataType::const_iterator it = dict.getData().begin();
+       it != dict.getData().end(); ++it) {
+    if (propnames.find(it->key) != propnames.end()) {
+      if (isSerializable(*it, handlers)) {
+        count++;
+      }
     }
   }
 
-  streamWrite(ss, count); // packed int?
-  
+  streamWrite(ss, count);  // packed int?
+
   unsigned int writtenCount = 0;
-  for(Dict::DataType::const_iterator it = dict.getData().begin();
-      it != dict.getData().end();
-      ++it) {
+  for (Dict::DataType::const_iterator it = dict.getData().begin();
+       it != dict.getData().end(); ++it) {
     if (propnames.find(it->key) != propnames.end()) {
-      if (isSerializable(*it)) {
+      if (isSerializable(*it, handlers)) {
         // note - not all properties are serializable, this may be
         //  a null op
-        if (streamWriteProp(ss, *it)) {
+        if (streamWriteProp(ss, *it, handlers)) {
           writtenCount++;
         }
       }
     }
   }
-  POSTCONDITION(count==writtenCount, "Estimated property count not equal to written");
+  POSTCONDITION(count == writtenCount,
+                "Estimated property count not equal to written");
   return true;
 }
 
-template<class T>
+template <class T>
 void readRDValue(std::istream &ss, RDValue &value) {
   T v;
   streamRead(ss, v);
@@ -444,7 +522,7 @@ void readRDVecValue(std::istream &ss, RDValue &value) {
 
 inline void readRDValueString(std::istream &ss, RDValue &value) {
   std::string v;
-  int version=0;
+  int version = 0;
   streamRead(ss, v, version);
   value = v;
 }
@@ -456,35 +534,68 @@ inline void readRDStringVecValue(std::istream &ss, RDValue &value) {
   value = v;
 }
 
-inline bool streamReadProp(std::istream &ss, Dict::Pair &pair) {
-  int version=0;
+inline bool streamReadProp(std::istream &ss, Dict::Pair &pair,
+                           bool &dictHasNonPOD,
+                           const CustomPropHandlerVec &handlers = {}) {
+  int version = 0;
   streamRead(ss, pair.key, version);
 
   unsigned char type;
   streamRead(ss, type);
-  switch(type) {
-    case DTags::StringTag: readRDValueString(ss, pair.val); break;
-    case DTags::IntTag: readRDValue<int>(ss, pair.val); break;
-    case DTags::UnsignedIntTag: readRDValue<unsigned int>(ss, pair.val); break;
-    case DTags::BoolTag: readRDValue<bool>(ss, pair.val); break;
-    case DTags::FloatTag: readRDValue<float>(ss, pair.val); break;
-    case DTags::DoubleTag: readRDValue<double>(ss, pair.val); break;
+  switch (type) {
+    case DTags::IntTag:
+      readRDValue<int>(ss, pair.val);
+      break;
+    case DTags::UnsignedIntTag:
+      readRDValue<unsigned int>(ss, pair.val);
+      break;
+    case DTags::BoolTag:
+      readRDValue<bool>(ss, pair.val);
+      break;
+    case DTags::FloatTag:
+      readRDValue<float>(ss, pair.val);
+      break;
+    case DTags::DoubleTag:
+      readRDValue<double>(ss, pair.val);
+      break;
 
+    case DTags::StringTag:
+      readRDValueString(ss, pair.val);
+      dictHasNonPOD = true;
+      break;
     case DTags::VecStringTag:
       readRDStringVecValue(ss, pair.val);
+      dictHasNonPOD = true;
       break;
     case DTags::VecIntTag:
       readRDVecValue<int>(ss, pair.val);
+      dictHasNonPOD = true;
       break;
     case DTags::VecUIntTag:
       readRDVecValue<unsigned int>(ss, pair.val);
+      dictHasNonPOD = true;
       break;
     case DTags::VecFloatTag:
       readRDVecValue<float>(ss, pair.val);
+      dictHasNonPOD = true;
       break;
     case DTags::VecDoubleTag:
       readRDVecValue<double>(ss, pair.val);
+      dictHasNonPOD = true;
       break;
+    case DTags::CustomTag: {
+      std::string propType;
+      int version = 0;
+      streamRead(ss, propType, version);
+      for (auto &handler : handlers) {
+        if (propType == handler->getPropName()) {
+          handler->read(ss, pair.val);
+          dictHasNonPOD = true;
+          return true;
+        }
+      }
+      return false;
+    }
 
     default:
       return false;
@@ -492,20 +603,23 @@ inline bool streamReadProp(std::istream &ss, Dict::Pair &pair) {
   return true;
 }
 
-inline unsigned int streamReadProps(std::istream &ss, RDProps &props) {
+inline unsigned int streamReadProps(std::istream &ss, RDProps &props,
+                                    const CustomPropHandlerVec &handlers = {}) {
   unsigned int count;
   streamRead(ss, count);
 
   Dict &dict = props.getDict();
+  dict.reset();  // Clear data before repopulating
   dict.getData().resize(count);
-  for(unsigned index = 0; index<count; ++index) {
-    CHECK_INVARIANT(streamReadProp(ss, dict.getData()[index]),
+  for (unsigned index = 0; index < count; ++index) {
+    CHECK_INVARIANT(streamReadProp(ss, dict.getData()[index],
+                                   dict.getNonPODStatus(), handlers),
                     "Corrupted property serialization detected");
   }
 
   return count;
 }
 
-}
+}  // namespace RDKit
 
 #endif

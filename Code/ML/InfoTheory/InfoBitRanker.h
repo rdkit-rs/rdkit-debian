@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/export.h>
 #ifndef _RD_INFORANKER_H_
 #define _RD_INFORANKER_H_
 
@@ -15,7 +16,7 @@
 #include <DataStructs/BitVects.h>
 #include <iostream>
 
-/*! \brief Class used to rank bits based on a specified measure of infomation
+/*! \brief Class used to rank bits based on a specified measure of information
  *
  * Basically a primitive mimic of the CombiChem "signal" functionality
  * To use:
@@ -83,7 +84,7 @@ namespace RDInfoTheory {
 typedef std::vector<RDKit::USHORT> USHORT_VECT;
 typedef std::vector<USHORT_VECT> VECT_USHORT_VECT;
 
-class InfoBitRanker {
+class RDKIT_INFOTHEORY_EXPORT InfoBitRanker {
  public:
   /*! \brief the type of measure for information
    *
@@ -119,9 +120,9 @@ class InfoBitRanker {
     d_clsCount.resize(d_classes, 0);
     d_nInst = 0;
     d_top = 0;
-    dp_topBits = 0;
+    dp_topBits = nullptr;
     d_biasList.resize(0);
-    dp_maskBits = 0;
+    dp_maskBits = nullptr;
   }
 
   ~InfoBitRanker() {
@@ -208,7 +209,7 @@ class InfoBitRanker {
    *computed
    *    - the maximum of these fractions for classes that are not in the
    *biasList are computed
-   *    - If this maximum is less than the fraction for atleast one of classes
+   *    - If this maximum is less than the fraction for at least one of the classes
    *in the biaslist
    *      the bit is considered good
    * ARGUMENTS:
@@ -258,7 +259,7 @@ class InfoBitRanker {
   unsigned int d_dims;     // the number of bits in the fingerprints
   unsigned int d_classes;  // the number of classes (active, inactive,
                            // moderately active etc.)
-  InfoType d_type;  // the type of information meassure - currently we support
+  InfoType d_type;  // the type of information measure - currently we support
                     // only entropy
   VECT_USHORT_VECT d_counts;  // place holder of counting the number of hits for
                               // each bit for each class
@@ -272,5 +273,5 @@ class InfoBitRanker {
       d_biasList;  // if we want a bias towards certain classes in ranking bits
   ExplicitBitVect *dp_maskBits;  // allows only certain bits to be considered
 };
-}
+}  // namespace RDInfoTheory
 #endif

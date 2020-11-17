@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/export.h>
 #ifndef RDTHREADS_H_2015
 #define RDTHREADS_H_2015
 
@@ -28,7 +29,7 @@ inline unsigned int getNumThreadsToUse(int target) {
     return 1;
   }
 }
-}
+}  // namespace RDKit
 
 #else
 
@@ -37,7 +38,7 @@ inline unsigned int getNumThreadsToUse(int target) {
   RDUNUSED_PARAM(target);
   return 1;
 }
-}
+}  // namespace RDKit
 #endif
 
 #endif

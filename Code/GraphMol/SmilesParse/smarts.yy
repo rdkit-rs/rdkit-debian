@@ -1,5 +1,6 @@
 %{
 
+  // $Id$
   //
   //  Copyright (C) 2003-2018 Greg Landrum and Rational Discovery LLC
   //
@@ -18,34 +19,51 @@
 #define YYDEBUG 1
 #include "smarts.tab.hpp"
 
-extern int yysmarts_lex(YYSTYPE *,void *);
-
-void
-yysmarts_error( const char *input,
-                std::vector<RDKit::RWMol *> *ms,
-		void *scanner,const char * msg )
-{
-  throw RDKit::SmilesParseException(msg);
-}
+extern int yysmarts_lex(YYSTYPE *,void *, int &);
 
 using namespace RDKit;
 namespace {
  void yyErrorCleanup(std::vector<RDKit::RWMol *> *molList){
   for(std::vector<RDKit::RWMol *>::iterator iter=molList->begin();
       iter != molList->end(); ++iter){
+     SmilesParseOps::CleanupAfterParseError(*iter);
      delete *iter;
   }
   molList->clear();
   molList->resize(0);
  }
 }
+void
+yysmarts_error( const char *input,
+                std::vector<RDKit::RWMol *> *ms,
+                RDKit::Atom* &lastAtom,
+                RDKit::Bond* &lastBond,
+		void *scanner,int start_token, const char * msg )
+{
+  RDUNUSED_PARAM(input);
+  RDUNUSED_PARAM(lastAtom);
+  RDUNUSED_PARAM(lastBond);
+  RDUNUSED_PARAM(scanner);
+  RDUNUSED_PARAM(start_token);
+  yyErrorCleanup(ms);
+  BOOST_LOG(rdErrorLog) << "SMARTS Parse Error: " << msg << " while parsing: " << input << std::endl;
+}
 %}
 
-%define api.pure
+%define api.pure full
 %lex-param   {yyscan_t *scanner}
+%lex-param   {int& start_token}
 %parse-param {const char *input}
 %parse-param {std::vector<RDKit::RWMol *> *molList}
+%parse-param {RDKit::Atom* &lastAtom}
+%parse-param {RDKit::Bond* &lastBond}
 %parse-param {void *scanner}
+%parse-param {int& start_token}
+
+%code provides {
+#define YY_DECL int yylex \
+               (YYSTYPE * yylval_param , yyscan_t yyscanner, int& start_token)
+}
 
 %union {
   int                      moli;
@@ -54,6 +72,7 @@ namespace {
   int                      ival;
 }
 
+%token START_MOL START_ATOM START_BOND;
 %token <ival> AROMATIC_ATOM_TOKEN ORGANIC_ATOM_TOKEN
 %token <atom> ATOM_TOKEN
 %token <atom> SIMPLE_ATOM_QUERY_TOKEN COMPLEX_ATOM_QUERY_TOKEN
@@ -69,7 +88,7 @@ namespace {
 %token NOT_TOKEN AND_TOKEN OR_TOKEN SEMI_TOKEN BEGIN_RECURSE END_RECURSE
 %token COLON_TOKEN UNDERSCORE_TOKEN
 %token <bond> BOND_TOKEN
-%type <moli> cmpd mol branch
+%type <moli>  mol branch
 %type <atom> atomd simple_atom hydrogen_atom
 %type <atom> atom_expr point_query atom_query recursive_query possible_range_query
 %type <ival> ring_number nonzero_number number charge_spec digit
@@ -81,24 +100,60 @@ namespace {
 %left AND_TOKEN
 %right NOT_TOKEN
 
+%destructor { delete $$; } <atom>
+%destructor { delete $$; } <bond>
+
+%start meta_start
+
 %%
 
 /* --------------------------------------------------------------- */
-cmpd: mol
-| cmpd error EOS_TOKEN{
-  yyclearin;
+meta_start:
+START_MOL mol {
+// the molList has already been updated, no need to do anything
+}
+| START_ATOM atomd EOS_TOKEN {
+  lastAtom = $2;
+  YYACCEPT;
+}
+| START_ATOM bad_atom_def {
+  YYABORT;
+}
+| START_ATOM {
+  YYABORT;
+}
+| START_BOND bond_expr EOS_TOKEN {
+  lastBond = $2;
+  YYACCEPT;
+}
+| START_BOND bond_expr {
+  delete $2;
+  YYABORT;
+}
+| START_BOND {
+  YYABORT;
+}
+| meta_start error EOS_TOKEN{
   yyerrok;
   yyErrorCleanup(molList);
   YYABORT;
 }
-| cmpd EOS_TOKEN {
+| meta_start EOS_TOKEN {
   YYACCEPT;
 }
-| error EOS_TOKEN{
-  yyclearin;
+| error EOS_TOKEN {
   yyerrok;
-
   yyErrorCleanup(molList);
+  YYABORT;
+}
+;
+
+bad_atom_def:
+ATOM_OPEN_TOKEN bad_atom_def
+| ATOM_CLOSE_TOKEN bad_atom_def
+| COLON_TOKEN bad_atom_def
+| atom_expr {
+  delete $1;
   YYABORT;
 }
 ;
@@ -124,14 +179,10 @@ mol: atomd {
   // a SMARTS molecule:
   if(!(a1->getIsAromatic() && $2->getIsAromatic())){
     newB = new QueryBond(Bond::SINGLE);
-    newB->expandQuery(makeBondOrderEqualsQuery(Bond::AROMATIC),
-  			    Queries::COMPOSITE_OR,
-  			    true);
+    newB->setQuery(makeSingleOrAromaticBondQuery());
   } else {
     newB = new QueryBond(Bond::AROMATIC);
-    newB->expandQuery(makeBondOrderEqualsQuery(Bond::SINGLE),
-  			    Queries::COMPOSITE_OR,
-  			    true);
+    newB->setQuery(makeSingleOrAromaticBondQuery());
   }
   newB->setProp(RDKit::common_properties::_unspecifiedOrder,1);
   newB->setOwningMol(mp);
@@ -176,14 +227,10 @@ mol: atomd {
   QueryBond * newB;
   if(!atom->getIsAromatic()){
     newB = new QueryBond(Bond::SINGLE);
-    newB->expandQuery(makeBondOrderEqualsQuery(Bond::AROMATIC),
-  			    Queries::COMPOSITE_OR,
-  			    true);
+    newB->setQuery(makeSingleOrAromaticBondQuery());
   } else {
     newB = new QueryBond(Bond::AROMATIC);
-    newB->expandQuery(makeBondOrderEqualsQuery(Bond::SINGLE),
-  			    Queries::COMPOSITE_OR,
-  			    true);
+    newB->setQuery(makeSingleOrAromaticBondQuery());
   }
   newB->setProp(RDKit::common_properties::_unspecifiedOrder,1);
   newB->setOwningMol(mp);
@@ -225,14 +272,13 @@ mol: atomd {
 | mol branch {
   RWMol *m1_p = (*molList)[$$],*m2_p=(*molList)[$2];
   // FIX: handle generic bonds here
-  SmilesParseOps::AddFragToMol(m1_p,m2_p,Bond::UNSPECIFIED,Bond::NONE,false,true);
+  SmilesParseOps::AddFragToMol(m1_p,m2_p,Bond::UNSPECIFIED,Bond::NONE);
   delete m2_p;
   int sz = molList->size();
   if ( sz==$2+1) {
     molList->resize( sz-1 );
   }
 }
-
 ;
 
 /* --------------------------------------------------------------- */
@@ -346,6 +392,7 @@ atom_expr: atom_expr AND_TOKEN atom_expr {
   $1->expandQuery($3->getQuery()->copy(),Queries::COMPOSITE_OR,true);
   if($1->getChiralTag()==Atom::CHI_UNSPECIFIED) $1->setChiralTag($3->getChiralTag());
   SmilesParseOps::ClearAtomChemicalProps($1);
+  $1->setAtomicNum(0);
   delete $3;
 }
 | atom_expr SEMI_TOKEN atom_expr {
@@ -563,6 +610,16 @@ possible_range_query : COMPLEX_ATOM_QUERY_TOKEN
 | IMPLICIT_H_ATOM_QUERY_TOKEN {
   $1->setQuery(makeAtomImplicitHCountQuery(0));
 }
+| PLUS_TOKEN {
+  QueryAtom *newQ = new QueryAtom();
+  newQ->setQuery(makeAtomFormalChargeQuery(0));
+  $$ = newQ;
+}
+| MINUS_TOKEN {
+  QueryAtom *newQ = new QueryAtom();
+  newQ->setQuery(makeAtomNegativeFormalChargeQuery(0));
+  $$ = newQ;
+}
 ;
 
 /* --------------------------------------------------------------- */
@@ -576,12 +633,12 @@ simple_atom: 	ORGANIC_ATOM_TOKEN {
   // The following rule applies a similar logic to aromatic atoms.
   //
   $$ = new QueryAtom($1);
-  $$->expandQuery(makeAtomAliphaticQuery(),Queries::COMPOSITE_AND);
+  $$->setQuery(makeAtomTypeQuery($1,false));
 }
 | AROMATIC_ATOM_TOKEN {
   $$ = new QueryAtom($1);
   $$->setIsAromatic(true);
-  $$->expandQuery(makeAtomAromaticQuery(),Queries::COMPOSITE_AND);
+  $$->setQuery(makeAtomTypeQuery($1,true));
 }
 | SIMPLE_ATOM_QUERY_TOKEN
 ;
@@ -668,7 +725,13 @@ number:  ZERO_TOKEN
 
 /* --------------------------------------------------------------- */
 nonzero_number:  NONZERO_DIGIT_TOKEN
-| nonzero_number digit { $$ = $1*10 + $2; }
+| nonzero_number digit { 
+    if($1 >= std::numeric_limits<std::int32_t>::max()/10 || 
+     $1*10 >= std::numeric_limits<std::int32_t>::max()-$2 ){
+     yysmarts_error(input,molList,lastAtom,lastBond,scanner,start_token,"number too large");
+     YYABORT;
+  }
+  $$ = $1*10 + $2; }
 ;
 
 digit: NONZERO_DIGIT_TOKEN

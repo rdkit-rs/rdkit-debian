@@ -28,7 +28,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from __future__ import print_function
 
 import gzip
 import io
@@ -39,14 +38,13 @@ import unittest
 from rdkit import RDConfig
 from rdkit.Chem import rdDepictor
 from rdkit import RDLogger
-from rdkit.six.moves.cPickle import loads
-from rdkit.Chem import ForwardSDMolSupplier, SanitizeMol
-from rdkit.Chem import MolFromSmiles, MolToSmiles
+import pickle
+from rdkit.Chem import MolFromSmiles, MolToSmiles, ForwardSDMolSupplier, SanitizeMol
 from rdkit.Chem import MolFromMolBlock, MolToMolBlock
 from rdkit.Chem import INCHI_AVAILABLE
 if INCHI_AVAILABLE:
   from rdkit.Chem import InchiReadWriteError
-  from rdkit.Chem import MolToInchi, MolFromInchi, InchiToInchiKey, MolToInchiKey
+  from rdkit.Chem import MolToInchi, MolBlockToInchi, MolFromInchi, InchiToInchiKey, MolToInchiKey
 
 COLOR_RED = '\033[31m'
 COLOR_GREEN = '\033[32m'
@@ -104,8 +102,8 @@ class TestCase(unittest.TestCase):
   def setUp(self):
     self.dataset = dict()
     self.dataset_inchi = dict()
-    inf = gzip.open(
-      os.path.join(RDConfig.RDCodeDir, 'Chem/test_data', 'pubchem-hard-set.sdf.gz'), 'r')
+    inf = gzip.open(os.path.join(RDConfig.RDCodeDir, 'Chem/test_data', 'pubchem-hard-set.sdf.gz'),
+                    'r')
     self.dataset['problematic'] = ForwardSDMolSupplier(inf, sanitize=False, removeHs=False)
     with open(os.path.join(RDConfig.RDCodeDir, 'Chem/test_data', 'pubchem-hard-set.inchi'),
               'r') as intF:
@@ -113,7 +111,7 @@ class TestCase(unittest.TestCase):
       intF.close()
     with io.BytesIO(buf) as inF:
       pkl = inF.read()
-    self.dataset_inchi['problematic'] = loads(pkl, encoding='latin1')
+    self.dataset_inchi['problematic'] = pickle.loads(pkl, encoding='latin1')
     # disable logging
     RDLogger.DisableLog('rdApp.warning')
 
@@ -131,6 +129,11 @@ class TestCase(unittest.TestCase):
         ref_inchi = inchi_db[m.GetProp('PUBCHEM_COMPOUND_CID')]
         x, y = MolToInchi(m), ref_inchi
         if x != y:
+          # print("---------------")
+          # print(m.GetProp('PUBCHEM_COMPOUND_CID'))
+          # print(MolToSmiles(m))
+          # print(y)
+          # print(x)
           if re.search(r'.[1-9]?ClO4', x) is not None:
             reasonable += 1
             continue
@@ -164,9 +167,9 @@ class TestCase(unittest.TestCase):
 
       fmt = "\n{0}InChI write Summary: {1} identical, {2} suffix variance, {3} reasonable{4}"
       print(fmt.format(COLOR_GREEN, same, diff, reasonable, COLOR_RESET))
-      self.assertEqual(same, 1164)
+      self.assertEqual(same, 1162)
       self.assertEqual(diff, 0)
-      self.assertEqual(reasonable, 17)
+      self.assertEqual(reasonable, 19)
 
   def test1InchiReadPubChem(self):
     for f in self.dataset.values():
@@ -203,11 +206,11 @@ class TestCase(unittest.TestCase):
           # InChI messed up the radical?
           unsanitizedInchiMol = MolFromInchi(x, sanitize=False)
           if sum([
-              a.GetNumRadicalElectrons() * a.GetAtomicNum() for a in m.GetAtoms()
-              if a.GetNumRadicalElectrons() != 0
+              a.GetNumRadicalElectrons() * a.GetAtomicNum()
+              for a in m.GetAtoms() if a.GetNumRadicalElectrons() != 0
           ]) != sum([
-              a.GetNumRadicalElectrons() * a.GetAtomicNum() for a in unsanitizedInchiMol.GetAtoms()
-              if a.GetNumRadicalElectrons() != 0
+              a.GetNumRadicalElectrons() * a.GetAtomicNum()
+              for a in unsanitizedInchiMol.GetAtoms() if a.GetNumRadicalElectrons() != 0
           ]):
             reasonable += 1
             continue
@@ -252,9 +255,9 @@ class TestCase(unittest.TestCase):
           same += 1
       fmt = "\n{0}InChI read Summary: {1} identical, {2} variance, {3} reasonable variance{4}"
       print(fmt.format(COLOR_GREEN, same, diff, reasonable, COLOR_RESET))
-      self.assertEqual(same, 627)
+      self.assertEqual(same, 684)
       self.assertEqual(diff, 0)
-      self.assertEqual(reasonable, 554)
+      self.assertEqual(reasonable, 497)
 
   def test2InchiOptions(self):
     m = MolFromSmiles("CC=C(N)C")
@@ -272,6 +275,56 @@ class TestCase(unittest.TestCase):
     k1 = InchiToInchiKey(inchi)
     k2 = MolToInchiKey(m)
     self.assertEqual(k1, k2)
+
+  def test5MolBlockToInchi(self):
+    mb = """
+  Mrv1824 02111920092D          
+
+  6  6  0  0  0  0            999 V2000
+   -5.5134    3.5259    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -6.2279    3.1134    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -6.2279    2.2884    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -5.5134    1.8759    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.7989    2.2884    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.7989    3.1134    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  3  4  1  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  1  0  0  0  0
+  1  6  1  0  0  0  0
+  2  3  2  0  0  0  0
+M  END"""
+    inchi = MolBlockToInchi(mb)
+    self.assertEqual(inchi, "InChI=1S/C5H8O/c1-2-4-6-5-3-1/h1-2H,3-5H2")
+    # make sure that options work
+    mb2 = """
+  Mrv1824 02121905282D          
+
+ 10 11  0  0  0  0            999 V2000
+   -4.6875   -1.1393    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -5.4020   -1.5518    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -5.4020   -2.3768    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.6875   -2.7893    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.9730   -2.3768    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.9730   -1.5518    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.2586   -2.7893    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.5441   -1.5518    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.5441   -2.3768    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.9608   -0.9684    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  1  6  1  0  0  0  0
+  7  9  1  0  0  0  0
+  6  8  1  0  0  0  0
+  7  5  1  0  0  0  0
+  8 10  1  0  0  0  0
+  8  9  2  0  0  0  0
+M  END"""
+    inchi2 = MolBlockToInchi(mb2, options="/FixedH")
+    self.assertEqual(inchi2, "InChI=1/C8H8N2/c1-6-7-4-2-3-5-8(7)10-9-6/h2-5H,1H3,(H,9,10)/f/h10H")
 
 
 if __name__ == '__main__':  # pragma: nocover

@@ -1,5 +1,4 @@
 if(RDK_USE_BOOST_SERIALIZATION AND Boost_SERIALIZATION_LIBRARY)
-    ADD_DEFINITIONS("-DRDK_USE_BOOST_SERIALIZATION")
     set(RDKit_SERIALIZATION_LIBS ${Boost_SERIALIZATION_LIBRARY})
 else()
     message("== Making FilterCatalog without boost Serialization support")
@@ -21,14 +20,17 @@ if (PYTHONINTERP_FOUND)
   endif()
 endif()
 
+
 rdkit_library(FilterCatalog
               Filters.cpp
               FilterCatalog.cpp
               FilterCatalogEntry.cpp
+	      FilterCatalogRunner.cpp
               FilterMatchers.cpp
               FunctionalGroupHierarchy.cpp
               LINK_LIBRARIES Subgraphs SubstructMatch SmilesParse
-              GraphMol RDGeometryLib Catalogs RDGeneral ${RDKit_SERIALIZATION_LIBS} )
+              GraphMol Catalogs ${RDKit_SERIALIZATION_LIBS} )
+target_compile_definitions(FilterCatalog PRIVATE RDKIT_FILTERCATALOG_BUILD)
 
 rdkit_headers(FilterCatalogEntry.h
               FilterCatalog.h
@@ -37,9 +39,9 @@ rdkit_headers(FilterCatalogEntry.h
               FunctionalGroupHierarchy.h
               DEST GraphMol/FilterCatalog)
 
+if(RDK_BUILD_PYTHON_WRAPPERS)
 add_subdirectory(Wrap)
+endif()
 
 rdkit_test(filterCatalogTest filtercatalogtest.cpp
-           LINK_LIBRARIES FilterCatalog
-           Catalogs SubstructMatch FileParsers SmilesParse GraphMol RDGeometryLib RDGeneral
-           ${RDKit_SERIALIZATION_LIBS})
+           LINK_LIBRARIES FilterCatalog SmilesParse FileParsers )

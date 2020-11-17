@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <iostream>
 
 #include <fstream>
@@ -68,6 +69,9 @@ void testPass() {
     "[C;!$(C-[OH])]=O",
     "[#6]-!:[#6]",
     "[C^3]",
+    "[*^0]",
+    "[*^1]",
+    "[*^2]",
     "[*^4]",
     "[*^5]",
     "[se]",
@@ -94,13 +98,22 @@ void testPass() {
     "[z1]",
     "[Z]",
     "[Z1]",
-#endif
     "[D{1-3}]",  // cactvs range queries
     "[D{-3}]",
     "[D{1-}]",
     "[z{1-3}]",
     "[Z{1-3}]",
     "[2H,13C]",  // github #1719
+    "[+{0-3}]",
+#endif
+    "[-{0-3}]",
+    "[-{0-3},C]",
+    "[-{0-3},D{1-3}]",       // github #2709
+    "C%(1000)CCC%(1000)",    // github #2909
+    "C%(1000)CC(C%(1000))",  // github #2909
+    "C%(1000)CC.C%(1000)",   // github #2909
+    "[C;d2]",                // non-hydrogen degree
+
     "EOS"
   };
   while (smis[i] != "EOS") {
@@ -109,14 +122,23 @@ void testPass() {
     CHECK_INVARIANT(mol, smi);
     int nAts = mol->getNumAtoms();
     CHECK_INVARIANT(nAts != 0, smi.c_str());
-    // make sure that we can pickle and de-pickle it (this is the test for
-    // github #1710):
-    std::string pkl;
-    MolPickler::pickleMol(*mol, pkl);
+    {  // make sure that we can pickle and de-pickle it (this is the test for
+      // github #1710):
+      std::string pkl;
+      MolPickler::pickleMol(*mol, pkl);
+      auto mol2 = new Mol(pkl);
+      TEST_ASSERT(mol2);
+      delete mol2;
+    }
+    {
+      // finally make sure that we can create parsable SMARTS from it:
+      auto outSmarts = MolToSmarts(*mol);
+      auto mol2 = SmartsToMol(outSmarts);
+      TEST_ASSERT(mol2);
+      delete mol2;
+    }
     delete mol;
-    mol = new Mol(pkl);
-    TEST_ASSERT(mol);
-    delete mol;
+
     i++;
   }
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
@@ -134,7 +156,8 @@ void testFail() {
   // alternate good and bad smiles here to ensure that the parser can resume
   // parsing
   // on good input:
-  string smis[] = {"CC=(CO)C", "CC(=CO)C", "C1CC",  "C1CC1", "fff", "C1CC1",
+  string smis[] = {"CC=(CO)C", "CC(=CO)C", "C1CC",  "C1CC1",
+                   "fff",      "C1CC1",
                    "C=0",  // part of sf.net issue 2525792
                    "C1CC1",
                    "C0",  // part of sf.net issue 2525792
@@ -142,7 +165,8 @@ void testFail() {
                    "C-0",  // part of sf.net issue 2525792
                    "C1CC1",
                    "C+0",  // part of sf.net issue 2525792
-                   "C1CC1",    "[HQ]",     "C1CC1", "EOS"};
+                   "C1CC1",    "[HQ]",     "C1CC1", "[55555555555555C]",
+                   "C1CC1",    "EOS"};
   while (smis[i] != "EOS") {
     string smi = smis[i];
     boost::logging::disable_logs("rdApp.error");
@@ -153,6 +177,7 @@ void testFail() {
     } else {
       CHECK_INVARIANT(mol, smi);
     }
+    delete mol;
     i++;
   }
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
@@ -169,7 +194,7 @@ std::vector<MatchVectType> _checkMatches(std::string smarts, std::string smiles,
   //  nMatches : expected number of matches
   //  lenFirst : length of the first match
   //
-  // Return the list of all matches just in case want to do aditional testing
+  // Return the list of all matches just in case want to do additional testing
   ROMol *mol, *mol2, *matcher, *matcher2;
   bool matches;
   unsigned int matchCount;
@@ -527,6 +552,8 @@ void testProblems() {
   _checkMatches("*-[N;H2,H1&-1,-2]", "CC([N-2])C", 1, 2);
   _checkNoMatches("*-[N;H2,H1&-1,-2]", "CC(=N)C");
   _checkNoMatches("*-[N;H2,H1&-1,-2]", "CC(NC)C");
+
+  delete matcher;
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
 }
 
@@ -758,6 +785,7 @@ void testSmartsWrite() {
       delete m1;
       delete m2;
     }
+    delete nmol;
     i++;
   }
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
@@ -784,6 +812,8 @@ void testIssue196() {
   TEST_ASSERT(mts1);
   TEST_ASSERT(mV1.size() == 2);
 
+  delete mol1;
+  delete matcher1;
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
 }
 
@@ -967,10 +997,12 @@ void testAtomMap() {
   sma = "[C:10H3]CC";
   matcher1 = SmartsToMol(sma);
   TEST_ASSERT(!matcher1);
+  delete matcher1;
 
   sma = "[C:10:3]ON";
   matcher1 = SmartsToMol(sma);
   TEST_ASSERT(!matcher1);
+  delete matcher1;
 
   sma = "C-C";
   matcher1 = SmartsToMol(sma);
@@ -993,6 +1025,7 @@ void testAtomMap() {
   sma = MolToSmarts(*matcher1);
   TEST_ASSERT(sma == "[C&$(C=O):2]-[O:3]");
 
+  delete matcher1;
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
 }
 
@@ -2514,7 +2547,7 @@ void testGithub1756() {
     m->updatePropertyCache(false);
     auto sma = MolToSmarts(*m);
     // std::cerr << sma << std::endl;
-    TEST_ASSERT(sma == "C-[C&*@&H0](-[Cl])-F");
+    TEST_ASSERT(sma == "C-[C@&H0](-Cl)-F");  // FIX: this seems odd...
   }
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
@@ -2550,6 +2583,18 @@ void testGithub1920() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testCombinedQueries() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog) << "Testing combined SMARTS queries for atoms and bonds"
+                       << std::endl;
+  std::unique_ptr<ROMol> m(SmartsToMol("Oc1ccccc1"));
+  TEST_ASSERT(m);
+  std::string sma = MolToSmarts(*m);
+  // std::cerr << " SMA: " << sma << std::endl;
+  TEST_ASSERT(sma == "Oc1ccccc1");
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 void testGithub1906() {
   BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdInfoLog)
@@ -2570,6 +2615,22 @@ void testGithub1906() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+void testGithub1988() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog) << "Testing github #1988: QueryAtoms with atom list "
+                          "queries should not have the atomic number set"
+                       << std::endl;
+  {
+    std::unique_ptr<ROMol> m(SmartsToMol("[Li,Na]"));
+    TEST_ASSERT(m->getAtomWithIdx(0)->getAtomicNum() == 0);
+  }
+  // {
+  //   std::unique_ptr<ROMol> m(SmartsToMol("C-,=C`"));
+  //   TEST_ASSERT(m->getBondWithIdx(0)->getBondType()==Bond::UNSPECIFIED);
+  // }
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
 void testGithub1985() {
   BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdInfoLog) << "Testing Github #1985: MolFromSmarts/MolToSmarts "
@@ -2585,8 +2646,174 @@ void testGithub1985() {
       std::unique_ptr<ROMol> m1(SmartsToMol(pr));
       TEST_ASSERT(m1);
       auto csma1 = MolToSmarts(*m1);
-      TEST_ASSERT(csma1.find("@") != std::string::npos);
+      TEST_ASSERT(csma1.find("C@") != std::string::npos);
     }
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testGithub2142() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog) << "Testing Github #2142: SMARTS roundtrip failure"
+                       << std::endl;
+  // make sure we actually do throw in the problematic case:
+  {
+    std::string sma1 = "[C,N;a]";
+    std::unique_ptr<ROMol> m1(SmartsToMol(sma1));
+    TEST_ASSERT(m1);
+    std::string sma2 = "[C]";
+    std::unique_ptr<ROMol> m2(SmartsToMol(sma2));
+    TEST_ASSERT(m2);
+    auto *qa = static_cast<QueryAtom *>(m2->getAtomWithIdx(0));
+    const auto q1 = static_cast<QueryAtom *>(m1->getAtomWithIdx(0))->getQuery();
+    qa->expandQuery(q1->copy(), Queries::COMPOSITE_OR);
+    bool ok = true;
+    try {
+      auto csma2 = MolToSmarts(*m2);
+      ok = false;
+    } catch (const ValueErrorException &) {
+    }
+    TEST_ASSERT(ok);
+  }
+  {  // the original problem report
+    std::string smarts = "[C;H1&$(C([#6])[#6]),H2&$(C[#6])]";
+    std::unique_ptr<ROMol> m1(SmartsToMol(smarts));
+    TEST_ASSERT(m1);
+    auto csma1 = MolToSmarts(*m1);
+    TEST_ASSERT(csma1 == "[C;H1&$(C(-,:[#6])[#6]),H2&$(C[#6])]");
+  }
+
+  {  // a second one from the issue
+    std::string smarts = "[N;$(NC),H2&$(NC[C,N])]";
+    std::unique_ptr<ROMol> m1(SmartsToMol(smarts));
+    TEST_ASSERT(m1);
+    auto csma1 = MolToSmarts(*m1);
+    TEST_ASSERT(csma1 == "[N;$(NC),H2&$(NC[C,N])]");
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testGithub2565() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog)
+      << "Testing Github #2565: Chirality reversed on SMARTS generation."
+      << std::endl;
+
+  std::vector<std::string> smiles(
+      {R"(O=C1C[C@]([H])1F)", R"(Cl[C@@H]1CCC1=O)",
+       R"(N1CCN=C1[C@H]1CCCc2ccccc21)", R"(C[C@@H](Cl)[C@H]1CC[C@@H](Cl)CC1)",
+       R"(Fc1cn([C@@H]2CCCO2)c(=O)[nH]c1=O)",
+       R"([C@@]1(C)(C(C)(C)C)O[C@@H](CN)[C@H](C[NH3+])O1)",
+
+       // these are Ok
+       R"(O=C1C[C@](Cl)1F)", R"(Br[C@@H](Cl)F)"});
+
+  for (const auto &smi : smiles) {
+    const std::unique_ptr<ROMol> mol(SmilesToMol(smi));
+    const std::string smarts = MolToSmarts(*mol, true);
+    const std::unique_ptr<ROMol> query(SmartsToMol(smarts));
+
+    bool uniquify = true;
+    bool recursionPossible = true;
+    bool useChirality = true;
+    std::vector<MatchVectType> matches;
+    TEST_ASSERT(SubstructMatch(*mol, *query, matches, uniquify,
+                               recursionPossible, useChirality));
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testSmartsStereoBonds() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog)
+      << "Testing stereo bond labels in mols parsed from SMARTS" << std::endl;
+  {
+    const auto mol = R"(C/C=C/C)"_smarts;
+    const Bond *bnd = mol->getBondWithIdx(1);
+    TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+    TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+  }
+  {
+    const auto mol = R"(C/C(F)=C(Cl)\C)"_smarts;
+    const Bond *bnd = mol->getBondWithIdx(2);
+    TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 5}));
+    TEST_ASSERT(bnd->getStereo() == Bond::STEREOCIS);
+  }
+  {
+    const auto mol = R"(F/C=C/C=C/C)"_smarts;
+    {
+      const Bond *bnd = mol->getBondWithIdx(1);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+    {
+      const Bond *bnd = mol->getBondWithIdx(3);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({2, 5}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+  }
+  {
+    const auto mol = R"(F\C=C/C=C/C)"_smarts;
+    {
+      const Bond *bnd = mol->getBondWithIdx(1);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOCIS);
+    }
+    {
+      const Bond *bnd = mol->getBondWithIdx(3);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({2, 5}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+  }
+  {
+    const auto mol = R"(F\C=C\C=C/C)"_smarts;
+    {
+      const Bond *bnd = mol->getBondWithIdx(1);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+    {
+      const Bond *bnd = mol->getBondWithIdx(3);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({2, 5}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOCIS);
+    }
+  }
+  {
+    const auto mol = R"(F/C=C/C=CC)"_smarts;
+    {
+      const Bond *bnd = mol->getBondWithIdx(1);
+      TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({0, 3}));
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+    }
+    {
+      const Bond *bnd = mol->getBondWithIdx(3);
+      TEST_ASSERT(bnd->getStereo() == Bond::STEREONONE);
+    }
+  }
+  {
+    // A weird way of writing C/C=C/O:
+    const auto mol = R"([#6](=[#6]/[#8])\[#6])"_smarts;
+
+    const Bond *bnd = mol->getBondWithIdx(1);
+
+    TEST_ASSERT(bnd->getStereoAtoms() == INT_VECT({3, 2}));
+    TEST_ASSERT(bnd->getStereo() == Bond::STEREOTRANS);
+  }
+
+  BOOST_LOG(rdInfoLog) << "done" << std::endl;
+}
+
+void testRingBondCrash() {
+  BOOST_LOG(rdInfoLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdInfoLog)
+      << "Testing a crash arising from negated ring bond queries" << std::endl;
+  {
+    auto m2 = "CC"_smiles;
+    auto q = "[C]@[Cl]"_smarts;
+    auto matches0 = SubstructMatch(*m2, *q);
   }
 
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
@@ -2610,7 +2837,8 @@ int main(int argc, char *argv[]) {
   testProblems();
   testIssue196();
   testIssue254();
-  testIssue255();
+  // testIssue255(); // this is a slow one and doesn't really actually test much
+  // without someone watching memory consumption
   testIssue330();
   testIssue351();
   testAtomMap();
@@ -2638,9 +2866,14 @@ int main(int argc, char *argv[]) {
   testGithub1756();
   testGithub1920();
   testGithub1719();
+  testCombinedQueries();
   testGithub1906();
-#endif
+  testGithub1988();
   testGithub1985();
-
+  testGithub2142();
+  testGithub2565();
+  testSmartsStereoBonds();
+#endif
+  testRingBondCrash();
   return 0;
 }

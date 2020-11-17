@@ -9,7 +9,7 @@
 //  of the RDKit source tree.
 //
 #include <RDGeneral/types.h>
-#include <math.h>
+#include <cmath>
 #include <Geometry/point.h>
 #include <Geometry/Transform2D.h>
 #include "DepictUtils.h"
@@ -29,15 +29,15 @@ unsigned int NUM_BONDS_FLIPS = 3;
 RDGeom::INT_POINT2D_MAP embedRing(const RDKit::INT_VECT &ring) {
   // The process here is very straight forward
   // we take the center of the ring to lies at the origin put the first
-  // point at the orgin anf then sweep
-  // anticlock wise so by an angle A = 360/n for the next point
+  // point at the origin and then sweep
+  // anticlockwise so by an angle A = 360/n for the next point
   // the length of the arm (l) we want to sweep is easy to compute given the
-  // bond lenght (b) we want to use for each bond in the ring (for now
-  // we will assume that this bond legnth is the same for all bonds in the ring
+  // bond length (b) we want to use for each bond in the ring (for now
+  // we will assume that this bond length is the same for all bonds in the ring
   //  l = b/sqrt(2*(1 - cos(A))
-  // the above formular derives from the traingle formula, where side 'c' is
+  // the above formula derives from the triangle formula, where side 'c' is
   // given
-  // interms of sides 'a' and 'b' as
+  // in terms of sides 'a' and 'b' as
   // c = a^2 + b^2 - 2.a.b.cos(A)
   // where A is the angle between a and b
 
@@ -173,7 +173,7 @@ RDKit::INT_VECT setNbrOrder(unsigned int aid, const RDKit::INT_VECT &nbrs,
 int pickFirstRingToEmbed(const RDKit::ROMol &mol,
                          const RDKit::VECT_INT_VECT &fusedRings) {
   // ok this is what we will do here
-  // we will pick the ring with the smallest number of substiuents
+  // we will pick the ring with the smallest number of substituents
   int res = -1;
   unsigned int maxSize = 0;
   int subs, minsubs = static_cast<int>(1e8);
@@ -216,7 +216,7 @@ RDKit::INT_VECT findNextRingToEmbed(const RDKit::INT_VECT &doneRings,
   // in common are in general flat systems to start with and can be embedded
   // cleanly.
   // when there are more than 2 atoms in common, these are most likely bridged
-  // syste, which are
+  // systems, which are
   // screwed up anyway, might as well screw them up later
   // if we do not have a system with two rings in common then we will return the
   // ring with max,
@@ -225,10 +225,8 @@ RDKit::INT_VECT findNextRingToEmbed(const RDKit::INT_VECT &doneRings,
   PRECONDITION(fusedRings.size() > 1, "");
 
   RDKit::INT_VECT commonAtoms, res, doneAtoms, notDone;
-  RDKit::INT_VECT_CI dri;
-  for (unsigned int i = 0; i < fusedRings.size(); i++) {
-    if (std::find(doneRings.begin(), doneRings.end(), static_cast<int>(i)) ==
-        doneRings.end()) {
+  for (int i = 0; i < rdcast<int>(fusedRings.size()); i++) {
+    if (std::find(doneRings.begin(), doneRings.end(), i) == doneRings.end()) {
       notDone.push_back(i);
     }
   }
@@ -381,7 +379,7 @@ void getNbrAtomAndBondIds(unsigned int aid, const RDKit::ROMol *mol,
 
 // find pairs of bonds that can be permuted at a non-ring degree 4
 // node. This function will return only those pairs that cannot be
-// permuted by flipping a rotatble bond
+// permuted by flipping a rotatable bond
 //
 //       D
 //       |
@@ -392,7 +390,7 @@ void getNbrAtomAndBondIds(unsigned int aid, const RDKit::ROMol *mol,
 //       b4
 //       |
 //       E
-// For example in teh above situation on the pairs (b1, b3) and (b1, b4) will be
+// For example in the above situation on the pairs (b1, b3) and (b1, b4) will be
 // returned
 // All other permutations can be achieved via a rotatable bond flip.
 INT_PAIR_VECT findBondsPairsToPermuteDeg4(const RDGeom::Point2D &center,
@@ -404,13 +402,10 @@ INT_PAIR_VECT findBondsPairsToPermuteDeg4(const RDGeom::Point2D &center,
   CHECK_INVARIANT(nbrBids.size() == 4, "");
   CHECK_INVARIANT(nbrLocs.size() == 4, "");
 
-  VECT_C_POINT::const_iterator npi;
-
   std::vector<RDGeom::Point2D> nbrPts;
-  RDKit::INT_VECT_CI aci;
-
-  for (npi = nbrLocs.begin(); npi != nbrLocs.end(); npi++) {
-    RDGeom::Point2D v = (*(*npi)) - center;
+  nbrPts.reserve(nbrLocs.size());
+  for (const auto &nloc : nbrLocs) {
+    RDGeom::Point2D v = (*nloc) - center;
     nbrPts.push_back(v);
   }
 
@@ -439,7 +434,7 @@ INT_PAIR_VECT findBondsPairsToPermuteDeg4(const RDGeom::Point2D &center,
     }
     return res;
   } else {
-    // bids[0] and bids[1] are oppostie to each other, so bids[2] and bids[3]
+    // bids[0] and bids[1] are opposite to each other, so bids[2] and bids[3]
     // must
     // be perpendicular to bids[0]
     INT_PAIR p1(nbrBids[0], nbrBids[2]);
@@ -501,4 +496,4 @@ template RDKit::INT_DEQUE rankAtomsByRank(const RDKit::ROMol &mol,
 template RDKit::INT_LIST rankAtomsByRank(const RDKit::ROMol &mol,
                                          const RDKit::INT_LIST &commAtms,
                                          bool ascending);
-}
+}  // namespace RDDepict

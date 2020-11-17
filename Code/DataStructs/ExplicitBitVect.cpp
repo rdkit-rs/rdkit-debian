@@ -19,7 +19,7 @@
 #ifdef WIN32
 #include <ios>
 #endif
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 ExplicitBitVect::ExplicitBitVect(unsigned int size, bool bitsSet) {
   d_size = 0;
@@ -52,6 +52,9 @@ ExplicitBitVect::ExplicitBitVect(const ExplicitBitVect &other)
 };
 
 ExplicitBitVect &ExplicitBitVect::operator=(const ExplicitBitVect &other) {
+  if (this == &other) {
+    return *this;
+  }
   d_size = other.d_size;
   delete dp_bits;
   dp_bits = new boost::dynamic_bitset<>(*(other.dp_bits));
@@ -168,10 +171,14 @@ unsigned int ExplicitBitVect::getNumOffBits() const {
 // the contents of v are blown out
 void ExplicitBitVect::getOnBits(IntVect &v) const {
   unsigned int nOn = getNumOnBits();
-  if (!v.empty()) IntVect().swap(v);
+  if (!v.empty()) {
+    IntVect().swap(v);
+  }
   v.reserve(nOn);
   for (unsigned int i = 0; i < d_size; i++) {
-    if ((bool)(*dp_bits)[i]) v.push_back(i);
+    if ((bool)(*dp_bits)[i]) {
+      v.push_back(i);
+    }
   }
 };
 
@@ -206,7 +213,7 @@ std::string ExplicitBitVect::toString() const {
   std::stringstream ss(std::ios_base::binary | std::ios_base::out |
                        std::ios_base::in);
 
-  boost::int32_t tInt = ci_BITVECT_VERSION * -1;
+  std::int32_t tInt = ci_BITVECT_VERSION * -1;
   RDKit::streamWrite(ss, tInt);
   tInt = d_size;
   RDKit::streamWrite(ss, tInt);

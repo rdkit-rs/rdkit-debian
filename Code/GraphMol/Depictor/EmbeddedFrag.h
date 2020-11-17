@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef _RD_EMBEDDED_FRAG_H_
 #define _RD_EMBEDDED_FRAG_H_
 
@@ -19,28 +20,23 @@
 namespace RDKit {
 class ROMol;
 class Bond;
-}
+}  // namespace RDKit
 
 namespace RDDepict {
 typedef boost::shared_array<double> DOUBLE_SMART_PTR;
 
-//! Class that contains the data for an atoms that has alredy been embedded
-class EmbeddedAtom {
+//! Class that contains the data for an atoms that has already been embedded
+class RDKIT_DEPICTOR_EXPORT EmbeddedAtom {
  public:
   typedef enum { UNSPECIFIED = 0, CISTRANS, RING } EAtomType;
 
   EmbeddedAtom()
-      : aid(0),
-        angle(-1.0),
-        nbr1(-1),
-        nbr2(-1),
-        CisTransNbr(-1),
-        ccw(true),
-        rotDir(0),
-        d_density(-1.0),
-        df_fixed(false) {
+      
+        {
     neighs.clear();
   }
+
+  EmbeddedAtom(const EmbeddedAtom &other) = default;
 
   EmbeddedAtom(unsigned int aid, const RDGeom::Point2D &pos)
       : aid(aid),
@@ -56,6 +52,10 @@ class EmbeddedAtom {
   }
 
   EmbeddedAtom &operator=(const EmbeddedAtom &other) {
+    if (this == &other) {
+      return *this;
+    }
+
     loc = other.loc;
     angle = other.angle;
     nbr1 = other.nbr1;
@@ -85,35 +85,35 @@ class EmbeddedAtom {
     ccw = (!ccw);
   }
 
-  unsigned int aid;  // the id of the atom
+  unsigned int aid{0};  // the id of the atom
 
   //! the angle that is already takes at this atom, so any new atom attaching to
   // this
   //! atom with have to fall in the available part
-  double angle;
+  double angle{-1.0};
 
   //! the first neighbor of this atom that form the 'angle'
-  int nbr1;
+  int nbr1{-1};
 
   //! the second neighbor of atom that from the 'angle'
-  int nbr2;
+  int nbr2{-1};
 
   //! is this is a cis/trans atom the neighbor of this atom that is involved in
   // the
   //! cis/trans system - defaults to -1
-  int CisTransNbr;
+  int CisTransNbr{-1};
 
   //! which direction do we rotate this normal to add the next bond
-  //! if ccw is true we rotate counter cloack wise, otherwise rotate clock wise,
+  //! if ccw is true we rotate counter clockwise, otherwise rotate clock wise,
   // by an angle that is
   //! <= PI/2
-  bool ccw;
+  bool ccw{true};
 
   //! rotation direction around this atom when adding new atoms,
   //! we determine this for the first neighbor and stick to this direction after
   // that
   //! useful only on atoms that are degree >= 4
-  int rotDir;
+  int rotDir{0};
 
   RDGeom::Point2D loc;  // the current location of this atom
   //! this is a normal vector to one of the bonds that added this atom
@@ -130,11 +130,11 @@ class EmbeddedAtom {
   // - this is sum of inverse of the square of distances to other atoms from
   // this atom
   // Used in the collision removal code - initialized to -1.0
-  double d_density;
+  double d_density{-1.0};
 
   //! if set this atom is fixed: further operations on the fragment may not
   //! move it.
-  bool df_fixed;
+  bool df_fixed{false};
 };
 
 typedef std::map<unsigned int, EmbeddedAtom> INT_EATOM_MAP;
@@ -144,26 +144,26 @@ typedef INT_EATOM_MAP::const_iterator INT_EATOM_MAP_CI;
 //! Class containing a fragment of a molecule that has already been embedded
 /*
   Here is how this class is designed to be used
-  - find a set of fused rings and compte the coordinates for the atoms in those
+  - find a set of fused rings and compute the coordinates for the atoms in those
   ring
-  - them grow this sytem either by adding non ring neighbors
+  - them grow this system either by adding non ring neighbors
   - or by adding other embedded fragment
   - so at the end of the process  the whole molecule end up being one these
   embedded frag objects
 */
-class EmbeddedFrag {
+class RDKIT_DEPICTOR_EXPORT EmbeddedFrag {
   // REVIEW: think about moving member functions up to global level and just
   // using
   // this class as a container
 
  public:
   //! Default constructor
-  EmbeddedFrag() : d_done(false), dp_mol(0) {
+  EmbeddedFrag() {
     d_eatoms.clear();
     d_attachPts.clear();
   };
 
-  //! Intializer from a single atom id
+  //! Initializer from a single atom id
   /*!
     A single Embedded Atom with this atom ID is added and placed at the origin
   */
@@ -173,7 +173,7 @@ class EmbeddedFrag {
   /*!
      This simply initialized a set of EmbeddedAtom to have the same coordinates
      as the
-     one's specified. No testing is done to verify any kind of ocrrectlness.
+     one's specified. No testing is done to verify any kind of correctness.
      Also
      this fragment is less ready (to expand and add new neighbors) than when
      using other
@@ -201,12 +201,12 @@ class EmbeddedFrag {
   //! Initializer for a cis/trans system using the double bond
   /*!
     ARGUMENTS:
-    \param dblBond   the double bond that is involed in the cis/trans
+    \param dblBond   the double bond that is involved in the cis/trans
     configuration
   */
   explicit EmbeddedFrag(const RDKit::Bond *dblBond);
 
-  //! Expand this embedded system by adding negihboring atoms or other embedded
+  //! Expand this embedded system by adding neighboring atoms or other embedded
   // systems
   /*!
 
@@ -267,7 +267,7 @@ class EmbeddedFrag {
   //! If this fragment done for the final embedding
   bool isDone() { return d_done; }
 
-  //! Get the molecule that this embedded fragmetn blongs to
+  //! Get the molecule that this embedded fragment belongs to
   const RDKit::ROMol *getMol() const { return dp_mol; }
 
   //! Find the common atom ids between this fragment and a second one
@@ -282,11 +282,11 @@ class EmbeddedFrag {
     \return the id of the atom if we found a neighbor
                  -1 otherwise
 
-    NOTE: by definition we can have only one neighbor in the embdded system.
+    NOTE: by definition we can have only one neighbor in the embedded system.
   */
   int findNeighbor(unsigned int aid);
 
-  //! Tranform this object to a new coordinates system
+  //! Transform this object to a new coordinates system
   /*!
     ARGUMENTS:
     \param trans : the transformation that need to be applied to the atoms in
@@ -319,7 +319,7 @@ class EmbeddedFrag {
   //! \brief compute a box that encloses the fragment
   void computeBox();
 
-  //! \brief Flip atoms on one side of a bond - used in removing colissions
+  //! \brief Flip atoms on one side of a bond - used in removing collisions
   /*!
     ARGUMENTS:
     \param bondId - the bond used as the mirror to flip
@@ -343,11 +343,11 @@ class EmbeddedFrag {
   void randomSampleFlipsAndPermutations(unsigned int nBondsPerSample = 3,
                                         unsigned int nSamples = 100,
                                         int seed = 100,
-                                        const DOUBLE_SMART_PTR *dmat = 0,
+                                        const DOUBLE_SMART_PTR *dmat = nullptr,
                                         double mimicDmatWt = 0.0,
                                         bool permuteDeg4Nodes = false);
 
-  //! Remove collisions in a structure by flipping rotable bonds
+  //! Remove collisions in a structure by flipping rotatable bonds
   //! along the shortest path between two colliding atoms
   void removeCollisionsBondFlip();
 
@@ -358,13 +358,13 @@ class EmbeddedFrag {
   // atoms
   void removeCollisionsShortenBonds();
 
-  //! helpers funtions to
+  //! helpers functions to
 
   //! \brief make list of neighbors for each atom in the embedded system that
   //!  still need to be embedded
   void setupNewNeighs();
 
-  //! update the  unembedded neighbor atom list for a specified atom
+  //! update the unembedded neighbor atom list for a specified atom
   void updateNewNeighs(unsigned int aid);
 
   //! \brief Find all atoms in this embedded system that are
@@ -388,7 +388,7 @@ class EmbeddedFrag {
   //! have only on common atom
   /*!
     So this is the state of affairs assumed here:
-    - we already have some rings in the fused system embeded and the
+    - we already have some rings in the fused system embedded and the
       coordinates for the atoms
     - the coordinates for the atoms in the new ring (with the center
       of rings at the origin) are available nringCors. we want to
@@ -398,7 +398,7 @@ class EmbeddedFrag {
       that are already embedded
     - so we need to compute a transform that includes a translation
       so that the common atom overlaps and the rotation to minimize
-      overalp with other atoms.
+      overlap with other atoms.
 
     Here's what is done:
     - we bisect the remaining sweep angle at the common atom and
@@ -429,7 +429,7 @@ class EmbeddedFrag {
   /*!
 
     We want add the new fragment such that, most of its atoms fall
-    on the side opoiste to where the atoms already embedded are aid1
+    on the side opposite to where the atoms already embedded are aid1
     and aid2 give the atoms that were used to align the new ring to
     the embedded atoms and we will assume that that process has
     already taken place (i.e. transformRing has been called)
@@ -451,15 +451,15 @@ class EmbeddedFrag {
                       - 1 means embFrag is the cis/trans fragment
                       - 2 mean "this" is the cis/trans fragment
     \param aid1      first atom that forms the plane (line) of reflection
-    \param aid2      seconf atom that forms the plane of reflection
+    \param aid2      second atom that forms the plane of reflection
   */
   void reflectIfNecessaryCisTrans(EmbeddedFrag &embFrag, unsigned int ctCase,
                                   unsigned int aid1, unsigned int aid2);
 
-  //! Reflect a fragment if necessary based on a thrid common point
+  //! Reflect a fragment if necessary based on a third common point
   /*!
 
-    we want add the new fragment such that the thrid point falls on
+    we want add the new fragment such that the third point falls on
     the same side of aid1 and aid2. We will assume that aid1 and
     aid2 from this fragments as well as embFrag are already aligned
     to each other.
@@ -482,8 +482,8 @@ class EmbeddedFrag {
   //! Helper function to addNonRingAtom to a specified atoms in the fragment
   /*
     Add an atom to this embedded fragment when the fragment already
-    has a atleast two previously added neighbors to 'toAid'. In this
-    case we have to choose where the the new neighbor goes based on
+    has at least two neighbors previously added to 'toAid'. In this
+    case we have to choose where the new neighbor goes based on
     the angle that is already taken around the atom.
 
     ARGUMENTS:
@@ -511,7 +511,7 @@ class EmbeddedFrag {
       unsigned int aid,
       unsigned int toAid);  //, const RDKit::ROMol *mol);
 
-  //! Helper funtion to contructor that takes predefined coordinates
+  //! Helper function to constructor that takes predefined coordinates
   /*!
 
     Given an atom with more than 2 neighbors all embedded in this
@@ -526,8 +526,8 @@ class EmbeddedFrag {
     - find the pair of nbrs that have the largest angle
     - this will most likely be the angle that is available - unless
       we have fused rings and we found on of the ring angle !!!! -
-      in this cae we find the next best
-    - find the smallest anngle that contains one of these nbrs -
+      in this case we find the next best
+    - find the smallest angle that contains one of these nbrs -
       this determined which
     - way we want to rotate
 
@@ -539,10 +539,10 @@ class EmbeddedFrag {
   // const RDKit::ROMol *mol);
 
   //! are we embedded with the final (molecule) coordinates
-  bool d_done;
-  double d_px, d_nx, d_py, d_ny;
+  bool d_done = false;
+  double d_px = 0.0, d_nx = 0.0, d_py = 0.0, d_ny = 0.0;
 
-  //! a map that takes one from teh atom id to the embeddedatom object for that
+  //! a map that takes one from the atom id to the embeddedatom object for that
   // atom.
   INT_EATOM_MAP d_eatoms;
 
@@ -550,8 +550,8 @@ class EmbeddedFrag {
   RDKit::INT_LIST d_attachPts;
 
   // pointer to the owning molecule
-  const RDKit::ROMol *dp_mol;
+  const RDKit::ROMol *dp_mol = nullptr;
 };
-}
+}  // namespace RDDepict
 
 #endif

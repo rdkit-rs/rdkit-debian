@@ -29,10 +29,7 @@ namespace {
 class EditableMol : boost::noncopyable {
  public:
   EditableMol(const ROMol &m) { dp_mol = new RWMol(m); };
-  ~EditableMol() {
-    PRECONDITION(dp_mol, "no molecule");
-    delete dp_mol;
-  };
+  ~EditableMol() noexcept { delete dp_mol; };
 
   void RemoveAtom(unsigned int idx) {
     PRECONDITION(dp_mol, "no molecule");
@@ -73,7 +70,7 @@ class EditableMol : boost::noncopyable {
  private:
   RWMol *dp_mol;
 };
-}
+}  // namespace
 
 struct EditableMol_wrapper {
   static void wrap() {
@@ -82,7 +79,7 @@ struct EditableMol_wrapper {
    This class can be used to add/remove bonds and atoms to\n\
    a molecule.\n\
    In order to use it, you need to first construct an EditableMol\n\
-   from a standard Mol:\n\
+   from a standard Mol:\n\n\
    >>> m = Chem.MolFromSmiles('CCC')\n\
    >>> em = Chem.EditableMol(m)\n\
    >>> em.AddAtom(Chem.Atom(8))\n\
@@ -132,5 +129,5 @@ struct EditableMol_wrapper {
   };
 };
 
-}  // end of namespace
+}  // namespace RDKit
 void wrap_EditableMol() { RDKit::EditableMol_wrapper::wrap(); }

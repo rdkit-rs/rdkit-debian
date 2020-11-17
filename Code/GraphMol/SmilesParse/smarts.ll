@@ -90,6 +90,15 @@ size_t setup_smarts_string(const std::string &text,yyscan_t yyscanner){
 %s IN_RECURSION_STATE
 %%
 
+%{
+  if (start_token)
+    {
+      int t = start_token;
+      start_token = 0;
+      return t;
+    }
+%}
+
 @[' ']*TH |
 @[' ']*AL |
 @[' ']*SQ |
@@ -211,6 +220,11 @@ size_t setup_smarts_string(const std::string &text,yyscan_t yyscanner){
 	yylval->atom->setQuery(makeAtomExplicitDegreeQuery(1));
 	return COMPLEX_ATOM_QUERY_TOKEN;
 }
+<IN_ATOM_STATE>d {
+	yylval->atom = new QueryAtom();
+	yylval->atom->setQuery(makeAtomNonHydrogenDegreeQuery(1));
+	return COMPLEX_ATOM_QUERY_TOKEN;
+}
 
 <IN_ATOM_STATE>X {
 	yylval->atom = new QueryAtom();
@@ -296,6 +310,10 @@ p			{  yylval->ival = 15;  return AROMATIC_ATOM_TOKEN;  }
 
 s			{  yylval->ival = 16;  return AROMATIC_ATOM_TOKEN;  }
 
+<IN_ATOM_STATE>si	{  yylval->ival = 14;  return AROMATIC_ATOM_TOKEN;  }
+
+<IN_ATOM_STATE>as	{  yylval->ival = 33;  return AROMATIC_ATOM_TOKEN;  }
+
 <IN_ATOM_STATE>se	{  yylval->ival = 34;  return AROMATIC_ATOM_TOKEN;  }
 
 <IN_ATOM_STATE>te	{  yylval->ival = 52;  return AROMATIC_ATOM_TOKEN;  }
@@ -363,8 +381,8 @@ A			{
 <IN_BRANCH_STATE>\)       	{ yy_pop_state(yyscanner); return GROUP_CLOSE_TOKEN; }
 <IN_RECURSION_STATE>\)       	{ yy_pop_state(yyscanner); return END_RECURSE; }
 
-\{       	{  return RANGE_OPEN_TOKEN; }
-\}       	{ yy_pop_state(yyscanner); return RANGE_CLOSE_TOKEN; }
+\{       	{ return RANGE_OPEN_TOKEN; }
+\}       	{ return RANGE_CLOSE_TOKEN; }
 
 
 

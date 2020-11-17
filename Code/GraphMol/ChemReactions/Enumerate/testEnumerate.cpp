@@ -30,6 +30,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <RDGeneral/test.h>
 #include <RDGeneral/utils.h>
 #include <RDGeneral/Exceptions.h>
 #include <GraphMol/RDKitBase.h>
@@ -84,15 +85,18 @@ void pickleTest(EnumerationStrategyBase &en, size_t len) {
 void testSamplers() {
   EnumerationTypes::BBS bbs;
   bbs.resize(3);
-  for (int i = 0; i < 10; ++i)
+  for (int i = 0; i < 10; ++i) {
     bbs[0].push_back(boost::shared_ptr<ROMol>(SmilesToMol("C=CCN=C=S")));
+  }
 
-  for (int i = 0; i < 5; ++i)
+  for (int i = 0; i < 5; ++i) {
     bbs[1].push_back(boost::shared_ptr<ROMol>(SmilesToMol("NCc1ncc(Cl)cc1Br")));
+  }
 
-  for (int i = 0; i < 6; ++i)
+  for (int i = 0; i < 6; ++i) {
     bbs[2].push_back(
         boost::shared_ptr<ROMol>(SmilesToMol("NCCCc1ncc(Cl)cc1Br")));
+  }
 
   ChemicalReaction rxn;
   CartesianProductStrategy cart;
@@ -104,14 +108,10 @@ void testSamplers() {
   EvenSamplePairsStrategy even;
   even.initialize(rxn, bbs);
   std::vector<boost::shared_ptr<EnumerationStrategyBase>> enumerators;
-  enumerators.push_back(
-      boost::shared_ptr<EnumerationStrategyBase>(cart.copy()));
-  enumerators.push_back(
-      boost::shared_ptr<EnumerationStrategyBase>(rand.copy()));
-  enumerators.push_back(
-      boost::shared_ptr<EnumerationStrategyBase>(randBBs.copy()));
-  enumerators.push_back(
-      boost::shared_ptr<EnumerationStrategyBase>(even.copy()));
+  enumerators.emplace_back(cart.copy());
+  enumerators.emplace_back(rand.copy());
+  enumerators.emplace_back(randBBs.copy());
+  enumerators.emplace_back(even.copy());
 #ifdef RDK_USE_BOOST_SERIALIZATION
   for (auto &enumerator : enumerators) {
     TEST_ASSERT(enumerator->getNumPermutations() == 10 * 5 * 6);
@@ -126,18 +126,25 @@ void testSamplers() {
 void testEvenSamplers() {
   EnumerationTypes::BBS bbs;
   bbs.resize(3);
-  boost::uint64_t R1 = 6000;
-  boost::uint64_t R2 = 500;
-  boost::uint64_t R3 = 10000;
-  for (unsigned long i = 0; i < R1; ++i)
-    bbs[0].push_back(boost::shared_ptr<ROMol>(SmilesToMol("C=CCN=C=S")));
+  boost::uint64_t R1 = 600;
+  boost::uint64_t R2 = 50;
+  boost::uint64_t R3 = 1000;
 
-  for (unsigned long i = 0; i < R2; ++i)
-    bbs[1].push_back(boost::shared_ptr<ROMol>(SmilesToMol("NCc1ncc(Cl)cc1Br")));
+  boost::shared_ptr<ROMol> m(SmilesToMol("C=CCN=C=S"));
+  boost::shared_ptr<ROMol> m2(SmilesToMol("NCc1ncc(Cl)cc1Br"));
+  boost::shared_ptr<ROMol> m3(SmilesToMol("NCCCc1ncc(Cl)cc1Br"));
 
-  for (unsigned long i = 0; i < R3; ++i)
-    bbs[2].push_back(
-        boost::shared_ptr<ROMol>(SmilesToMol("NCCCc1ncc(Cl)cc1Br")));
+  for (unsigned long i = 0; i < R1; ++i) {
+    bbs[0].push_back(m);
+  }
+
+  for (unsigned long i = 0; i < R2; ++i) {
+    bbs[1].push_back(m2);
+  }
+
+  for (unsigned long i = 0; i < R3; ++i) {
+    bbs[2].push_back(m3);
+  }
 
   ChemicalReaction rxn;
   EvenSamplePairsStrategy even;
@@ -368,19 +375,11 @@ void testGithub1657() {
   BOOST_LOG(rdInfoLog) << "\tdone" << std::endl;
 }
 #else
-void testGithub1657() {
-}
+void testGithub1657() {}
 #endif
 
-
-int main(int argc, char *argv[]) {
+int main() {
   RDLog::InitLogs();
-  bool doLong = false;
-  if (argc > 1) {
-    if (!strncmp(argv[1], "-l", 2)) {
-      doLong = true;
-    }
-  }
 #if 1
   testSamplers();
   testEvenSamplers();

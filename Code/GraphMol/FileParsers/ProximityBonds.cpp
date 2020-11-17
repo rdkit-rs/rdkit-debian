@@ -30,18 +30,25 @@ struct ProximityEntry {
 };
 
 static bool IsBonded(ProximityEntry *p, ProximityEntry *q, unsigned int flags) {
-  if (flags & ctdIGNORE_H_H_CONTACTS && p->elem == 1 && q->elem == 1)
+  if (flags & ctdIGNORE_H_H_CONTACTS && p->elem == 1 && q->elem == 1) {
     return false;
+  }
   double dx = (double)p->x - (double)q->x;
   double dist2 = dx * dx;
-  if (dist2 > MAXDIST2) return false;
+  if (dist2 > MAXDIST2) {
+    return false;
+  }
   double dy = (double)p->y - (double)q->y;
   dist2 += dy * dy;
-  if (dist2 > MAXDIST2) return false;
+  if (dist2 > MAXDIST2) {
+    return false;
+  }
   double dz = (double)p->z - (double)q->z;
   dist2 += dz * dz;
 
-  if (dist2 > MAXDIST2 || dist2 < MINDIST2) return false;
+  if (dist2 > MAXDIST2 || dist2 < MINDIST2) {
+    return false;
+  }
 
   double radius = (double)p->r + (double)q->r + EXTDIST;
   return dist2 <= radius * radius;
@@ -59,31 +66,35 @@ static bool IsBlacklistedAtom(Atom *atom) {
   int elem = atom->getAtomicNum();
   // make an inverse query (non-metals and metaloids)
   if ((5 <= elem && elem <= 8) || (14 <= elem && elem <= 16) ||
-      (32 <= elem && elem <= 34) || (51 <= elem && elem <= 52))
+      (32 <= elem && elem <= 34) || (51 <= elem && elem <= 52)) {
     return false;
-  else
+  } else {
     return true;
+  }
 }
 
 bool IsBlacklistedPair(Atom *beg_atom, Atom *end_atom) {
   PRECONDITION(beg_atom, "empty atom");
   PRECONDITION(end_atom, "empty atom");
 
-  AtomPDBResidueInfo *beg_info =
-      (AtomPDBResidueInfo *)beg_atom->getMonomerInfo();
-  AtomPDBResidueInfo *end_info =
-      (AtomPDBResidueInfo *)end_atom->getMonomerInfo();
-  if (!beg_info || beg_info->getMonomerType() != AtomMonomerInfo::PDBRESIDUE)
+  auto *beg_info = (AtomPDBResidueInfo *)beg_atom->getMonomerInfo();
+  auto *end_info = (AtomPDBResidueInfo *)end_atom->getMonomerInfo();
+  if (!beg_info || beg_info->getMonomerType() != AtomMonomerInfo::PDBRESIDUE) {
     return false;
-  if (!end_info || end_info->getMonomerType() != AtomMonomerInfo::PDBRESIDUE)
+  }
+  if (!end_info || end_info->getMonomerType() != AtomMonomerInfo::PDBRESIDUE) {
     return false;
+  }
 
   if (!SamePDBResidue(beg_info, end_info)) {
-    if (IsBlacklistedAtom(beg_atom) || IsBlacklistedAtom(end_atom)) return true;
+    if (IsBlacklistedAtom(beg_atom) || IsBlacklistedAtom(end_atom)) {
+      return true;
+    }
     // Dont make bonds to waters
     if (beg_info->getResidueName() == "HOH" ||
-        beg_info->getResidueName() == "HOH")
+        end_info->getResidueName() == "HOH") {
       return true;
+    }
   }
   return false;
 }
@@ -149,19 +160,19 @@ for (int j=0; j<count; j++) {
 }
 */
 
-#define HASHSIZE 1024
-#define HASHMASK 1023
-#define HASHX 571
-#define HASHY 127
-#define HASHZ 3
+constexpr int HASHSIZE = 1024;
+constexpr int HASHMASK = 1023;
+constexpr int HASHX = 571;
+constexpr int HASHY = 127;
+constexpr int HASHZ = 3;
 
 static void ConnectTheDots_Large(RWMol *mol, unsigned int flags) {
   int HashTable[HASHSIZE];
   memset(HashTable, -1, sizeof(HashTable));
 
   unsigned int count = mol->getNumAtoms();
-  ProximityEntry *tmp =
-      (ProximityEntry *)malloc(count * sizeof(ProximityEntry));
+  auto *tmp = (ProximityEntry *)malloc(count * sizeof(ProximityEntry));
+  CHECK_INVARIANT(tmp, "bad allocation");
   PeriodicTable *table = PeriodicTable::getTable();
   Conformer *conf = &mol->getConformer();
 
@@ -180,8 +191,8 @@ static void ConnectTheDots_Large(RWMol *mol, unsigned int flags) {
     int hash = HASHX * (int)(p.x / MAXDIST) + HASHY * (int)(p.y / MAXDIST) +
                HASHZ * (int)(p.z / MAXDIST);
 
-    for (int dx = -HASHX; dx <= HASHX; dx += HASHX)
-      for (int dy = -HASHY; dy <= HASHY; dy += HASHY)
+    for (int dx = -HASHX; dx <= HASHX; dx += HASHX) {
+      for (int dy = -HASHY; dy <= HASHY; dy += HASHY) {
         for (int dz = -HASHZ; dz <= HASHZ; dz += HASHZ) {
           int probe = hash + dx + dy + dz;
           int list = HashTable[probe & HASHMASK];
@@ -189,11 +200,14 @@ static void ConnectTheDots_Large(RWMol *mol, unsigned int flags) {
             ProximityEntry *tmpj = &tmp[list];
             if (tmpj->hash == probe && IsBonded(tmpi, tmpj, flags) &&
                 !mol->getBondBetweenAtoms(tmpi->atm, tmpj->atm) &&
-                !IsBlacklistedPair(atom, mol->getAtomWithIdx(tmpj->atm)))
+                !IsBlacklistedPair(atom, mol->getAtomWithIdx(tmpj->atm))) {
               mol->addBond(tmpi->atm, tmpj->atm, Bond::SINGLE);
+            }
             list = tmpj->next;
           }
         }
+      }
+    }
     int list = hash & HASHMASK;
     tmpi->next = HashTable[list];
     HashTable[list] = i;
@@ -205,8 +219,7 @@ static void ConnectTheDots_Large(RWMol *mol, unsigned int flags) {
     unsigned int elem = atom->getAtomicNum();
     // detect multivalent Hs, which could happen with ConnectTheDots
     if (elem == 1 && atom->getDegree() > 1) {
-      AtomPDBResidueInfo *atom_info =
-          (AtomPDBResidueInfo *)(atom->getMonomerInfo());
+      auto *atom_info = (AtomPDBResidueInfo *)(atom->getMonomerInfo());
       // cut all but shortest Bond
       RDGeom::Point3D p = conf->getAtomPos(i);
       RDKit::RWMol::ADJ_ITER nbr, end_nbr;
@@ -216,7 +229,7 @@ static void ConnectTheDots_Large(RWMol *mol, unsigned int flags) {
       while (nbr != end_nbr) {
         RDGeom::Point3D pn = conf->getAtomPos(*nbr);
         float d = (p - pn).length();
-        AtomPDBResidueInfo *n_info =
+        auto *n_info =
             (AtomPDBResidueInfo *)(mol->getAtomWithIdx(*nbr)->getMonomerInfo());
         if (d < best &&
             atom_info->getResidueNumber() == n_info->getResidueNumber()) {
@@ -242,14 +255,18 @@ static void ConnectTheDots_Large(RWMol *mol, unsigned int flags) {
 }
 
 void ConnectTheDots(RWMol *mol, unsigned int flags) {
-  if (!mol || !mol->getNumConformers()) return;
+  if (!mol || !mol->getNumConformers()) {
+    return;
+  }
   // Determine optimal algorithm to use by getNumAtoms()?
   ConnectTheDots_Large(mol, flags);
 }
 
 // These are macros to allow their use in C++ constants
-#define BCNAM(A, B, C) (((A) << 16) | ((B) << 8) | (C))
-#define BCATM(A, B, C, D) (((A) << 24) | ((B) << 16) | ((C) << 8) | (D))
+constexpr int BCNAM(char A, char B, char C) { return (A << 16) | (B << 8) | C; }
+constexpr int BCATM(char A, char B, char C, char D) {
+  return (A << 24) | (B << 16) | (C << 8) | D;
+}
 
 static bool StandardPDBDoubleBond(unsigned int rescode, unsigned int atm1,
                                   unsigned int atm2) {
@@ -272,91 +289,202 @@ static bool StandardPDBDoubleBond(unsigned int rescode, unsigned int atm1,
     case BCNAM('T', 'H', 'R'):
     case BCNAM('V', 'A', 'L'):
       if (atm1 == BCATM(' ', 'C', ' ', ' ') &&
-          atm2 == BCATM(' ', 'O', ' ', ' '))
+          atm2 == BCATM(' ', 'O', ' ', ' ')) {
         return true;
+      }
       break;
     case BCNAM('A', 'R', 'G'):
       if (atm1 == BCATM(' ', 'C', ' ', ' ') &&
-          atm2 == BCATM(' ', 'O', ' ', ' '))
+          atm2 == BCATM(' ', 'O', ' ', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'Z', ' ') &&
-          atm2 == BCATM(' ', 'N', 'H', '2'))
+          atm2 == BCATM(' ', 'N', 'H', '2')) {
         return true;
+      }
       break;
     case BCNAM('A', 'S', 'N'):
     case BCNAM('A', 'S', 'P'):
       if (atm1 == BCATM(' ', 'C', ' ', ' ') &&
-          atm2 == BCATM(' ', 'O', ' ', ' '))
+          atm2 == BCATM(' ', 'O', ' ', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'G', ' ') &&
-          atm2 == BCATM(' ', 'O', 'D', '1'))
+          atm2 == BCATM(' ', 'O', 'D', '1')) {
         return true;
+      }
       break;
     case BCNAM('G', 'L', 'N'):
     case BCNAM('G', 'L', 'U'):
       if (atm1 == BCATM(' ', 'C', ' ', ' ') &&
-          atm2 == BCATM(' ', 'O', ' ', ' '))
+          atm2 == BCATM(' ', 'O', ' ', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'D', ' ') &&
-          atm2 == BCATM(' ', 'O', 'E', '1'))
+          atm2 == BCATM(' ', 'O', 'E', '1')) {
         return true;
+      }
       break;
     case BCNAM('H', 'I', 'S'):
       if (atm1 == BCATM(' ', 'C', ' ', ' ') &&
-          atm2 == BCATM(' ', 'O', ' ', ' '))
+          atm2 == BCATM(' ', 'O', ' ', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'D', '2') &&
-          atm2 == BCATM(' ', 'C', 'G', ' '))
+          atm2 == BCATM(' ', 'C', 'G', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'E', '1') &&
-          atm2 == BCATM(' ', 'N', 'D', '1'))
+          atm2 == BCATM(' ', 'N', 'D', '1')) {
         return true;
+      }
       break;
     case BCNAM('P', 'H', 'E'):
     case BCNAM('T', 'Y', 'R'):
       if (atm1 == BCATM(' ', 'C', ' ', ' ') &&
-          atm2 == BCATM(' ', 'O', ' ', ' '))
+          atm2 == BCATM(' ', 'O', ' ', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'D', '1') &&
-          atm2 == BCATM(' ', 'C', 'G', ' '))
+          atm2 == BCATM(' ', 'C', 'G', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'D', '2') &&
-          atm2 == BCATM(' ', 'C', 'E', '2'))
+          atm2 == BCATM(' ', 'C', 'E', '2')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'E', '1') &&
-          atm2 == BCATM(' ', 'C', 'Z', ' '))
+          atm2 == BCATM(' ', 'C', 'Z', ' ')) {
         return true;
+      }
       break;
     case BCNAM('T', 'R', 'P'):
       if (atm1 == BCATM(' ', 'C', ' ', ' ') &&
-          atm2 == BCATM(' ', 'O', ' ', ' '))
+          atm2 == BCATM(' ', 'O', ' ', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'D', '1') &&
-          atm2 == BCATM(' ', 'C', 'G', ' '))
+          atm2 == BCATM(' ', 'C', 'G', ' ')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'D', '2') &&
-          atm2 == BCATM(' ', 'C', 'E', '2'))
+          atm2 == BCATM(' ', 'C', 'E', '2')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'E', '3') &&
-          atm2 == BCATM(' ', 'C', 'Z', '3'))
+          atm2 == BCATM(' ', 'C', 'Z', '3')) {
         return true;
+      }
       if (atm1 == BCATM(' ', 'C', 'H', '2') &&
-          atm2 == BCATM(' ', 'C', 'Z', '2'))
+          atm2 == BCATM(' ', 'C', 'Z', '2')) {
         return true;
+      }
+      break;
+    case BCNAM(' ', ' ', 'A'):
+    case BCNAM(' ', 'D', 'A'):
+      if (atm1 == BCATM(' ', 'C', '6', ' ') &&
+          atm2 == BCATM(' ', 'N', '1', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '2', ' ') &&
+          atm2 == BCATM(' ', 'N', '3', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '4', ' ') &&
+          atm2 == BCATM(' ', 'C', '5', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '8', ' ') &&
+          atm2 == BCATM(' ', 'N', '7', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'O', 'P', '1') &&
+          atm2 == BCATM(' ', 'P', ' ', ' ')) {
+        return true;
+      }
+      break;
+    case BCNAM(' ', ' ', 'G'):
+    case BCNAM(' ', 'D', 'G'):
+      if (atm1 == BCATM(' ', 'C', '6', ' ') &&
+          atm2 == BCATM(' ', 'O', '6', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '2', ' ') &&
+          atm2 == BCATM(' ', 'N', '3', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '4', ' ') &&
+          atm2 == BCATM(' ', 'C', '5', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '8', ' ') &&
+          atm2 == BCATM(' ', 'N', '7', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'O', 'P', '1') &&
+          atm2 == BCATM(' ', 'P', ' ', ' ')) {
+        return true;
+      }
+      break;
+    case BCNAM(' ', ' ', 'C'):
+    case BCNAM(' ', 'D', 'C'):
+      if (atm1 == BCATM(' ', 'C', '2', ' ') &&
+          atm2 == BCATM(' ', 'O', '2', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '4', ' ') &&
+          atm2 == BCATM(' ', 'N', '3', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '5', ' ') &&
+          atm2 == BCATM(' ', 'C', '6', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'O', 'P', '1') &&
+          atm2 == BCATM(' ', 'P', ' ', ' ')) {
+        return true;
+      }
+      break;
+    case BCNAM(' ', ' ', 'T'):
+    case BCNAM(' ', 'D', 'T'):
+    case BCNAM(' ', ' ', 'U'):
+    case BCNAM(' ', 'D', 'U'):
+      if (atm1 == BCATM(' ', 'C', '2', ' ') &&
+          atm2 == BCATM(' ', 'O', '2', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '4', ' ') &&
+          atm2 == BCATM(' ', 'O', '4', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'C', '5', ' ') &&
+          atm2 == BCATM(' ', 'C', '6', ' ')) {
+        return true;
+      }
+      if (atm1 == BCATM(' ', 'O', 'P', '1') &&
+          atm2 == BCATM(' ', 'P', ' ', ' ')) {
+        return true;
+      }
       break;
   }
   return false;
 }
 
 static bool StandardPDBDoubleBond(RWMol *mol, Atom *beg, Atom *end) {
-  AtomPDBResidueInfo *bInfo = (AtomPDBResidueInfo *)beg->getMonomerInfo();
-  if (!bInfo || bInfo->getMonomerType() != AtomMonomerInfo::PDBRESIDUE)
+  auto *bInfo = (AtomPDBResidueInfo *)beg->getMonomerInfo();
+  if (!bInfo || bInfo->getMonomerType() != AtomMonomerInfo::PDBRESIDUE) {
     return false;
-  AtomPDBResidueInfo *eInfo = (AtomPDBResidueInfo *)end->getMonomerInfo();
-  if (!eInfo || eInfo->getMonomerType() != AtomMonomerInfo::PDBRESIDUE)
+  }
+  auto *eInfo = (AtomPDBResidueInfo *)end->getMonomerInfo();
+  if (!eInfo || eInfo->getMonomerType() != AtomMonomerInfo::PDBRESIDUE) {
     return false;
-  if (!SamePDBResidue(bInfo, eInfo)) return false;
-  if (bInfo->getIsHeteroAtom() || eInfo->getIsHeteroAtom()) return false;
+  }
+  if (!SamePDBResidue(bInfo, eInfo)) {
+    return false;
+  }
+  if (bInfo->getIsHeteroAtom() || eInfo->getIsHeteroAtom()) {
+    return false;
+  }
 
   const char *ptr = bInfo->getResidueName().c_str();
   unsigned int rescode = BCNAM(ptr[0], ptr[1], ptr[2]);
@@ -365,15 +493,22 @@ static bool StandardPDBDoubleBond(RWMol *mol, Atom *beg, Atom *end) {
   ptr = eInfo->getName().c_str();
   unsigned int atm2 = BCATM(ptr[0], ptr[1], ptr[2], ptr[3]);
 
-  if (!StandardPDBDoubleBond(rescode, atm1, atm2)) return false;
+  if (!StandardPDBDoubleBond(rescode, atm1, atm2)) {
+    return false;
+  }
 
   // Check that neither end already has a double bond
   ROMol::OBOND_ITER_PAIR bp;
-  for (bp = mol->getAtomBonds(beg); bp.first != bp.second; ++bp.first)
-    if ((*mol)[*bp.first]->getBondType() == Bond::DOUBLE) return false;
-  for (bp = mol->getAtomBonds(end); bp.first != bp.second; ++bp.first)
-    if ((*mol)[*bp.first]->getBondType() == Bond::DOUBLE) return false;
-
+  for (bp = mol->getAtomBonds(beg); bp.first != bp.second; ++bp.first) {
+    if ((*mol)[*bp.first]->getBondType() == Bond::DOUBLE) {
+      return false;
+    }
+  }
+  for (bp = mol->getAtomBonds(end); bp.first != bp.second; ++bp.first) {
+    if ((*mol)[*bp.first]->getBondType() == Bond::DOUBLE) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -384,7 +519,9 @@ void StandardPDBResidueBondOrders(RWMol *mol) {
     if (bond->getBondType() == Bond::SINGLE) {
       Atom *beg = bond->getBeginAtom();
       Atom *end = bond->getEndAtom();
-      if (StandardPDBDoubleBond(mol, beg, end)) bond->setBondType(Bond::DOUBLE);
+      if (StandardPDBDoubleBond(mol, beg, end)) {
+        bond->setBondType(Bond::DOUBLE);
+      }
     }
   }
 }

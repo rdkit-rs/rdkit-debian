@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/export.h>
 #ifndef _RD_MOLWRITERS_H_
 #define _RD_MOLWRITERS_H_
 
@@ -20,7 +21,7 @@
 namespace RDKit {
 
 static int defaultConfId = -1;
-class MolWriter {
+class RDKIT_FILEPARSERS_EXPORT MolWriter {
  public:
   virtual ~MolWriter() {}
   virtual void write(const ROMol &mol, int confId = defaultConfId) = 0;
@@ -32,7 +33,7 @@ class MolWriter {
 
 //! The SmilesWriter is for writing molecules and properties to
 //! delimited text files.
-class SmilesWriter : public MolWriter {
+class RDKIT_FILEPARSERS_EXPORT SmilesWriter : public MolWriter {
   /******************************************************************************
    * A Smiles Table writer - this is how it is used
    *  - create a SmilesWriter with a output file name (or a ostream), a
@@ -89,12 +90,11 @@ class SmilesWriter : public MolWriter {
   //! \brief close our stream (the writer cannot be used again)
   void close() {
     flush();
-    std::ostream *tmp_ostream = dp_ostream;
-    dp_ostream = NULL;
     if (df_owner) {
+      delete dp_ostream;
       df_owner = false;
-      delete tmp_ostream;
     }
+    dp_ostream = nullptr;
   };
 
   //! \brief get the number of molecules written so far
@@ -121,7 +121,7 @@ class SmilesWriter : public MolWriter {
 
 //! The SDWriter is for writing molecules and properties to
 //! SD files
-class SDWriter : public MolWriter {
+class RDKIT_FILEPARSERS_EXPORT SDWriter : public MolWriter {
   /**************************************************************************************
    * A SD file ( or stream) writer - this is how it is used
    *  - create a SDMolWriter with a output file name (or a ostream),
@@ -145,7 +145,7 @@ class SDWriter : public MolWriter {
   //! \brief return the text that would be written to the file
   static std::string getText(const ROMol &mol, int confId = defaultConfId,
                              bool kekulize = true, bool force_V3000 = false,
-                             int molid = -1, STR_VECT *propNames = NULL);
+                             int molid = -1, STR_VECT *propNames = nullptr);
 
   //! \brief write a new molecule to the file
   void write(const ROMol &mol, int confId = defaultConfId);
@@ -166,12 +166,11 @@ class SDWriter : public MolWriter {
   //! \brief close our stream (the writer cannot be used again)
   void close() {
     flush();
-    std::ostream *tmp_ostream = dp_ostream;
-    dp_ostream = NULL;
     if (df_owner) {
+      delete dp_ostream;
       df_owner = false;
-      delete tmp_ostream;
     }
+    dp_ostream = nullptr;
   };
 
   //! \brief get the number of molecules written so far
@@ -196,7 +195,7 @@ class SDWriter : public MolWriter {
 
 //! The TDTWriter is for writing molecules and properties to
 //! TDT files
-class TDTWriter : public MolWriter {
+class RDKIT_FILEPARSERS_EXPORT TDTWriter : public MolWriter {
   /**************************************************************************************
    * A TDT file ( or stream) writer - this is how it is used
    *  - create a TDTWriter with a output file name (or a ostream),
@@ -235,13 +234,16 @@ class TDTWriter : public MolWriter {
 
   //! \brief close our stream (the writer cannot be used again)
   void close() {
-    flush();
-    std::ostream *tmp_ostream = dp_ostream;
-    dp_ostream = NULL;
-    if (df_owner) {
-      df_owner = false;
-      delete tmp_ostream;
+    // if we've written any mols, finish with a "|" line
+    if (dp_ostream && d_molid > 0) {
+      *dp_ostream << "|\n";
     }
+    flush();
+    if (df_owner) {
+      delete dp_ostream;
+      df_owner = false;
+    }
+    dp_ostream = nullptr;
   };
 
   //! \brief get the number of molecules written so far
@@ -271,7 +273,7 @@ class TDTWriter : public MolWriter {
 
 //! The PDBWriter is for writing molecules to Brookhaven Protein
 //! DataBank format files.
-class PDBWriter : public MolWriter {
+class RDKIT_FILEPARSERS_EXPORT PDBWriter : public MolWriter {
  public:
   PDBWriter(const std::string &fileName, unsigned int flavor = 0);
   PDBWriter(std::ostream *outStream, bool takeOwnership = false,
@@ -299,12 +301,11 @@ class PDBWriter : public MolWriter {
   //! \brief close our stream (the writer cannot be used again)
   void close() {
     flush();
-    std::ostream *tmp_ostream = dp_ostream;
-    dp_ostream = NULL;
     if (df_owner) {
+      delete dp_ostream;
       df_owner = false;
-      delete tmp_ostream;
     }
+    dp_ostream = nullptr;
   };
 
   //! \brief get the number of molecules written so far
@@ -316,6 +317,6 @@ class PDBWriter : public MolWriter {
   unsigned int d_count;
   bool df_owner;
 };
-}
+}  // namespace RDKit
 
 #endif

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 
 project (RDKit)
 
@@ -8,12 +8,17 @@ IF(NOT CMAKE_BUILD_TYPE)
       FORCE)
 ENDIF(NOT CMAKE_BUILD_TYPE)
 
-enable_testing()
+# Enable CTest
+include(CTest)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/Code/cmake/Modules/")
 
 add_library(rdkit_base INTERFACE)
+add_dependencies(rdkit_base catch)
 
 option(RDK_BUILD_SWIG_WRAPPERS "build the SWIG wrappers" OFF )
 option(RDK_BUILD_PYTHON_WRAPPERS "build the standard python wrappers" ON )
@@ -21,9 +26,11 @@ option(RDK_BUILD_COMPRESSED_SUPPLIERS "build in support for compressed MolSuppli
 option(RDK_BUILD_INCHI_SUPPORT "build the rdkit inchi wrapper" OFF )
 option(RDK_BUILD_AVALON_SUPPORT "install support for the avalon toolkit. Use the variable AVALONTOOLS_DIR to set the location of the source." OFF )
 option(RDK_BUILD_PGSQL "build the PostgreSQL cartridge" OFF )
+option(RDK_BUILD_RPATH_SUPPORT "build shared libraries using rpath" OFF)
 option(RDK_PGSQL_STATIC "statically link rdkit libraries into the PostgreSQL cartridge" ON )
 option(RDK_BUILD_CONTRIB "build the Contrib directory" OFF )
 option(RDK_INSTALL_INTREE "install the rdkit in the source tree (former behavior)" ON )
+option(RDK_INSTALL_DLLS_MSVC "install the rdkit DLLs when using MSVC" OFF)
 option(RDK_INSTALL_STATIC_LIBS "install the rdkit static libraries" ON )
 option(RDK_INSTALL_PYTHON_TESTS "install the rdkit Python tests with the wrappers" OFF )
 option(RDK_BUILD_THREADSAFE_SSS "enable thread-safe substructure searching" ON )
@@ -37,18 +44,43 @@ option(RDK_BUILD_CPP_TESTS "build the c++ tests (disabing can speed up builds" O
 option(RDK_USE_FLEXBISON "use flex/bison, if available, to build the SMILES/SMARTS/SLN parsers" OFF)
 option(RDK_TEST_COVERAGE "Use G(L)COV to compute test coverage" OFF)
 option(RDK_USE_BOOST_SERIALIZATION "Use the boost serialization library if available" ON)
+option(RDK_USE_BOOST_STACKTRACE "use boost::stacktrace to do more verbose invariant output (linux only)" ON)
 option(RDK_BUILD_TEST_GZIP "Build the gzip'd stream test" OFF)
-option(RDK_OPTIMIZE_NATIVE "Use native features while compiling." ON)
+option(RDK_OPTIMIZE_POPCNT "Use SSE4.2 popcount instruction while compiling." ON)
 option(RDK_USE_STRICT_ROTOR_DEFINITION "Use the most strict rotatable bond definition" ON)
 option(RDK_BUILD_DESCRIPTORS3D "Build the 3D descriptors calculators, requires Eigen3 to be installed" ON)
 option(RDK_BUILD_FREESASA_SUPPORT "build the rdkit freesasa wrapper" OFF )
 option(RDK_BUILD_COORDGEN_SUPPORT "build the rdkit coordgen wrapper" ON )
+option(RDK_BUILD_MAEPARSER_SUPPORT "build the rdkit MAE parser wrapper" ON )
 option(RDK_BUILD_MOLINTERCHANGE_SUPPORT "build in support for CommonChem molecule interchange" ON )
+option(RDK_BUILD_YAEHMOP_SUPPORT "build support for the YAeHMOP wrapper" OFF)
+option(RDK_BUILD_STRUCTCHECKER_SUPPORT "build in support for the StructChecker alpha (not recommended, use the MolVS integration instead)" OFF )
+option(RDK_USE_URF "Build support for Florian Flachsenberg's URF library" ON)
 option(RDK_INSTALL_DEV_COMPONENT "install libraries and headers" ON)
+option(RDK_USE_BOOST_REGEX "use boost::regex instead of std::regex (needed for systems with g++-4.8)" OFF)
+option(RDK_USE_BOOST_IOSTREAMS "use boost::iostreams" ON)
+option(RDK_BUILD_MINIMAL_LIB "build the minimal RDKit wrapper (for the JS bindings)" OFF)
+option(RDK_BUILD_FUZZ_TARGETS "build the fuzz targets" OFF)
+
+set(RDK_BOOST_VERSION "1.58.0")
+
 if(NOT MSVC)
-  if(RDK_OPTIMIZE_NATIVE)
+  if(RDK_OPTIMIZE_POPCNT)
+    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
+      message("RDK_OPTIMIZE_POPCNT is not available on aarch64")
+    elseif(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "ppc64le")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntb")
+    else()
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
+    endif()
   endif()
+endif()
+
+if(NOT UNIX OR APPLE)
+  if(RDK_USE_BOOST_STACKTRACE)
+    MESSAGE("Disabling boost::stacktrace on non-linux platform")
+    set(RDK_USE_BOOST_STACKTRACE OFF)
+  endif(RDK_USE_BOOST_STACKTRACE)
 endif()
 
 if(RDK_BUILD_SWIG_WRAPPERS!=ON)
@@ -63,6 +95,9 @@ if(RDK_SWIG_STATIC AND RDK_BUILD_SWIG_WRAPPERS)
   endif(NOT RDK_INSTALL_STATIC_LIBS)
 endif()
 
+if(NOT (MSVC AND (NOT RDK_INSTALL_DLLS_MSVC)))
+  add_definitions(-DRDKIT_DYN_LINK)
+endif()
 
 if(RDK_PGSQL_STATIC AND RDK_BUILD_PGSQL)
   if(NOT RDK_INSTALL_STATIC_LIBS)
@@ -70,6 +105,7 @@ if(RDK_PGSQL_STATIC AND RDK_BUILD_PGSQL)
     set(RDK_INSTALL_STATIC_LIBS ON CACHE BOOL "install the rdkit static libraries" FORCE)
   endif(NOT RDK_INSTALL_STATIC_LIBS)
 endif()
+
 
 include(TestBigEndian)
 TEST_BIG_ENDIAN(RDK_BIG_ENDIAN)
@@ -83,9 +119,9 @@ set(RDK_PYTHON_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/rdkit")
 
 #-------
 # Config variables:
-set(RDKit_Year "2018")
-set(RDKit_Month "03")
-set(RDKit_Revision "4")
+set(RDKit_Year "2020")
+set(RDKit_Month "09")
+set(RDKit_Revision "1")
 set(RDKit_RevisionModifier "")
 set(RDKit_ABI "1")
 
@@ -95,6 +131,11 @@ string(REGEX REPLACE "^0" "" RDKit_intMonth ${RDKit_Month} )
 
 set(RDKit_CodeDir "${CMAKE_CURRENT_SOURCE_DIR}/Code")
 set(RDKit_ExternalDir "${CMAKE_CURRENT_SOURCE_DIR}/External")
+
+#include catch
+add_subdirectory(${RDKit_ExternalDir}/catch)
+include_directories(${CATCH_INCLUDE_DIR})
+message("CATCH: ${CATCH_INCLUDE_DIR}")
 
 if(RDK_INSTALL_INTREE)
   set(RDKit_BinDir "${CMAKE_SOURCE_DIR}/bin")
@@ -108,16 +149,51 @@ else(RDK_INSTALL_INTREE)
   set(RDKit_ShareDir "share/RDKit")
 endif(RDK_INSTALL_INTREE)
 
+if(RDK_BUILD_RPATH_SUPPORT)
+  # use, i.e. don't skip the full RPATH for the build tree
+  SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+  # when building, don't use the install RPATH already
+  # (but later on when installing)
+  SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+  message("CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib")
+  SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+  # add the automatically determined parts of the RPATH
+  # which point to directories outside the build tree to the install RPATH
+  SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+  # the RPATH to be used when installing, but only if it's not a system
+  # directory
+  LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES
+  "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+  IF("${isSystemDir}" STREQUAL "-1")
+     SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+  ENDIF("${isSystemDir}" STREQUAL "-1")
+endif()
+
+
+
 if(RDK_BUILD_SWIG_WRAPPERS)
   set(RDKit_JavaLibDir "${RDKit_ExternalDir}/java_lib")
 endif(RDK_BUILD_SWIG_WRAPPERS)
 
 
 if(RDK_BUILD_COORDGEN_SUPPORT)
-    add_definitions(-DBUILD_COORDGEN_SUPPORT)
+    add_definitions(-DRDK_BUILD_COORDGEN_SUPPORT)
     include_directories(${RDKit_ExternalDir})
 endif()
 
+if(RDK_BUILD_MAEPARSER_SUPPORT)
+    add_definitions(-DRDK_BUILD_MAEPARSER_SUPPORT)
+    include_directories(${RDKit_ExternalDir})
+endif()
+
+if(RDK_USE_URF)
+  ADD_DEFINITIONS("-DRDK_USE_URF")
+  include_directories(${RDKit_ExternalDir}/RingFamilies/RingDecomposerLib/src/RingDecomposerLib)
+endif()
 
 
 if(CMAKE_SIZEOF_VOID_P MATCHES 4)
@@ -132,23 +208,9 @@ endif(MINGW)
 
 # defines macros: rdkit_python_extension, rdkit_test
 include(RDKitUtils)
-install(EXPORT ${RDKit_EXPORTED_TARGETS} DESTINATION ${RDKit_LibDir})
+
 install(TARGETS rdkit_base EXPORT ${RDKit_EXPORTED_TARGETS}
         COMPONENT dev )
-
-# create and install package configuration and version files
-configure_file (
-    ${RDKit_SOURCE_DIR}/rdkit-config.cmake.in
-    ${RDKit_BINARY_DIR}/rdkit-config.cmake @ONLY)
-
-configure_file (
-    ${RDKit_SOURCE_DIR}/rdkit-config-version.cmake.in
-    ${RDKit_BINARY_DIR}/rdkit-config-version.cmake @ONLY)
-
-install(FILES
-    ${RDKit_BINARY_DIR}/rdkit-config.cmake
-    ${RDKit_BINARY_DIR}/rdkit-config-version.cmake
-    DESTINATION ${RDKit_LibDir})
 
 # disable some warnings that we don't care about
 if(MSVC)
@@ -164,7 +226,6 @@ endif(MSVC)
 # extra boost versions
 if(MSVC)
   # FIX: do we still need this?
-  SET(Boost_ADDITIONAL_VERSIONS "1.48" "1.48.0" "1.45" "1.45.0" "1.44" "1.44.0" "1.43" "1.43.0" "1.42" "1.42.0" "1.41" "1.41.0" "1.40" "1.40.0")
   target_compile_definitions(rdkit_base INTERFACE "-DBOOST_ALL_NO_LIB")
 endif(MSVC)
 
@@ -173,34 +234,61 @@ if(RDK_BUILD_INCHI_SUPPORT)
 endif(RDK_BUILD_INCHI_SUPPORT)
 
 if(RDK_BUILD_PYTHON_WRAPPERS)
+  add_library(rdkit_py_base INTERFACE)
+
   #-------
   # pull in python:
   find_package(PythonInterp)
   if (PYTHONINTERP_FOUND AND NOT Python_ADDITIONAL_VERSIONS)
     set(Python_ADDITIONAL_VERSIONS "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
   endif (PYTHONINTERP_FOUND AND NOT Python_ADDITIONAL_VERSIONS)
+
+  if(PYTHON_VERSION_MAJOR EQUAL 2)
+    message(FATAL_ERROR "ERROR: The RDKit no longer supports Python 2.\nIf you have Python 3 installed, you can tell cmake where to find it using the -DPYTHON_EXECUTABLE argument.")
+  endif()
+
   find_package(PythonLibs)
   target_include_directories(rdkit_base INTERFACE ${PYTHON_INCLUDE_DIR})
+
+  # determine linkage of python
+  execute_process(
+      COMMAND
+      ${PYTHON_EXECUTABLE} -c "from distutils import sysconfig; print(sysconfig.get_config_var('Py_ENABLE_SHARED'))"
+      OUTPUT_VARIABLE Py_ENABLE_SHARED
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  if(WIN32 OR "${Py_ENABLE_SHARED}" STREQUAL "1")
+    target_link_libraries(rdkit_py_base INTERFACE ${PYTHON_LIBRARIES} )
+  endif()
+  
   find_package(NumPy REQUIRED)
   target_include_directories(rdkit_base INTERFACE ${PYTHON_NUMPY_INCLUDE_PATH})
 
   if(PYTHON_VERSION_MAJOR EQUAL 3)
     # Find boost-python3 using name specified as command line option then fall back to commonly used names
     set(RDK_BOOST_PYTHON3_NAME "python3" CACHE STRING "Name of the boost python3 library. If installed as libboost_python-xxx.so, use python-xxx.")
-    foreach(Boost_Python_Lib "${RDK_BOOST_PYTHON3_NAME}" "python-py3${PYTHON_VERSION_MINOR}" "python3")
-      find_package(Boost 1.56.0 COMPONENTS "${Boost_Python_Lib}" QUIET)
-      if(Boost_FOUND)
-        break()
-      endif()
-    endforeach()
-    # If boost-python3 not found, just find boost-python and hope that it is compatible with python3
-    if(NOT Boost_FOUND)
-      find_package(Boost 1.56.0 COMPONENTS python REQUIRED)
-    endif()
-  else(PYTHON_VERSION_MAJOR EQUAL 3)
-     find_package(Boost 1.56.0 COMPONENTS python REQUIRED)
+    list(APPEND Boost_Python_Names "${RDK_BOOST_PYTHON3_NAME}" "python-py3${PYTHON_VERSION_MINOR}" "python3")
   endif(PYTHON_VERSION_MAJOR EQUAL 3)
 
+  # Boost 1.67+ uses a version suffix like "python36" or "python27"
+  list(APPEND Boost_Python_Names "python${PYTHON_VERSION_MAJOR}${PYTHON_VERSION_MINOR}")
+
+  # Try each potential boost-python name until one works
+  foreach(Boost_Python_LibN ${Boost_Python_Names})
+    find_package(Boost ${RDK_BOOST_VERSION} COMPONENTS "${Boost_Python_LibN}" QUIET)
+    if(Boost_FOUND)
+      set(Boost_Python_Lib ${Boost_Python_LibN})
+      break()
+    endif()
+  endforeach()
+  # Finally just try "python" and hope it is a compatible version
+  if(NOT Boost_FOUND)
+    find_package(Boost ${RDK_BOOST_VERSION} COMPONENTS python REQUIRED)
+    set(Boost_Python_Lib "python")
+  endif()
+
+  target_link_libraries(rdkit_py_base INTERFACE Boost::${Boost_Python_Lib})
 
   if(RDK_INSTALL_INTREE)
     set(RDKit_PythonDir "${CMAKE_SOURCE_DIR}/rdkit")
@@ -239,13 +327,6 @@ if(RDK_BUILD_PYTHON_WRAPPERS)
 
   endif(RDK_INSTALL_INTREE)
 
-  # determine linkage of python
-  execute_process(
-      COMMAND
-      ${PYTHON_EXECUTABLE} -c "from distutils import sysconfig; print(sysconfig.get_config_var('Py_ENABLE_SHARED'))"
-      OUTPUT_VARIABLE Py_ENABLE_SHARED
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
   if(NOT WIN32)
     # See https://bugs.python.org/msg277944
     # The "command to create shared modules". Used as variable in the "Makefile (and similar) templates to build python modules"
@@ -261,8 +342,12 @@ if(RDK_BUILD_PYTHON_WRAPPERS)
      message("PYTHON Py_ENABLE_SHARED: ${Py_ENABLE_SHARED}")
      message("PYTHON USING LINK LINE: ${PYTHON_LDSHARED}")
   endif()
+
+  install(TARGETS rdkit_py_base EXPORT ${RDKit_EXPORTED_TARGETS}
+          COMPONENT dev )
+
 else(RDK_BUILD_PYTHON_WRAPPERS)
-  find_package(Boost 1.56.0 REQUIRED)
+  find_package(Boost ${RDK_BOOST_VERSION} REQUIRED)
 endif(RDK_BUILD_PYTHON_WRAPPERS)
 
 # Detect clang, which masquerades as gcc.  CMake 2.6 doesn't know how to
@@ -274,6 +359,7 @@ if(RDK_BUILD_DESCRIPTORS3D)
   if(EIGEN3_FOUND)
     target_compile_definitions(rdkit_base INTERFACE "-DRDK_HAS_EIGEN3" "-DRDK_BUILD_DESCRIPTORS3D")
     target_link_libraries(rdkit_base INTERFACE Eigen3::Eigen)
+    set(RDK_HAS_EIGEN ON)
   else(EIGEN3_FOUND)
     message("Eigen3 not found, disabling the Descriptors3D build.")
     set(RDK_BUILD_DESCRIPTORS3D OFF)
@@ -288,6 +374,7 @@ if(RDK_BUILD_THREADSAFE_SSS)
   if(RDK_TEST_MULTITHREADED)
     target_compile_definitions(rdkit_base INTERFACE "-DRDK_TEST_MULTITHREADED")
   endif()
+  target_link_libraries(rdkit_base INTERFACE Threads::Threads)
 else()
   if(RDK_TEST_MULTITHREADED)
     message("RDK_TEST_MULTITHREADED does not make sense without RD_BUILD_THREADSAFE_SSS, disabling it.")
@@ -297,10 +384,13 @@ endif()
 
 if(RDK_USE_BOOST_SERIALIZATION)
     set(T_LIBS ${Boost_LIBRARIES})
-    find_package(Boost 1.56.0 COMPONENTS serialization)
+    find_package(Boost ${RDK_BOOST_VERSION} COMPONENTS serialization)
     if (Boost_SERIALIZATION_LIBRARY)
       set(Boost_LIBRARIES ${T_LIBS} ${Boost_LIBRARIES})
+    else()
+      set(Boost_LIBRARIES ${T_LIBS})
     endif()
+  target_compile_definitions(rdkit_base INTERFACE -DRDK_USE_BOOST_SERIALIZATION -DBOOST_SERIALIZATION_DYN_LINK)
 endif()
 
 
@@ -344,7 +434,7 @@ else(RDK_TEST_COVERAGE)
  if(CMAKE_COMPILER_IS_GNUCXX)
    # We don't on C_FLAGS warnings to keep Avalon compiling quiet
    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated -Wno-unused-function -fno-strict-aliasing")
-   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -Wall -Wextra")
+   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -Wall -Wextra")
   if (NOT CYGWIN)
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
@@ -353,7 +443,7 @@ else(RDK_TEST_COVERAGE)
  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
    # We don't on C_FLAGS warnings to keep Avalon compiling quiet
    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds -fPIC -Wno-parentheses -Wno-logical-op-parentheses -Wno-format")
-   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -Wno-format -Wno-logical-op-parentheses -fPIC")
+   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -Wno-format -Wno-logical-op-parentheses -fPIC")
    if(APPLE)
      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
    endif()
@@ -426,6 +516,7 @@ if (MSVC)
 endif(MSVC)
 
 
+
 add_subdirectory(External)
 add_subdirectory(Code)
 
@@ -437,6 +528,35 @@ endif(RDK_BUILD_PYTHON_WRAPPERS)
 if(RDK_BUILD_CONTRIB)
   add_subdirectory(Contrib)
 endif(RDK_BUILD_CONTRIB)
+
+# export the project targets (to be included in the cmake package configuration)
+install(
+  EXPORT ${RDKit_EXPORTED_TARGETS}
+  FILE ${RDKit_EXPORTED_TARGETS}.cmake
+  NAMESPACE RDKit::
+  DESTINATION ${RDKit_LibDir}/cmake/rdkit
+)
+
+# create and install package configuration and version files
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${RDKit_BINARY_DIR}/rdkit-config-version.cmake"
+  VERSION ${RDKit_RELEASENAME}
+  COMPATIBILITY AnyNewerVersion
+)
+
+configure_file (
+    ${RDKit_SOURCE_DIR}/rdkit-config.cmake.in
+    ${RDKit_BINARY_DIR}/rdkit-config.cmake @ONLY)
+
+install(FILES
+    ${RDKit_BINARY_DIR}/rdkit-config.cmake
+    ${RDKit_BINARY_DIR}/rdkit-config-version.cmake
+    DESTINATION ${RDKit_LibDir}/cmake/rdkit)
+
+# Memory testing setup
+FIND_PROGRAM(MEMORYCHECK_COMMAND valgrind)
+CONFIGURE_FILE(CTestCustom.ctest.in ${RDKit_BINARY_DIR}/CTestCustom.ctest)
 
 # Packaging
 SET(CPACK_GENERATOR "TGZ;DEB;RPM")

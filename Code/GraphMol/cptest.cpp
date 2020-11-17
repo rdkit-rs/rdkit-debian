@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/RDKitQueries.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
@@ -27,9 +28,9 @@ void test1() {
 void test2() {
   auto *mol = new RWMol();
 
-  mol->addAtom(new Atom(6));
-  mol->addAtom(new Atom(6));
-  mol->addAtom(new Atom(8));
+  mol->addAtom(new Atom(6), false, true);
+  mol->addAtom(new Atom(6), false, true);
+  mol->addAtom(new Atom(8), false, true);
   mol->addBond(0, 1, Bond::SINGLE);
   mol->addBond(1, 2, Bond::SINGLE);
   mol->setAtomBookmark(mol->getAtomWithIdx(1), 1);
@@ -44,6 +45,8 @@ void test2() {
   CHECK_INVARIANT(mol2->getAtomWithBookmark(1)->getIdx() == 1, "");
   CHECK_INVARIANT(mol2->hasBondBookmark(2), "");
   CHECK_INVARIANT(mol2->getBondWithBookmark(2)->getIdx() == 0, "");
+  delete mol;
+  delete mol2;
 }
 
 void testQueryCopying() {
@@ -55,7 +58,7 @@ void testQueryCopying() {
     std::string smi =
         "[$([O,S;H1;v2]-[!$(*=[O,N,P,S])]),$([O,S;H0;v2]),$([O,S;-]),$([N;v3;!$"
         "(N-*=!@[O,N,P,S])]),$([nH0,o,s;+0])]";
-    ROMol *m = static_cast<ROMol *>(SmartsToMol(smi));
+    auto *m = static_cast<ROMol *>(SmartsToMol(smi));
     TEST_ASSERT(m);
     std::cerr << "\n\n\nCOPY" << std::endl;
     auto *m2 = new ROMol(*m, true);
@@ -73,7 +76,7 @@ void testConformerCopying() {
 
   {
     std::string smi = "CCC";
-    ROMol *m = static_cast<ROMol *>(SmilesToMol(smi));
+    auto *m = static_cast<ROMol *>(SmilesToMol(smi));
     TEST_ASSERT(m);
 
     auto *conf = new Conformer(m->getNumAtoms());
@@ -111,13 +114,35 @@ void testConformerCopying() {
   BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
 }
 
+void testGithub2144() {
+  BOOST_LOG(rdInfoLog) << "-----------------------\n Testing Github #2144: no "
+                          "RWMol(RWMol) copy constructor"
+                       << std::endl;
+
+  {
+    auto mol1 = "C1CCCCC1"_smiles;
+    TEST_ASSERT(mol1);
+    RWMol mol2(*mol1);
+    TEST_ASSERT(mol2.getNumBonds() == mol1->getNumBonds())
+    TEST_ASSERT(mol2.getNumAtoms() == mol1->getNumAtoms())
+    RWMol mol3(mol2);
+    TEST_ASSERT(mol2.getNumBonds() == mol3.getNumBonds())
+    TEST_ASSERT(mol2.getNumAtoms() == mol3.getNumAtoms())
+  }
+
+  BOOST_LOG(rdInfoLog) << "Finished" << std::endl;
+}
+
 // -------------------------------------------------------------------
 int main() {
-#if 0
+  RDLog::InitLogs();
+
+#if 1
   test1();
   test2();
 #endif
   testQueryCopying();
   testConformerCopying();
+  testGithub2144();
   return 0;
 }

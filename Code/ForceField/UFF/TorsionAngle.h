@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_TORSIONANGLE_H__
 #define __RD_TORSIONANGLE_H__
 
@@ -25,10 +26,9 @@ namespace UFF {
 class AtomicParams;
 
 //! the torsion term for the Universal Force Field
-class TorsionAngleContrib : public ForceFieldContrib {
+class RDKIT_FORCEFIELD_EXPORT TorsionAngleContrib : public ForceFieldContrib {
  public:
-  TorsionAngleContrib()
-      : d_at1Idx(-1), d_at2Idx(-1), d_at3Idx(-1), d_at4Idx(-1), d_order(0){};
+  TorsionAngleContrib(){};
   //! Constructor
   /*!
     The torsion is between atom1 - atom2 - atom3 - atom4
@@ -74,8 +74,11 @@ class TorsionAngleContrib : public ForceFieldContrib {
   };
 
  private:
-  int d_at1Idx, d_at2Idx, d_at3Idx, d_at4Idx;
-  unsigned int d_order;
+  int d_at1Idx{-1};
+  int d_at2Idx{-1};
+  int d_at3Idx{-1};
+  int d_at4Idx{-1};
+  unsigned int d_order{0};
   double d_forceConstant, d_cosTerm;
 
   //! returns dE/dTheta
@@ -94,15 +97,19 @@ class TorsionAngleContrib : public ForceFieldContrib {
 
 namespace Utils {
 //! calculates and returns the cosine of a torsion angle
-double calculateCosTorsion(const RDGeom::Point3D &p1, const RDGeom::Point3D &p2,
-                           const RDGeom::Point3D &p3,
-                           const RDGeom::Point3D &p4);
-void calcTorsionGrad(RDGeom::Point3D *r, RDGeom::Point3D *t, double *d,
-                     double **g, double &sinTerm, double &cosPhi);
-double equation17(double bondOrder23, const AtomicParams *at2Params,
-                  const AtomicParams *at3Params);
-bool isInGroup6(int num);
-}
-}
-}
+RDKIT_FORCEFIELD_EXPORT double calculateCosTorsion(const RDGeom::Point3D &p1,
+                                                   const RDGeom::Point3D &p2,
+                                                   const RDGeom::Point3D &p3,
+                                                   const RDGeom::Point3D &p4);
+RDKIT_FORCEFIELD_EXPORT void calcTorsionGrad(RDGeom::Point3D *r,
+                                             RDGeom::Point3D *t, double *d,
+                                             double **g, double &sinTerm,
+                                             double &cosPhi);
+RDKIT_FORCEFIELD_EXPORT double equation17(double bondOrder23,
+                                          const AtomicParams *at2Params,
+                                          const AtomicParams *at3Params);
+RDKIT_FORCEFIELD_EXPORT bool isInGroup6(int num);
+}  // namespace Utils
+}  // namespace UFF
+}  // namespace ForceFields
 #endif

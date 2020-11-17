@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef _RD_FRAGCATALOGENTRY_H_
 #define _RD_FRAGCATALOGENTRY_H_
 
@@ -23,9 +24,10 @@
 
 namespace RDKit {
 
-class FragCatalogEntry : public RDCatalog::CatalogEntry {
+class RDKIT_FRAGCATALOG_EXPORT FragCatalogEntry
+    : public RDCatalog::CatalogEntry {
  public:
-  FragCatalogEntry() : dp_mol(0), d_descrip(""), d_order(0) {
+  FragCatalogEntry() :  d_descrip("") {
     dp_props = new Dict();
     setBitId(-1);
   }
@@ -36,10 +38,10 @@ class FragCatalogEntry : public RDCatalog::CatalogEntry {
 
   ~FragCatalogEntry() {
     delete dp_mol;
-    dp_mol = 0;
+    dp_mol = nullptr;
     if (dp_props) {
       delete dp_props;
-      dp_props = 0;
+      dp_props = nullptr;
     }
   }
 
@@ -49,7 +51,7 @@ class FragCatalogEntry : public RDCatalog::CatalogEntry {
 
   void setDescription(const FragCatParams *params);
 
-  // check if this fragment macthes the one specified
+  // check if this fragment matches the one specified
   //
 
   bool match(const FragCatalogEntry *other, double tol) const;
@@ -115,18 +117,18 @@ class FragCatalogEntry : public RDCatalog::CatalogEntry {
   void initFromString(const std::string &text);
 
  private:
-  ROMol *dp_mol;
+  ROMol *dp_mol{nullptr};
   Dict *dp_props;
 
   std::string d_descrip;
 
-  unsigned int d_order;
+  unsigned int d_order{0};
 
   // a map between the atom ids in mol that connect to
   // a functional group and the corresponding functional
   // group ID
   INT_INT_VECT_MAP d_aToFmap;
 };
-}
+}  // namespace RDKit
 
 #endif

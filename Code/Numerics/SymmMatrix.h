@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_SYMM_MATRIX_H__
 #define __RD_SYMM_MATRIX_H__
 
@@ -232,9 +233,9 @@ class SymmMatrix {
   }
 
  protected:
-  SymmMatrix() : d_size(0), d_dataSize(0), d_data(0){};
-  unsigned int d_size;
-  unsigned int d_dataSize;
+  SymmMatrix() :  d_data(0){};
+  unsigned int d_size{0};
+  unsigned int d_dataSize{0};
   DATA_SPTR d_data;
 
  private:
@@ -338,7 +339,7 @@ Vector<TYPE> &multiply(const SymmMatrix<TYPE> &A, const Vector<TYPE> &x,
 typedef SymmMatrix<double> DoubleSymmMatrix;
 typedef SymmMatrix<int> IntSymmMatrix;
 typedef SymmMatrix<unsigned int> UintSymmMatrix;
-}
+}  // namespace RDNumeric
 
 //! ostream operator for Matrix's
 template <class TYPE>

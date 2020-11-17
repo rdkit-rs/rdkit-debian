@@ -9,6 +9,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/FileParsers/MolSupplier.h>
 #include <GraphMol/FileParsers/MolWriters.h>
@@ -395,11 +396,15 @@ int mmffValidationSuite(int argc, char *argv[]) {
             sdfWriter->write(*mol);
             rdkFStream << "\nTOTAL MMFF ENERGY              =" << std::right
                        << std::setw(16) << std::fixed << std::setprecision(4)
-                       << field->calcEnergy() << "\n\n" << std::endl;
+                       << field->calcEnergy() << "\n\n"
+                       << std::endl;
             delete field;
           }
+          delete mmffMolProperties;
         }
+        BOOST_FOREACH (ROMol *m, molVec) { delete m; }
         sdfWriter->close();
+        delete sdfWriter;
         rdkFStream.close();
         std::cerr << "Checking against " << ref << "..." << std::endl;
         rdkFStream.open(rdk.c_str(), std::fstream::in | std::fstream::binary);
@@ -636,8 +641,9 @@ int mmffValidationSuite(int argc, char *argv[]) {
                 std::stringstream diff;
                 diff << "Bond stretching: found a difference\n";
                 if (haveLine) {
-                  diff << "Expected:\n" << rdkLine << "\nFound:\n" << refLine
-                       << "\n";
+                  diff << "Expected:\n"
+                       << rdkLine << "\nFound:\n"
+                       << refLine << "\n";
                 }
                 errorMsg += diff.str();
               }
@@ -791,8 +797,9 @@ int mmffValidationSuite(int argc, char *argv[]) {
                 std::stringstream diff;
                 diff << "Angle bending: found a difference\n";
                 if (haveLine) {
-                  diff << "Expected:\n" << rdkLine << "\nFound:\n" << refLine
-                       << "\n";
+                  diff << "Expected:\n"
+                       << rdkLine << "\nFound:\n"
+                       << refLine << "\n";
                 }
                 errorMsg += diff.str();
               }
@@ -951,8 +958,9 @@ int mmffValidationSuite(int argc, char *argv[]) {
                 std::stringstream diff;
                 diff << "Stretch-bending: found a difference\n";
                 if (haveLine) {
-                  diff << "Expected:\n" << rdkLine << "\nFound:\n" << refLine
-                       << "\n";
+                  diff << "Expected:\n"
+                       << rdkLine << "\nFound:\n"
+                       << refLine << "\n";
                 }
                 errorMsg += diff.str();
               }
@@ -1107,8 +1115,9 @@ int mmffValidationSuite(int argc, char *argv[]) {
                 std::stringstream diff;
                 diff << "Out-of-plane bending: found a difference\n";
                 if (haveLine) {
-                  diff << "Expected:\n" << rdkLine << "\nFound:\n" << refLine
-                       << "\n";
+                  diff << "Expected:\n"
+                       << rdkLine << "\nFound:\n"
+                       << refLine << "\n";
                 }
                 errorMsg += diff.str();
               }
@@ -1215,6 +1224,8 @@ int mmffValidationSuite(int argc, char *argv[]) {
                     ForceFields::MMFF::isDoubleZero(refTorsionEnergy))) {
                 fixTorsionInstance(torsionInstance);
                 refTorsionInstanceVec.push_back(torsionInstance);
+              } else {
+                delete torsionInstance;
               }
               ++n;
             }
@@ -1274,14 +1285,15 @@ int mmffValidationSuite(int argc, char *argv[]) {
                 std::stringstream diff;
                 diff << "Torsional: found a difference\n";
                 if (haveLine) {
-                  diff << "Expected:\n" << rdkLine << "\nFound:\n" << refLine
-                       << "\n";
+                  diff << "Expected:\n"
+                       << rdkLine << "\nFound:\n"
+                       << refLine << "\n";
                 }
                 errorMsg += diff.str();
               }
-              delete rdkTorsionInstanceVec[j];
-              delete refTorsionInstanceVec[j];
             }
+            for (auto &ti : rdkTorsionInstanceVec) { delete ti; }
+            for (auto &ti : refTorsionInstanceVec) { delete ti; }
             error = (fabs(rdkEnergy - refEnergy) > ENERGY_TOLERANCE);
             if (error && checkEnergy) {
               failed = true;
@@ -1555,7 +1567,7 @@ void testMMFFAllConstraints() {
   field = RDKit::MMFF::constructForceField(*mol, mmffMolProperties);
   field->initialize();
   tc = new ForceFields::MMFF::TorsionConstraintContrib(field, 1, 3, 6, 8, true,
-                                                       -10.0, -8.0, 1.0e5);
+                                                       -10.0, 8.0, 1.0e5);
   field->contribs().push_back(ForceFields::ContribPtr(tc));
   field->minimize();
   TEST_ASSERT(
@@ -1570,7 +1582,7 @@ void testMMFFAllConstraints() {
   field = RDKit::MMFF::constructForceField(*mol, mmffMolProperties);
   field->initialize();
   tc = new ForceFields::MMFF::TorsionConstraintContrib(field, 1, 3, 6, 8, false,
-                                                       -10.0, -8.0, 1.0e5);
+                                                       -10.0, 8.0, 1.0e5);
   field->contribs().push_back(ForceFields::ContribPtr(tc));
   field->minimize(500);
   TEST_ASSERT(
@@ -1612,6 +1624,66 @@ void testMMFFAllConstraints() {
   RDGeom::Point3D fq = mol->getConformer().getAtomPos(1);
   TEST_ASSERT((fp - fq).length() < 0.01);
   delete field;
+  delete mol;
+
+  std::cerr << "  done" << std::endl;
+}
+
+void testMMFFTorsionConstraints() {
+  std::cerr << "-------------------------------------" << std::endl;
+  std::cerr << "Unit test for MMFF TorsionConstraint close to 0 degrees." << std::endl;
+
+  std::string molBlock = R"(
+     RDKit          3D
+
+ 11 10  0  0  0  0  0  0  0  0999 V2000
+   -1.6091   -0.3348   -0.0457 N   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.3935    0.2978   -0.1061 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.6708   -0.8686    0.8103 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.3560    0.4358   -0.0518 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.3583    1.1207    0.7968 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.2978    1.0122   -0.9759 H   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8573   -0.4893    0.0451 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8947   -1.1355   -0.8327 H   0  0  0  0  0  0  0  0  0  0  0  0
+    0.7774   -1.1052    0.9415 H   0  0  0  0  0  0  0  0  0  0  0  0
+    2.0396    0.2763    0.1127 O   0  0  0  0  0  0  0  0  0  0  0  0
+    2.1165    0.7905   -0.6941 H   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  1  3  1  0  0  0  0
+  1  4  1  0  0  0  0
+  4  5  1  0  0  0  0
+  4  6  1  0  0  0  0
+  4  7  1  0  0  0  0
+  7  8  1  0  0  0  0
+  7  9  1  0  0  0  0
+  7 10  1  0  0  0  0
+ 10 11  1  0  0  0  0
+M  END
+)";
+  RDKit::RWMol *mol;
+
+  // torsion constraints
+  mol = RDKit::MolBlockToMol(molBlock, true, false);
+  TEST_ASSERT(mol);
+  std::vector<double> e;
+  for (double d: {0.0001, 0.0}) {
+    MolTransforms::setDihedralDeg(mol->getConformer(), 0, 3, 6, 9, d);
+    MMFF::MMFFMolProperties mmffMolProperties(*mol);
+    TEST_ASSERT(mmffMolProperties.isValid());
+    ForceFields::ForceField *field = RDKit::MMFF::constructForceField(*mol, &mmffMolProperties);
+    TEST_ASSERT(field);
+    field->initialize();
+    auto *tc = new ForceFields::MMFF::TorsionConstraintContrib(field, 0, 3, 6,
+                                                               9, d, d, 1.0e6);
+    field->contribs().push_back(ForceFields::ContribPtr(tc));
+    field->minimize();
+    e.push_back(field->calcEnergy());
+    TEST_ASSERT(
+        RDKit::feq(MolTransforms::getDihedralDeg(mol->getConformer(), 0, 3, 6, 9),
+                   d, 0.5));
+    delete field;
+  }
+  TEST_ASSERT(RDKit::feq(e[0], e[1], 0.5));
   delete mol;
 
   std::cerr << "  done" << std::endl;
@@ -1715,6 +1787,7 @@ void testMMFFCopy() {
 int main(int argc, char *argv[]) {
   if (!mmffValidationSuite(argc, argv)) {
     testMMFFAllConstraints();
+    testMMFFTorsionConstraints();
     testMMFFCopy();
   }
 

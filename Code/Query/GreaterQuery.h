@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2003-2006 Greg Landrum and Rational Discovery LLC
+// Copyright (c) 2003-2020 Greg Landrum and Rational Discovery LLC
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -7,8 +7,9 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
-#ifndef __RD_GREATERQUERY_H__
-#define __RD_GREATERQUERY_H__
+#include <RDGeneral/export.h>
+#ifndef RD_GREATERQUERY_H
+#define RD_GREATERQUERY_H
 #include "Query.h"
 #include "EqualityQuery.h"
 
@@ -58,6 +59,7 @@ class GreaterQuery
     res->setNegation(this->getNegation());
     res->setDataFunc(this->d_dataFunc);
     res->d_description = this->d_description;
+    res->d_queryType = this->d_queryType;
     return res;
   };
 
@@ -72,5 +74,5 @@ class GreaterQuery
     return res.str();
   };
 };
-}
+}  // namespace Queries
 #endif

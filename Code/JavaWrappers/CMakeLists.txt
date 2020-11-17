@@ -9,7 +9,7 @@ SET(CMAKE_SWIG_FLAGS "")
 
 
 set(swigRDKitLibSuffix "")
-if(RDK_SWIG_STATIC AND (NOT MSVC))
+if(RDK_SWIG_STATIC AND ((NOT MSVC) OR (MSVC AND RDK_INSTALL_DLLS_MSVC)))
   set(swigRDKitLibSuffix "_static")
 endif()
 set(swigRDKitLibList "")
@@ -20,26 +20,49 @@ if(RDK_BUILD_INCHI_SUPPORT)
   set(swigRDKitLibList "${swigRDKitLibList}RDInchiLib;${INCHI_LIBRARIES};")
 endif(RDK_BUILD_INCHI_SUPPORT)
 set(swigRDKitLibList "${swigRDKitLibList}"
-  "FilterCatalog;Catalogs;FMCS;MolDraw2D;FileParsers;SmilesParse;"
+  "Abbreviations;ScaffoldNetwork;MolHash;RGroupDecomposition;SubstructLibrary;TautomerQuery;"
+  "MolEnumerator;"
+  "MolStandardize;FilterCatalog;Catalogs;FMCS;MolDraw2D;FileParsers;SmilesParse;"
   "Depictor;SubstructMatch;ChemReactions;Fingerprints;ChemTransforms;"
   "Subgraphs;GraphMol;DataStructs;Trajectory;Descriptors;"
   "PartialCharges;MolTransforms;DistGeomHelpers;DistGeometry;"
-  "ForceFieldHelpers;ForceField;EigenSolvers;Optimizer;MolAlign;"
-  "Alignment;SimDivPickers;RDGeometryLib;RDGeneral;"
+  "ForceFieldHelpers;ForceField;EigenSolvers;Optimizer;MolAlign;O3AAlign;"
+  "Alignment;SimDivPickers;RDGeometryLib;RDStreams;RDGeneral;"
 )
 #if(RDK_BUILD_COORDGEN_SUPPORT)
 #  set(swigRDKitLibList "${swigRDKitLibList};${RDK_COORDGEN_LIBS}")
 #endif(RDK_BUILD_COORDGEN_SUPPORT)
+if(RDK_USE_URF)
+  set(swigRDKitLibList "${swigRDKitLibList};${RDK_URF_LIBS};")
+endif(RDK_USE_URF)
 set(swigRDKitLibs "")
 foreach(swigRDKitLib ${swigRDKitLibList})
   set(swigRDKitLibs "${swigRDKitLibs}${swigRDKitLib}${swigRDKitLibSuffix};")
 endforeach()
-set(swigRDKitLibs "${swigRDKitLibs}${Boost_SERIALIZATION_LIBRARY}")
+set(swigRDKitLibs "${swigRDKitLibs}${Boost_SERIALIZATION_LIBRARY};")
+
+if(RDK_USE_BOOST_IOSTREAMS)
+ADD_DEFINITIONS("-DRDK_USE_BOOST_IOSTREAMS")
+if(WIN32)
+  find_package(Boost ${RDK_BOOST_VERSION} COMPONENTS system iostreams REQUIRED)
+  set(swigRDKitLibs "${swigRDKitLibs}${Boost_IOSTREAMS_LIBRARY};${Boost_SYSTEM_LIBRARY};")
+  
+  find_package(Boost ${RDK_BOOST_VERSION} COMPONENTS zlib)
+  if(Boost_ZLIB_FOUND)
+    set(swigRDKitLibs "${swigRDKitLibs}${Boost_ZLIB_LIBRARY};")
+  endif()
+else()
+  find_package(Boost ${RDK_BOOST_VERSION} COMPONENTS system iostreams REQUIRED)
+  set(swigRDKitLibs "${swigRDKitLibs}${Boost_IOSTREAMS_LIBRARY};${Boost_SYSTEM_LIBRARY};")
+endif()
+endif(RDK_USE_BOOST_IOSTREAMS)
+
+
 
 set(RDKit_Wrapper_Libs ${swigRDKitLibs})
 
 message("SUFFIX: ${swigRDKitLibSuffix}")
-message("LIBS: ${RDKit_Wrapper_Libs}")
+message("JAVA_LIBS: ${RDKit_Wrapper_Libs}")
 
 
 if(RDK_BUILD_SWIG_JAVA_WRAPPER)

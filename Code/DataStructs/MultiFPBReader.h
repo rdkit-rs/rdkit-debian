@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef RD_MULTIFPBREADER_H_APR2016
 #define RD_MULTIFPBREADER_H_APR2016
 /*! \file MultiFPBReader.h
@@ -50,11 +51,11 @@ namespace RDKit {
   \c lazyRead mode.
 
 */
-class MultiFPBReader {
+class RDKIT_DATASTRUCTS_EXPORT MultiFPBReader {
  public:
   typedef boost::tuple<double, unsigned int, unsigned int> ResultTuple;
   MultiFPBReader()
-      : df_init(false), df_initOnSearch(false), df_takeOwnership(false){};
+       {};
 
   /*!
     \param initOnSearch: if this is true, the \c init() method on child readers
@@ -85,7 +86,7 @@ class MultiFPBReader {
 
   //! Read the data from the file and initialize internal data structures
   /*!
-  This must be called before most of the other methods of this clases.
+  This must be called before most of the other methods of this class.
   It calls the \c init() method on each of the child FPBReaders
 
   */
@@ -136,12 +137,12 @@ class MultiFPBReader {
     zero, the max supported by the system will be used.
 
   */
-  std::vector<ResultTuple> getTanimotoNeighbors(const boost::uint8_t *bv,
+  std::vector<ResultTuple> getTanimotoNeighbors(const std::uint8_t *bv,
                                                 double threshold = 0.7,
                                                 int numThreads = 1) const;
   //! \overload
   std::vector<ResultTuple> getTanimotoNeighbors(
-      boost::shared_array<boost::uint8_t> bv, double threshold = 0.7,
+      boost::shared_array<std::uint8_t> bv, double threshold = 0.7,
       int numThreads = 1) const {
     return getTanimotoNeighbors(bv.get(), threshold, numThreads);
   };
@@ -164,13 +165,13 @@ class MultiFPBReader {
     zero, the max supported by the system will be used.
 
   */
-  std::vector<ResultTuple> getTverskyNeighbors(const boost::uint8_t *bv,
+  std::vector<ResultTuple> getTverskyNeighbors(const std::uint8_t *bv,
                                                double ca, double cb,
                                                double threshold = 0.7,
                                                int numThreads = 1) const;
   //! \overload
   std::vector<ResultTuple> getTverskyNeighbors(
-      boost::shared_array<boost::uint8_t> bv, double ca, double cb,
+      boost::shared_array<std::uint8_t> bv, double ca, double cb,
       double threshold = 0.7, int numThreads = 1) const {
     return getTverskyNeighbors(bv.get(), ca, cb, threshold, numThreads);
   };
@@ -184,20 +185,20 @@ class MultiFPBReader {
   /*! (i.e. where all the bits set in the query are also set in the db
    molecule)
    */
-  std::vector<std::pair<unsigned int, unsigned int> > getContainingNeighbors(
-      const boost::uint8_t *bv, int numThreads = 1) const;
+  std::vector<std::pair<unsigned int, unsigned int>> getContainingNeighbors(
+      const std::uint8_t *bv, int numThreads = 1) const;
   //! \overload
-  std::vector<std::pair<unsigned int, unsigned int> > getContainingNeighbors(
-      boost::shared_array<boost::uint8_t> bv, int numThreads = 1) const {
+  std::vector<std::pair<unsigned int, unsigned int>> getContainingNeighbors(
+      boost::shared_array<std::uint8_t> bv, int numThreads = 1) const {
     return getContainingNeighbors(bv.get(), numThreads);
   };
   //! \overload
-  std::vector<std::pair<unsigned int, unsigned int> > getContainingNeighbors(
+  std::vector<std::pair<unsigned int, unsigned int>> getContainingNeighbors(
       const ExplicitBitVect &ebv, int numThreads = 1) const;
 
  private:
   std::vector<FPBReader *> d_readers;
-  bool df_init, df_initOnSearch, df_takeOwnership;
+  bool df_init{false}, df_initOnSearch{false}, df_takeOwnership{false};
 
   // disable automatic copy constructors and assignment operators
   // for this class and its subclasses.  They will likely be
@@ -206,5 +207,5 @@ class MultiFPBReader {
   MultiFPBReader(const MultiFPBReader &);
   MultiFPBReader &operator=(const MultiFPBReader &);
 };
-}
+}  // namespace RDKit
 #endif

@@ -33,7 +33,8 @@ double getAlignmentTransform(const ROMol &prbMol, const ROMol &refMol,
     const bool recursionPossible = true;
     const bool useChirality = false;
     const bool useQueryQueryMatches = true;
-    if (SubstructMatch(refMol, prbMol, match, recursionPossible, useChirality, useQueryQueryMatches)) {
+    if (SubstructMatch(refMol, prbMol, match, recursionPossible, useChirality,
+                       useQueryQueryMatches)) {
       MatchVectType::const_iterator mi;
       for (mi = match.begin(); mi != match.end(); mi++) {
         prbPoints.push_back(&prbCnf.getAtomPos(mi->first));
@@ -106,8 +107,83 @@ double getBestRMS(ROMol &probeMol, ROMol &refMol, int probeId, int refId,
   }
 
   // Perform a final alignment to the best alignment...
-  if (&bestMatch != &matches.back())
+  if (&bestMatch != &matches.back()) {
     alignMol(probeMol, refMol, probeId, refId, &bestMatch);
+  }
+  return bestRMS;
+}
+
+double CalcRMS(ROMol &prbMol, const ROMol &refMol, int prbCid, int refCid,
+               const std::vector<MatchVectType> &map, int maxMatches,
+               const RDNumeric::DoubleVector *weights) {
+  std::vector<MatchVectType> matches = map;
+  if (matches.empty()) {
+    bool uniquify = false;
+    bool recursionPossible = true;
+    bool useChirality = false;
+    bool useQueryQueryMatches = false;
+
+    SubstructMatch(refMol, prbMol, matches, uniquify, recursionPossible,
+                   useChirality, useQueryQueryMatches, maxMatches);
+
+    if (matches.empty()) {
+      throw MolAlignException(
+          "No sub-structure match found between the reference and probe mol");
+    }
+
+    if (matches.size() > 1e6) {
+      std::string name;
+      prbMol.getPropIfPresent(common_properties::_Name, name);
+      std::cerr << "Warning in " << __FUNCTION__ << ": " << matches.size()
+                << " matches detected for molecule " << name << ", this may "
+                << "lead to a performance slowdown.\n";
+    }
+  }
+
+  unsigned int msize = matches[0].size();
+  const RDNumeric::DoubleVector *wts;
+  if (weights != nullptr) {
+    PRECONDITION(msize == weights->size(), "Mismatch in number of points");
+    wts = weights;
+  } else {
+    wts = new RDNumeric::DoubleVector(msize, 1.0);
+  }
+
+  double bestRMS = 1.e300;
+  MatchVectType &bestMatch = matches[0];
+  for (auto &matche : matches) {
+    RDGeom::Point3DConstPtrVect refPoints, prbPoints;
+    const Conformer &prbCnf = prbMol.getConformer(prbCid);
+    const Conformer &refCnf = refMol.getConformer(refCid);
+
+    for (const auto &mi : matche) {
+      prbPoints.push_back(&prbCnf.getAtomPos(mi.first));
+      refPoints.push_back(&refCnf.getAtomPos(mi.second));
+    }
+
+    unsigned int npt = refPoints.size();
+    PRECONDITION(npt == prbPoints.size(), "Mismatch in number of points");
+    double ssr = 0.;
+
+    const RDGeom::Point3D *rpt, *ppt;
+    for (unsigned int i = 0; i < npt; i++) {
+      rpt = refPoints[i];
+      ppt = prbPoints[i];
+      ssr += (*wts)[i] * (*ppt - *rpt).lengthSq();
+    }
+    ssr /= (prbPoints.size());
+
+    double rms = sqrt(ssr);
+
+    if (rms < bestRMS) {
+      bestRMS = rms;
+      bestMatch = matche;
+    }
+  }
+  if (weights == nullptr) {
+    delete wts;
+  }
+
   return bestRMS;
 }
 
@@ -189,5 +265,5 @@ void alignMolConformers(ROMol &mol, const std::vector<unsigned int> *atomIds,
     }
   }
 }
-}
-}
+}  // namespace MolAlign
+}  // namespace RDKit

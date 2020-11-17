@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #pragma once
 #include <map>
 #include "../RDKitBase.h"
@@ -20,33 +21,31 @@ namespace FMCS {
 class MaximumCommonSubgraph;
 struct TargetMatch;
 
-struct MolFragment {  // Reference to a fragment of source molecule
+struct RDKIT_FMCS_EXPORT
+    MolFragment {  // Reference to a fragment of source molecule
   std::vector<const Atom*> Atoms;
   std::vector<const Bond*> Bonds;
   std::vector<unsigned> AtomsIdx;
   std::vector<unsigned> BondsIdx;  // need for results and size() only !
   std::map<unsigned, unsigned> SeedAtomIdxMap;  // Full Query Molecule to Seed
-                                                // indeces backward conversion
+                                                // indices backward conversion
                                                 // map
 };
 
-struct NewBond {
-  unsigned SourceAtomIdx;  // index in the seed. Atom is already in the seed
-  unsigned BondIdx;     // index in qmol of new bond scheduled to be added into
+struct RDKIT_FMCS_EXPORT NewBond {
+  unsigned SourceAtomIdx{0};  // index in the seed. Atom is already in the seed
+  unsigned BondIdx{0};  // index in qmol of new bond scheduled to be added into
                         // seed. This is outgoing bond from SourceAtomIdx
-  unsigned NewAtomIdx;  // index in qmol of new atom scheduled to be added into
-                        // seed. Another end of new bond
-  const Atom* NewAtom;  // pointer to qmol's new atom scheduled to be added into
-                        // seed. Another end of new bond
-  unsigned EndAtomIdx;  // index in the seed. RING. "New" Atom on the another
-                        // end of new bond is already exists in the seed.
+  unsigned NewAtomIdx{0};  // index in qmol of new atom scheduled to be added
+                           // into seed. Another end of new bond
+  const Atom* NewAtom{nullptr};  // pointer to qmol's new atom scheduled to be
+                                 // added into seed. Another end of new bond
+  unsigned EndAtomIdx{0};  // index in the seed. RING. "New" Atom on the another
+                           // end of new bond is already exists in the seed.
 
   NewBond()
-      : SourceAtomIdx(-1),
-        BondIdx(-1),
-        NewAtomIdx(-1),
-        NewAtom(0),
-        EndAtomIdx(-1) {}
+
+  {}
 
   NewBond(unsigned from_atom, unsigned bond_idx, unsigned new_atom,
           unsigned to_atom, const Atom* a)
@@ -57,36 +56,32 @@ struct NewBond {
         EndAtomIdx(to_atom) {}
 };
 
-class Seed {
+class RDKIT_FMCS_EXPORT Seed {
  private:
   mutable std::vector<NewBond> NewBonds;  // for multistage growing. all
                                           // directly connected outgoing bonds
  public:
-  bool CopyComplete;  // this seed has been completely copied into list.
-                      // postponed non0locked copy for MULTI_THREAD
-  mutable unsigned GrowingStage;  // 0 new seed; -1 finished; n>0 in progress,
-                                  // exact stage of growing for SDF
-  MolFragment MoleculeFragment;   // Reference to a fragment of source molecule
+  bool CopyComplete{false};  // this seed has been completely copied into list.
+                             // postponed non-locked copy for MULTI_THREAD
+  mutable unsigned GrowingStage{0};  // 0 new seed; -1 finished; n>0 in
+                                     // progress, exact stage of growing for SDF
+  MolFragment MoleculeFragment;  // Reference to a fragment of source molecule
   Graph Topology;  // seed topology with references to source molecule
 
   std::vector<bool> ExcludedBonds;
-  unsigned LastAddedAtomsBeginIdx;  // in this subgraph for improving
-                                    // performance of future growing
-  unsigned LastAddedBondsBeginIdx;  // in this subgraph for DEBUG ONLY
-  unsigned RemainingBonds;
-  unsigned RemainingAtoms;
+  unsigned LastAddedAtomsBeginIdx{0};  // in this subgraph for improving
+                                       // performance of future growing
+  unsigned LastAddedBondsBeginIdx{0};  // in this subgraph for DEBUG ONLY
+  unsigned RemainingBonds{0};
+  unsigned RemainingAtoms{0};
 #ifdef DUP_SUBSTRUCT_CACHE
   DuplicatedSeedCache::TKey DupCacheKey;
 #endif
   std::vector<TargetMatch> MatchResult;  // for each target
  public:
   Seed()
-      : CopyComplete(false),
-        GrowingStage(0),
-        LastAddedAtomsBeginIdx(0),
-        LastAddedBondsBeginIdx(0),
-        RemainingBonds(-1),
-        RemainingAtoms(-1) {}
+
+  {}
 
   void setMoleculeFragment(const Seed& src) {
     MoleculeFragment = src.MoleculeFragment;
@@ -138,5 +133,5 @@ class Seed {
   unsigned addBond(const Bond* bond);
   void fillNewBonds(const ROMol& qmol);
 };
-}
-}
+}  // namespace FMCS
+}  // namespace RDKit

@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include "AlignPoints.h"
 #include <Numerics/Vector.h>
 #include <RDGeneral/utils.h>
@@ -14,7 +15,7 @@
 #include <Geometry/Transform3D.h>
 #include <Geometry/point.h>
 
-#include <math.h>
+#include <cmath>
 
 using namespace RDNumeric;
 using namespace RDNumeric::Alignments;

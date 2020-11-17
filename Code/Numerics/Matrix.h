@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_MATRIX_H__
 #define __RD_MATRIX_H__
 
@@ -228,10 +229,10 @@ class Matrix {
   }
 
  protected:
-  Matrix() : d_nRows(0), d_nCols(0), d_dataSize(0), d_data(){};
-  unsigned int d_nRows;
-  unsigned int d_nCols;
-  unsigned int d_dataSize;
+  Matrix() :  d_data(){};
+  unsigned int d_nRows{0};
+  unsigned int d_nCols{0};
+  unsigned int d_dataSize{0};
   DATA_SPTR d_data;
 
  private:
@@ -243,7 +244,7 @@ class Matrix {
   Multiply a Matrix A with a second Matrix B
   so the result is C = A*B
 
-  \param A  the the first Matrix used in the multiplication
+  \param A  the first Matrix used in the multiplication
   \param B  the Matrix by which to multiply
   \param C  Matrix to use for the results
 
@@ -323,7 +324,7 @@ Vector<TYPE> &multiply(const Matrix<TYPE> &A, const Vector<TYPE> &x,
 };
 
 typedef Matrix<double> DoubleMatrix;
-};
+};  // namespace RDNumeric
 
 //! ostream operator for Matrix's
 template <class TYPE>

@@ -7,9 +7,9 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
-#include <ctype.h>
+#include <cctype>
 #include <memory.h>
-#include <errno.h>
+#include <cerrno>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -18,7 +18,7 @@
 #include "../FileParsers/FileParsers.h"
 #include "../FileParsers/MolSupplier.h"  //SDF
 #include "../SmilesParse/SmilesParse.h"
-#include "StructChecker.h"
+#include "StructCheckerOptions.h"
 
 #include "AugmentedAtomData.cpp"
 
@@ -30,7 +30,6 @@ bool parseOptionsJSON(const std::string &json, StructCheckerOptions &op) {
   try {
     std::istringstream ss;
     ss.str(json);
-    std::istream &iss = ss;
     boost::property_tree::ptree pt;
     boost::property_tree::read_json(ss, pt);
     op = StructCheckerOptions();  // reset to default values
@@ -94,15 +93,15 @@ static const char
 // used in unit test
 bool StringToAugmentedAtom(const char *str, AugmentedAtom &aa) {
   /*
-  * The syntax of a augmented atom string is as follows:
-  *
-  *   <AAString> ::= ['@'|'!@'] <Atom Symbol> [<Charge>]
-  *                 {'(' <Bond Symbol> <Atom Symbol> [<Charge>] ')'}.
-  * Bond symbols and charge descriptors are defined in the symbol tables
-  * 'bond_to_string' and 'charge_to_string'.
-  * '@' means central atom is in ring, '!@' means central atom is not in ring,
-  *omitting means any topography could match.
-  */
+   * The syntax of a augmented atom string is as follows:
+   *
+   *   <AAString> ::= ['@'|'!@'] <Atom Symbol> [<Charge>]
+   *                 {'(' <Bond Symbol> <Atom Symbol> [<Charge>] ')'}.
+   * Bond symbols and charge descriptors are defined in the symbol tables
+   * 'bond_to_string' and 'charge_to_string'.
+   * '@' means central atom is in ring, '!@' means central atom is not in ring,
+   *omitting means any topography could match.
+   */
 
   size_t i;
   aa.ShortName = str;
@@ -186,8 +185,8 @@ bool StringToAugmentedAtom(const char *str, AugmentedAtom &aa) {
       return false;
     }
     if (!isalpha(*str)) { /* there must be an atom symbol */
-      BOOST_LOG(rdErrorLog) << "syntax error '" << str
-                            << "'\nthere must be an atom symbol.\n";
+      BOOST_LOG(rdErrorLog)
+          << "syntax error '" << str << "'\nthere must be an atom symbol.\n";
       return false;
     }
 
@@ -261,10 +260,10 @@ bool StringToAugmentedAtom(const char *str, AugmentedAtom &aa) {
 static bool ReadAugmentedAtoms(const std::string &path,
                                std::vector<AugmentedAtom> &atoms) {
   /*
-  * '*.chk' and '*.aci' files loader
-  * Only the portion of the strings between the two '"' characters is used,
-  * other characters are regarded as comments.
-  */
+   * '*.chk' and '*.aci' files loader
+   * Only the portion of the strings between the two '"' characters is used,
+   * other characters are regarded as comments.
+   */
   FILE *fp = fopen(path.c_str(), "r");
   if (!fp) {
     BOOST_LOG(rdErrorLog) << "could not open file '" << path << "'\n"
@@ -309,20 +308,20 @@ static bool ReadAugmentedAtoms(const std::string &path,
         while (s[len] >= ' ' && s[len] != '"') len++;
         s[len] = '\0';  // == atom_string
         if (!StringToAugmentedAtom(s, atoms[i])) {
-          BOOST_LOG(rdErrorLog) << "unsuccessful AA parsing of " << i + 1 << " "
-                                << str << "\n";
+          BOOST_LOG(rdErrorLog)
+              << "unsuccessful AA parsing of " << i + 1 << " " << str << "\n";
           fclose(fp);
           return false;
         }
       } else {  // incorrect text line
-        BOOST_LOG(rdErrorLog) << "unsuccessful AA parsing of " << i + 1 << " "
-                              << str << "\n";
+        BOOST_LOG(rdErrorLog)
+            << "unsuccessful AA parsing of " << i + 1 << " " << str << "\n";
         fclose(fp);
         return false;
       }
     } else if (ferror(fp)) {
-      BOOST_LOG(rdErrorLog) << "unsuccessful AA parsing of " << i + 1 << " "
-                            << str << "\n";
+      BOOST_LOG(rdErrorLog)
+          << "unsuccessful AA parsing of " << i + 1 << " " << str << "\n";
       fclose(fp);
       return false;
     }
@@ -335,16 +334,16 @@ static bool ReadAAPairs(
     const std::string &path,
     std::vector<std::pair<AugmentedAtom, AugmentedAtom>> &trans_pairs) {
   /*
-  * '*.trn' file loader
-  * Reads file and constructs an array of pairs of augmented atom
-  * descriptions. The first one being the search pattern and the second
-  * one the target pattern.
-  * The function expects the number of augmented atom description pairs
-  * on the first line and the strings corresponding to the data structures
-  * on the n following lines.
-  * Only the portion of the strings between the two '"' characters is used,
-  * other characters are regarded as comments.
-  */
+   * '*.trn' file loader
+   * Reads file and constructs an array of pairs of augmented atom
+   * descriptions. The first one being the search pattern and the second
+   * one the target pattern.
+   * The function expects the number of augmented atom description pairs
+   * on the first line and the strings corresponding to the data structures
+   * on the n following lines.
+   * Only the portion of the strings between the two '"' characters is used,
+   * other characters are regarded as comments.
+   */
   FILE *fp = fopen(path.c_str(), "r");
   if (!fp) {
     BOOST_LOG(rdErrorLog) << "could not open file '" << path << "'\n"
@@ -352,8 +351,8 @@ static bool ReadAAPairs(
     return false;
   }
   unsigned n = 0;
-
-  unsigned k = fscanf(fp, "%d", &n);
+  int num_scan = fscanf(fp, "%d", &n);
+  TEST_ASSERT(num_scan == 1);
 
   char buffer[80];
 
@@ -390,8 +389,8 @@ static bool ReadAAPairs(
         s[len] = '\0';  // == atom_string
 
         if (!StringToAugmentedAtom(s, trans_pairs[i].first)) {
-          BOOST_LOG(rdErrorLog) << "unsuccessful translation of " << str
-                                << "\n";
+          BOOST_LOG(rdErrorLog)
+              << "unsuccessful translation of " << str << "\n";
           fclose(fp);
           return false;
         }
@@ -407,8 +406,8 @@ static bool ReadAAPairs(
           s[len] = '\0';  // == atom_string
 
           if (!StringToAugmentedAtom(s, trans_pairs[i].second)) {
-            BOOST_LOG(rdErrorLog) << "unsuccessful translation of " << str
-                                  << "\n";
+            BOOST_LOG(rdErrorLog)
+                << "unsuccessful translation of " << str << "\n";
             fclose(fp);
             return false;
           }
@@ -598,9 +597,9 @@ bool StructCheckerOptions::loadTautomerData(const std::string &path) {
                 if (str.length() >= 4 && 0 == strcmp(str.c_str(), "$MOL")) {
                   RWMol *molTo = MolDataStreamToMol(in, line);
                   if (!molTo) {
-                    BOOST_LOG(rdErrorLog) << "RD-file corrupted. " << path
-                                          << " line " << line
-                                          << "\n";  // log error
+                    BOOST_LOG(rdErrorLog)
+                        << "RD-file corrupted. " << path << " line " << line
+                        << "\n";  // log error
                     return false;
                   }
                   // ?? MakeHydrogensImplicit()
@@ -613,8 +612,8 @@ bool StructCheckerOptions::loadTautomerData(const std::string &path) {
         }
       } while (!in.eof());
     } else {
-      BOOST_LOG(rdErrorLog) << "unsupported file type. " << path
-                            << "\n";  // log error
+      BOOST_LOG(rdErrorLog)
+          << "unsupported file type. " << path << "\n";  // log error
       return false;
     }
   } catch (std::exception &ex) {
@@ -664,6 +663,7 @@ void StructCheckerOptions::parseTautomerData(
 
 bool loadChargeDataTables(const std::string &path) {
   // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  RDUNUSED_PARAM(path);
   /*
       double Elneg0; // elneg_table[0].value;
       std::map<unsigned, double> ElnegTable;   // AtomicNumber -> eleng

@@ -30,6 +30,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include <RDGeneral/export.h>
 #ifndef RGROUP_RANDOM_SAMPLE_H
 #define RGROUP_RANDOM_SAMPLE_H
 
@@ -61,30 +62,31 @@ namespace RDKit {
 
   See EnumerationStrategyBase for more details and usage.
 */
-class RandomSampleStrategy : public EnumerationStrategyBase {
-  boost::uint64_t m_numPermutationsProcessed;
+class RDKIT_CHEMREACTIONS_EXPORT RandomSampleStrategy
+    : public EnumerationStrategyBase {
+  boost::uint64_t m_numPermutationsProcessed{};
   boost::minstd_rand m_rng;
-  std::vector<boost::random::uniform_int_distribution<> > m_distributions;
+  std::vector<boost::random::uniform_int_distribution<>> m_distributions;
 
  public:
   RandomSampleStrategy()
       : EnumerationStrategyBase(),
-        m_numPermutationsProcessed(),
+        
         m_rng(),
         m_distributions() {
     for (size_t i = 0; i < m_permutation.size(); ++i) {
-      m_distributions.push_back(
-          boost::random::uniform_int_distribution<>(0, m_permutation[i] - 1));
+      m_distributions.emplace_back(0, m_permutation[i] - 1);
     }
   }
 
   using EnumerationStrategyBase::initialize;
 
-  virtual void initializeStrategy(const ChemicalReaction &, const EnumerationTypes::BBS &) {
+  virtual void initializeStrategy(const ChemicalReaction &,
+                                  const EnumerationTypes::BBS &) {
     m_distributions.clear();
     for (size_t i = 0; i < m_permutationSizes.size(); ++i) {
-      m_distributions.push_back(boost::random::uniform_int_distribution<>(
-          0, m_permutationSizes[i] - 1));
+      m_distributions.emplace_back(
+          0, m_permutationSizes[i] - 1);
     }
 
     m_numPermutationsProcessed = 0;
@@ -104,7 +106,8 @@ class RandomSampleStrategy : public EnumerationStrategyBase {
   }
 
   virtual boost::uint64_t getPermutationIdx() const {
-    return m_numPermutationsProcessed; }
+    return m_numPermutationsProcessed;
+  }
 
   virtual operator bool() const { return true; }
 
@@ -113,7 +116,7 @@ class RandomSampleStrategy : public EnumerationStrategyBase {
   }
 
  private:
-#ifdef RDK_USE_BOOST_SERIALIZATION    
+#ifdef RDK_USE_BOOST_SERIALIZATION
   friend class boost::serialization::access;
 
   template <class Archive>
@@ -142,8 +145,8 @@ class RandomSampleStrategy : public EnumerationStrategyBase {
     // reset the uniform distributions
     m_distributions.clear();
     for (size_t i = 0; i < m_permutationSizes.size(); ++i) {
-      m_distributions.push_back(boost::random::uniform_int_distribution<>(
-          0, m_permutationSizes[i] - 1));
+      m_distributions.emplace_back(
+          0, m_permutationSizes[i] - 1);
     }
   }
 
@@ -151,11 +154,11 @@ class RandomSampleStrategy : public EnumerationStrategyBase {
   void serialize(Archive &ar, const unsigned int file_version) {
     boost::serialization::split_member(ar, *this, file_version);
   }
-#endif  
+#endif
 };
-}
+}  // namespace RDKit
 
-#ifdef RDK_USE_BOOST_SERIALIZATION        
+#ifdef RDK_USE_BOOST_SERIALIZATION
 BOOST_CLASS_VERSION(RDKit::RandomSampleStrategy, 1)
 #endif
 

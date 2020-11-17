@@ -31,6 +31,7 @@
 //
 // Created by Greg Landrum, September 2006
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_SLNATTRIBS_H__
 #define __RD_SLNATTRIBS_H__
 
@@ -50,18 +51,18 @@ typedef enum {
   AttribNot
 } AttribCombineOp;
 
-class AttribType {
+class RDKIT_SLNPARSE_EXPORT AttribType {
  public:
   AttribType()
-      : first(""), second(""), op(""), negated(false), structQuery(0){};
+      : first(""), second(""), op("") {};
   std::string first;
   std::string second;
   std::string op;
-  bool negated;
-  void *structQuery;
+  bool negated{false};
+  void *structQuery{nullptr};
 };
 
-typedef std::vector<std::pair<AttribCombineOp, boost::shared_ptr<AttribType> > >
+typedef std::vector<std::pair<AttribCombineOp, boost::shared_ptr<AttribType>>>
     AttribListType;
 
 //! parses the attributes provided for an atom and sets
@@ -88,6 +89,6 @@ void parseFinalBondAttribs(Bond *bond, bool doingQuery);
 void parseMolAttribs(ROMol *mol, AttribListType attribs);
 
 void adjustAtomChiralities(RWMol *mol);
-}
-}
+}  // namespace SLNParse
+}  // namespace RDKit
 #endif

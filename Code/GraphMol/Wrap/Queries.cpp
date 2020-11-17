@@ -83,17 +83,30 @@ QAFUNC2(IsInRingQueryAtom, makeAtomInRingQuery, int);
 QAFUNC2(HasChiralTagQueryAtom, makeAtomHasChiralTagQuery, int);
 QAFUNC2(MissingChiralTagQueryAtom, makeAtomMissingChiralTagQuery, int);
 
+QAFUNC2(AAtomQueryAtom, makeAAtomQuery, int);
+QAFUNC2(AHAtomQueryAtom, makeAHAtomQuery, int);
+QAFUNC2(QAtomQueryAtom, makeQAtomQuery, int);
+QAFUNC2(QHAtomQueryAtom, makeQHAtomQuery, int);
+QAFUNC2(XAtomQueryAtom, makeXAtomQuery, int);
+QAFUNC2(XHAtomQueryAtom, makeXHAtomQuery, int);
+QAFUNC2(MAtomQueryAtom, makeMAtomQuery, int);
+QAFUNC2(MHAtomQueryAtom, makeMHAtomQuery, int);
+
 QueryAtom *HasPropQueryAtom(const std::string &propname, bool negate) {
   auto *res = new QueryAtom();
   res->setQuery(makeHasPropQuery<Atom>(propname));
-  if (negate) res->getQuery()->setNegation(true);
+  if (negate) {
+    res->getQuery()->setNegation(true);
+  }
   return res;
 }
 
 QueryBond *HasPropQueryBond(const std::string &propname, bool negate) {
   auto *res = new QueryBond();
   res->setQuery(makeHasPropQuery<Bond>(propname));
-  if (negate) res->getQuery()->setNegation(true);
+  if (negate) {
+    res->getQuery()->setNegation(true);
+  }
   return res;
 }
 
@@ -101,7 +114,9 @@ template <class Ob, class Ret, class T>
 Ret *PropQuery(const std::string &propname, const T &v, bool negate) {
   auto *res = new Ret();
   res->setQuery(makePropQuery<Ob, T>(propname, v));
-  if (negate) res->getQuery()->setNegation(true);
+  if (negate) {
+    res->getQuery()->setNegation(true);
+  }
   return res;
 }
 
@@ -110,7 +125,20 @@ Ret *PropQueryWithTol(const std::string &propname, const T &v, bool negate,
                       const T &tol = T()) {
   auto *res = new Ret();
   res->setQuery(makePropQuery<Ob, T>(propname, v, tol));
-  if (negate) res->getQuery()->setNegation(true);
+  if (negate) {
+    res->getQuery()->setNegation(true);
+  }
+  return res;
+}
+
+template <class Ob, class Ret>
+Ret *PropQueryWithTol(const std::string &propname, const ExplicitBitVect &v,
+                      bool negate, float tol = 0.0) {
+  auto *res = new Ret();
+  res->setQuery(makePropQuery<Ob>(propname, v, tol));
+  if (negate) {
+    res->getQuery()->setNegation(true);
+  }
   return res;
 }
 
@@ -167,6 +195,15 @@ struct queries_wrapper {
     QADEF2(HasChiralTag);
     QADEF2(MissingChiralTag);
 
+    QADEF2(AAtom);
+    QADEF2(AHAtom);
+    QADEF2(XAtom);
+    QADEF2(XHAtom);
+    QADEF2(QAtom);
+    QADEF2(QHAtom);
+    QADEF2(MAtom);
+    QADEF2(MHAtom);
+
     python::def("HasPropQueryAtom", HasPropQueryAtom,
                 (python::arg("propname"), python::arg("negate") = false),
                 "Returns a QueryAtom that matches when the propery 'propname' "
@@ -212,6 +249,15 @@ struct queries_wrapper {
                 "Returns a QueryAtom that matches when the propery 'propname' "
                 "has the specified "
                 "value +- tolerance",
+                python::return_value_policy<python::manage_new_object>());
+
+    python::def("HasBitVectPropWithValueQueryAtom",
+                PropQueryWithTol<Atom, QueryAtom>,
+                (python::arg("propname"), python::arg("val"),
+                 python::arg("negate") = false, python::arg("tolerance") = 0),
+                "Returns a QueryAtom that matches when the propery 'propname' "
+                "has the specified explicit bit vector"
+                " value.  The Tolerance is the allowed Tanimoto difference",
                 python::return_value_policy<python::manage_new_object>());
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -264,6 +310,6 @@ struct queries_wrapper {
                 python::return_value_policy<python::manage_new_object>());
   };
 };
-}  // end of namespace
+}  // namespace RDKit
 
 void wrap_queries() { RDKit::queries_wrapper::wrap(); }

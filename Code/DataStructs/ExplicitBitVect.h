@@ -8,6 +8,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef __RD_EXPLICITBITVECTS_H__
 #define __RD_EXPLICITBITVECTS_H__
 
@@ -25,12 +26,12 @@
     sparsely occupied vectors.
 
  */
-class ExplicitBitVect : public BitVect {
+class RDKIT_DATASTRUCTS_EXPORT ExplicitBitVect : public BitVect {
  public:
-  ExplicitBitVect() : dp_bits(0), d_size(0), d_numOnBits(0){};
+  ExplicitBitVect()  {};
   //! initialize with a particular size;
   explicit ExplicitBitVect(unsigned int size)
-      : dp_bits(0), d_size(0), d_numOnBits(0) {
+      : dp_bits(nullptr), d_size(0), d_numOnBits(0) {
     _initForSize(size);
   };
   //! initialize with a particular size and all bits set
@@ -43,7 +44,8 @@ class ExplicitBitVect : public BitVect {
   //! construct directly from a dynamic_bitset pointer
   //  takes ownership of the pointer
   ExplicitBitVect(boost::dynamic_bitset<> *bits)
-      : dp_bits(bits), d_size(static_cast<unsigned int>(bits->size())),
+      : dp_bits(bits),
+        d_size(static_cast<unsigned int>(bits->size())),
         d_numOnBits(static_cast<unsigned int>(bits->count())){};
 
   ~ExplicitBitVect();
@@ -76,7 +78,7 @@ class ExplicitBitVect : public BitVect {
   void clearBits() { dp_bits->reset(); };
   std::string toString() const;
 
-  boost::dynamic_bitset<> *dp_bits;  //!< our raw storage
+  boost::dynamic_bitset<> *dp_bits{nullptr};  //!< our raw storage
 
   bool operator==(const ExplicitBitVect &o) const {
     return *dp_bits == *o.dp_bits;
@@ -86,8 +88,8 @@ class ExplicitBitVect : public BitVect {
   }
 
  private:
-  unsigned int d_size;
-  unsigned int d_numOnBits;
+  unsigned int d_size{0};
+  unsigned int d_numOnBits{0};
   void _initForSize(const unsigned int size);
 };
 

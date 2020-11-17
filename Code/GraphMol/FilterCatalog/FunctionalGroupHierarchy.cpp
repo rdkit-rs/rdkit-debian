@@ -30,6 +30,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "FunctionalGroupHierarchy.h"
 #include "FilterMatchers.h"
 #include "FilterCatalog.h"
 #include <GraphMol/SmilesParse/SmilesParse.h>
@@ -172,9 +173,6 @@ const FuncData_t FuncDataArray[] = {
 
     {0, "TerminalAlkyne", "[C;$(C#[CH])]", "Terminal Alkyne", nullptr}};
 
-const unsigned int NUM_FUNCS =
-    static_cast<unsigned int>(sizeof(FuncDataArray) / sizeof(FuncData_t));
-
 FilterCatalog &hierarchy_get() {
   static FilterCatalog fgroup;
   return fgroup;
@@ -256,7 +254,9 @@ const FilterCatalog &GetFunctionalGroupHierarchy() {
 const std::map<std::string, ROMOL_SPTR> &GetFlattenedFunctionalGroupHierarchy(
     bool normalize) {
   GetFunctionalGroupHierarchy();
-  if (normalize) return flatten_normalized_get();
+  if (normalize) {
+    return flatten_normalized_get();
+  }
   return flatten_get();
 }
 }

@@ -1,4 +1,3 @@
-#  $Id$
 #
 #  Copyright (c) 2007-2014, Novartis Institutes for BioMedical Research Inc.
 #  All rights reserved.
@@ -29,12 +28,13 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from __future__ import print_function
 
-import unittest, doctest
-import os, sys
-from rdkit.six import exec_
-from rdkit.six.moves import cPickle
+import importlib.util
+import unittest
+import doctest
+import os
+import sys
+import pickle
 
 from rdkit import rdBase
 from rdkit import Chem
@@ -51,10 +51,11 @@ def feq(v1, v2, tol2=1e-4):
 def ptEq(pt1, pt2, tol=1e-4):
   return feq(pt1.x, pt2.x, tol) and feq(pt1.y, pt2.y, tol) and feq(pt1.z, pt2.z, tol)
 
+
 # Boost functions are NOT found by doctest, this "fixes" them
 #  by adding the doctests to a fake module
-import imp
-TestPreprocess = imp.new_module("TestPreprocess")
+spec = importlib.util.spec_from_loader("TestPreprocess", loader=None)
+TestPreprocess = importlib.util.module_from_spec(spec)
 code = """
 from rdkit.Chem import rdChemReactions
 def PreprocessReaction(*a, **kw):
@@ -62,7 +63,7 @@ def PreprocessReaction(*a, **kw):
     '''
     return rdChemReactions.PreprocessReaction(*a, **kw)
 """ % "\n".join([x.lstrip() for x in rdChemReactions.PreprocessReaction.__doc__.split("\n")])
-exec_(code, TestPreprocess.__dict__)
+exec(code, TestPreprocess.__dict__)
 
 
 def load_tests(loader, tests, ignore):
@@ -167,8 +168,8 @@ class TestCase(unittest.TestCase):
       ValueError,
       lambda x='[C:1](=[O:2])O.[N:3]>>[C:1](=[O:2])[N:3]Q': rdChemReactions.ReactionFromSmarts(x))
     self.assertRaises(
-      ValueError,
-      lambda x='[C:1](=[O:2])O.[N:3]>>[C:1](=[O:2])[N:3]>>CC': rdChemReactions.ReactionFromSmarts(x))
+      ValueError, lambda x='[C:1](=[O:2])O.[N:3]>>[C:1](=[O:2])[N:3]>>CC': rdChemReactions.
+      ReactionFromSmarts(x))
 
     block = """$RXN
 
@@ -386,8 +387,8 @@ M  END
     # reaction parser which now allows using parenthesis in products
     # as well. original smiles: '[C:1]1[O:2][N:3]1>>[C:1]1[O:2].[N:3]1'
     rxn = rdChemReactions.ReactionFromSmarts('[C:1]1[O:2][N:3]1>>([C:1]1[O:2].[N:3]1)')
-    pkl = cPickle.dumps(rxn)
-    rxn = cPickle.loads(pkl)
+    pkl = pickle.dumps(rxn)
+    rxn = pickle.loads(pkl)
     mol = Chem.MolFromSmiles('C1ON1')
     products = rxn.RunReactants([mol])
     self.assertEqual(len(products), 1)
@@ -408,10 +409,10 @@ M  END
     rxn = rdChemReactions.ReactionFromSmarts('[C:1]1[O:2][N:3]1>>[C:1][O:2].[N:3]')
     r1 = rxn.GetReactantTemplate(0)
     sma = Chem.MolToSmarts(r1)
-    self.assertEqual(sma, '[C:1]1-,:[O:2]-,:[N:3]-,:1')
+    self.assertEqual(sma, '[C:1]1[O:2][N:3]1')
     p1 = rxn.GetProductTemplate(0)
     sma = Chem.MolToSmarts(p1)
-    self.assertEqual(sma, '[C:1]-,:[O:2]')
+    self.assertEqual(sma, '[C:1][O:2]')
 
     p2 = rxn.GetProductTemplate(1)
     sma = Chem.MolToSmarts(p2)
@@ -489,8 +490,10 @@ M  END
     self.assertTrue(rxn)
     rxn.Initialize()
     rxn.GetReactantTemplate(0).GetAtomWithIdx(0).SetProp('query', 'carboxylicacid')
-    querydefs = {k.lower(): v
-                 for k, v in FilterCatalog.GetFlattenedFunctionalGroupHierarchy().items()}
+    querydefs = {
+      k.lower(): v
+      for k, v in FilterCatalog.GetFlattenedFunctionalGroupHierarchy().items()
+    }
 
     self.assertTrue('CarboxylicAcid' in FilterCatalog.GetFlattenedFunctionalGroupHierarchy())
     rxn.AddRecursiveQueriesToReaction(querydefs, 'query')
@@ -589,9 +592,18 @@ M  END
     self.assertTrue(res)
     expected_result = [Chem.MolToSmiles(Chem.MolFromSmiles("C=CCNC(N)=S"))]
     expected_result.sort()
-    sidechains_expected_result = [Chem.MolToSmiles(
-      Chem.MolFromSmiles("[*:1]=S.[*:3]CC=C"), isomericSmiles=True)]
-    sidechains_nodummy_expected_result = [[0, [3, ], [1, ]], [3, [1, ], [2, ]]]
+    sidechains_expected_result = [
+      Chem.MolToSmiles(Chem.MolFromSmiles("[*:1]=S.[*:3]CC=C"), isomericSmiles=True)
+    ]
+    sidechains_nodummy_expected_result = [[0, [
+      3,
+    ], [
+      1,
+    ]], [3, [
+      1,
+    ], [
+      2,
+    ]]]
     sidechains_nodummy = []
 
     sidechains_expected_result.sort()
@@ -609,9 +621,11 @@ M  END
           if not addDummy:
             for atom in sidechain.GetAtoms():
               if atom.HasProp("_rgroupAtomMaps"):
-                sidechains_nodummy.append([atom.GetIdx(),
-                                           eval(atom.GetProp("_rgroupAtomMaps")),
-                                           eval(atom.GetProp("_rgroupBonds")), ])
+                sidechains_nodummy.append([
+                  atom.GetIdx(),
+                  eval(atom.GetProp("_rgroupAtomMaps")),
+                  eval(atom.GetProp("_rgroupBonds")),
+                ])
           result.sort()
           sidechains.sort()
 
@@ -623,8 +637,9 @@ M  END
 
     expected_result = [Chem.MolToSmiles(Chem.MolFromSmiles("NCNCc1ncc(Cl)cc1Br"))]
     expected_result.sort()
-    sidechains_expected_result = [Chem.MolToSmiles(
-      Chem.MolFromSmiles("[*:2]Cc1ncc(Cl)cc1Br"), isomericSmiles=True)]
+    sidechains_expected_result = [
+      Chem.MolToSmiles(Chem.MolFromSmiles("[*:2]Cc1ncc(Cl)cc1Br"), isomericSmiles=True)
+    ]
     sidechains_expected_result.sort()
 
     res = rxn.RunReactant(reagents[1], 1)
@@ -673,8 +688,342 @@ M  END
     rxn = rdChemReactions.ReactionFromRxnFile(testFile)
     rxn.Initialize()
     res = rdChemReactions.PreprocessReaction(rxn)
-    self.assertEquals(res, (0, 0, 2, 1, (((0, 'halogen.bromine.aromatic'), ), (
-      (1, 'boronicacid'), ))))
+    self.assertEquals(res,
+                      (0, 0, 2, 1, (((0, 'halogen.bromine.aromatic'), ), ((1, 'boronicacid'), ))))
+
+  def testProperties(self):
+    smirks_thiourea = "[N;$(N-[#6]):3]=[C;$(C=S):1].[N;$(N[#6]);!$(N=*);!$([N-]);!$(N#*);!$([ND3]);!$([ND4]);!$(N[O,N]);!$(N[C,S]=[S,O,N]):2]>>[N:3]-[C:1]-[N+0:2]"
+    rxn = rdChemReactions.ReactionFromSmarts(smirks_thiourea)
+    self.assertFalse(rxn.HasProp("fooprop"))
+    rxn.SetProp("fooprop", "bar", computed=True)
+    rxn.SetIntProp("intprop", 3)
+    self.assertTrue(rxn.HasProp("fooprop"))
+    self.assertTrue(rxn.HasProp("intprop"))
+    self.assertEquals(rxn.GetIntProp("intprop"), 3)
+    nrxn = rdChemReactions.ChemicalReaction(rxn.ToBinary())
+    self.assertFalse(nrxn.HasProp("fooprop"))
+    nrxn = rdChemReactions.ChemicalReaction(rxn.ToBinary(Chem.PropertyPickleOptions.AllProps))
+    self.assertTrue(nrxn.HasProp("fooprop"))
+    nrxn.ClearComputedProps()
+    self.assertFalse(nrxn.HasProp("fooprop"))
+    self.assertTrue(nrxn.HasProp("intprop"))
+    self.assertEquals(nrxn.GetIntProp("intprop"), 3)
+
+  def testRoundTripException(self):
+    smarts = '[C:1]([C@:3]1([OH:24])[CH2:8][CH2:7][C@H:6]2[C@H:9]3[C@H:19]([C@@H:20]([F:22])[CH2:21][C@:4]12[CH3:5])[C@:17]1([CH3:18])[C:12](=[CH:13][C:14](=[O:23])[CH2:15][CH2:16]1)[CH:11]=[CH:10]3)#[CH:2].C(Cl)CCl.ClC1C=CC=C(C(OO)=[O:37])C=1.C(O)(C)(C)C>C(OCC)(=O)C>[C:1]([C@:3]1([OH:24])[CH2:8][CH2:7][C@H:6]2[C@H:9]3[C@H:19]([C@@H:20]([F:22])[CH2:21][C@:4]12[CH3:5])[C@:17]1([CH3:18])[C:12](=[CH:13][C:14](=[O:23])[CH2:15][CH2:16]1)[C@H:11]1[O:37][C@@H:10]31)#[CH:2]'
+    rxn = rdChemReactions.ReactionFromSmarts(smarts)
+    # this shouldn't throw an exception
+    smarts = rdChemReactions.ReactionToSmarts(rxn)
+
+  def testMaxProducts(self):
+    smarts = "[c:1]1[c:2][c:3][c:4][c:5][c:6]1>>[c:1]1[c:2][c:3][c:4][c:5][c:6]1"
+    rxn = rdChemReactions.ReactionFromSmarts(smarts)
+    m = Chem.MolFromSmiles("c1ccccc1")
+    prods = rxn.RunReactants([m])
+    self.assertEqual(len(prods), 12)
+
+    prods = rxn.RunReactants([m], 1)
+    self.assertEqual(len(prods), 1)
+
+  def testGitHub1868(self):
+    fileN = os.path.join(self.dataDir, 'v3k.AmideBond.rxn')
+    for i in range(100):
+      _rxn = rdChemReactions.ReactionFromRxnFile(fileN)
+      _rxn.Initialize()
+      _reacts = [Chem.MolToSmarts(r) for r in _rxn.GetReactants()]
+      _prods = [Chem.MolToSmarts(p) for p in _rxn.GetProducts()]
+
+  def test_PNGMetadata(self):
+    fname = os.path.join(self.dataDir, 'reaction1.smarts.png')
+    rxn = rdChemReactions.ReactionFromPNGFile(fname)
+    self.failIf(rxn is None)
+    self.assertEqual(rxn.GetNumReactantTemplates(), 2)
+    self.assertEqual(rxn.GetNumProductTemplates(), 1)
+
+    fname = os.path.join(self.dataDir, 'reaction1.no_metadata.png')
+    npng1 = rdChemReactions.ReactionMetadataToPNGFile(rxn, fname)
+    png = open(fname, 'rb').read()
+    npng2 = rdChemReactions.ReactionMetadataToPNGString(rxn, png)
+    self.assertEqual(npng1, npng2)
+    nrxn = rdChemReactions.ReactionFromPNGString(npng2)
+    self.failIf(nrxn is None)
+    self.assertEqual(nrxn.GetNumReactantTemplates(), 2)
+    self.assertEqual(nrxn.GetNumProductTemplates(), 1)
+    opts = [
+      {
+        'includePkl': True,
+        'includeSmiles': False,
+        'includeSmarts': False,
+        'includeRxn': False
+      },
+      {
+        'includePkl': False,
+        'includeSmiles': True,
+        'includeSmarts': False,
+        'includeRxn': False
+      },
+      {
+        'includePkl': False,
+        'includeSmiles': False,
+        'includeSmarts': True,
+        'includeRxn': False
+      },
+      {
+        'includePkl': False,
+        'includeSmiles': False,
+        'includeSmarts': False,
+        'includeRxn': True
+      },
+    ]
+    for opt in opts:
+      npng = rdChemReactions.ReactionMetadataToPNGString(rxn, png, **opt)
+      nrxn = rdChemReactions.ReactionFromPNGString(npng)
+      self.failIf(nrxn is None)
+      self.assertEqual(nrxn.GetNumReactantTemplates(), 2)
+      self.assertEqual(nrxn.GetNumProductTemplates(), 1)
+
+
+def _getProductCXSMILES(product):
+  """
+  Clear properties.
+
+  Mapping properties show up in CXSMILES make validation less readable.
+  """
+  for a in product.GetAtoms():
+    for k in a.GetPropsAsDict():
+      a.ClearProp(k)
+  return Chem.MolToCXSmiles(product)
+
+
+def _reactAndSummarize(rxn_smarts, *smiles):
+  """
+  Run a reaction and combine the products in a single string.  
+
+  Makes errors readable ish
+  """
+  rxn = rdChemReactions.ReactionFromSmarts(rxn_smarts)
+  mols = [Chem.MolFromSmiles(s) for s in smiles]
+  products = []
+  for prods in rxn.RunReactants(mols):
+    products.append(' + '.join(map(_getProductCXSMILES, prods)))
+  products = ' OR '.join(products)
+  return products
+
+
+class StereoGroupTests(unittest.TestCase):
+
+  def test_reaction_preserves_stereo(self):
+    """
+    StereoGroup atoms are in the reaction, but the reaction doesn't affect
+    the chirality at the stereo centers
+    -> preserve stereo group
+    """
+    reaction = '[C@:1]>>[C@:1]'
+    reactants = ['F[C@H](Cl)Br |o1:1|', 'F[C@@H](Cl)Br |&1:1|', 'FC(Cl)Br']
+    for reactant in reactants:
+      products = _reactAndSummarize(reaction, reactant)
+      self.assertEqual(products, reactant)
+
+  def test_reaction_ignores_stereo(self):
+    """
+    StereoGroup atoms are in the reaction, but the reaction doesn't specify the
+    chirality at the stereo centers
+    -> preserve stereo group
+    """
+    reaction = '[C:1]>>[C:1]'
+    reactants = ['F[C@H](Cl)Br |o1:1|', 'F[C@@H](Cl)Br |&1:1|', 'FC(Cl)Br']
+    for reactant in reactants:
+      products = _reactAndSummarize(reaction, reactant)
+      self.assertEqual(products, reactant)
+
+  def test_reaction_inverts_stereo(self):
+    """
+    StereoGroup atoms are in the reaction, and the reaction inverts the specified
+    chirality at the stereo centers.
+    -> preserve stereo group
+    """
+    reaction = '[C@:1]>>[C@@:1]'
+
+    products = _reactAndSummarize(reaction, 'F[C@H](Cl)Br |o1:1|')
+    self.assertEqual(products, 'F[C@@H](Cl)Br |o1:1|')
+    products = _reactAndSummarize(reaction, 'F[C@@H](Cl)Br |&1:1|')
+    self.assertEqual(products, 'F[C@H](Cl)Br |&1:1|')
+    products = _reactAndSummarize(reaction, 'FC(Cl)Br')
+    self.assertEqual(products, 'FC(Cl)Br')
+
+  def test_reaction_destroys_stereo(self):
+    """
+    StereoGroup atoms are in the reaction, and the reaction destroys the specified
+    chirality at the stereo centers
+    -> invalidate stereo center, preserve the rest of the stereo group.
+    """
+    reaction = '[C@:1]>>[C:1]'
+    products = _reactAndSummarize(reaction, 'F[C@H](Cl)Br |o1:1|')
+    self.assertEqual(products, 'FC(Cl)Br')
+    products = _reactAndSummarize(reaction, 'F[C@@H](Cl)Br |&1:1|')
+    self.assertEqual(products, 'FC(Cl)Br')
+    products = _reactAndSummarize(reaction, 'FC(Cl)Br')
+    self.assertEqual(products, 'FC(Cl)Br')
+
+    reaction = '[C@:1]F>>[C:1]F'
+    # Reaction destroys stereo (but preserves unaffected group
+    products = _reactAndSummarize(reaction, 'F[C@H](Cl)[C@@H](Cl)Br |o1:1,&2:3|')
+    self.assertEqual(products, 'FC(Cl)[C@@H](Cl)Br |&1:3|')
+    # Reaction destroys stereo (but preserves the rest of the group
+    products = _reactAndSummarize(reaction, 'F[C@H](Cl)[C@@H](Cl)Br |&1:1,3|')
+    self.assertEqual(products, 'FC(Cl)[C@@H](Cl)Br |&1:3|')
+
+  def test_reaction_defines_stereo(self):
+    """
+    StereoGroup atoms are in the reaction, and the reaction creates the specified
+    chirality at the stereo centers
+    -> remove the stereo center from 
+    -> invalidate stereo group
+    """
+    products = _reactAndSummarize('[C:1]>>[C@@:1]', 'F[C@H](Cl)Br |o1:1|')
+    self.assertEqual(products, 'F[C@@H](Cl)Br')
+    products = _reactAndSummarize('[C:1]>>[C@@:1]', 'F[C@@H](Cl)Br |&1:1|')
+    self.assertEqual(products, 'F[C@@H](Cl)Br')
+    products = _reactAndSummarize('[C:1]>>[C@@:1]', 'FC(Cl)Br')
+    self.assertEqual(products, 'F[C@@H](Cl)Br')
+
+    # Remove group with defined stereo
+    products = _reactAndSummarize('[C:1]F>>[C@@:1]F', 'F[C@H](Cl)[C@@H](Cl)Br |o1:1,&2:3|')
+    self.assertEqual(products, 'F[C@@H](Cl)[C@@H](Cl)Br |&1:3|')
+
+    # Remove atoms with defined stereo from group
+    products = _reactAndSummarize('[C:1]F>>[C@@:1]F', 'F[C@H](Cl)[C@@H](Cl)Br |o1:1,3|')
+    self.assertEqual(products, 'F[C@@H](Cl)[C@@H](Cl)Br |o1:3|')
+
+  def test_stereogroup_is_spectator_to_reaction(self):
+    """
+    StereoGroup atoms are not in the reaction
+    -> stereo group is unaffected
+    """
+    # 5a. Reaction preserves unrelated stereo
+    products = _reactAndSummarize('[C@:1]F>>[C@:1]F', 'F[C@H](Cl)[C@@H](Cl)Br |o1:3|')
+    self.assertEqual(products, 'F[C@H](Cl)[C@@H](Cl)Br |o1:3|')
+    # 5b. Reaction ignores unrelated stereo'
+    products = _reactAndSummarize('[C:1]F>>[C:1]F', 'F[C@H](Cl)[C@@H](Cl)Br |o1:3|')
+    self.assertEqual(products, 'F[C@H](Cl)[C@@H](Cl)Br |o1:3|')
+    # 5c. Reaction inverts unrelated stereo'
+    products = _reactAndSummarize('[C@:1]F>>[C@@:1]F', 'F[C@H](Cl)[C@@H](Cl)Br |o1:3|')
+    self.assertEqual(products, 'F[C@@H](Cl)[C@@H](Cl)Br |o1:3|')
+    # 5d. Reaction destroys unrelated stereo' 1:3|
+    products = _reactAndSummarize('[C@:1]F>>[C:1]F', 'F[C@H](Cl)[C@@H](Cl)Br |o1:3|')
+    self.assertEqual(products, 'FC(Cl)[C@@H](Cl)Br |o1:3|')
+    # 5e. Reaction assigns unrelated stereo'
+    products = _reactAndSummarize('[C:1]F>>[C@@:1]F', 'F[C@H](Cl)[C@@H](Cl)Br |o1:3|')
+    self.assertEqual(products, 'F[C@@H](Cl)[C@@H](Cl)Br |o1:3|')
+
+  def test_reaction_splits_stereogroup(self):
+    """
+    StereoGroup atoms are split into two products by the reaction
+    -> Should the group be invalidated or trimmed?
+    """
+    products = _reactAndSummarize('[C:1]OO[C:2]>>[C:2]O.O[C:1]',
+                                  'F[C@H](Cl)OO[C@@H](Cl)Br |o1:1,5|')
+    # Two product sets, each with two mols:
+    self.assertEqual(products.count('|o1:1|'), 4)
+
+  def test_reaction_copies_stereogroup(self):
+    """
+    If multiple copies of an atom in StereoGroup show up in the product, they
+    should all be part of the same product StereoGroup.
+    """
+    # Stereogroup atoms are in the reaction with multiple copies in the product
+    products = _reactAndSummarize('[O:1].[C:2]=O>>[O:1][C:2][O:1]',
+                                  'Cl[C@@H](Br)C[C@H](Br)CCO |&1:1,4|', 'CC(=O)C')
+    # stereogroup manually checked, product SMILES assumed correct.
+    self.assertEqual(products,
+                     'CC(C)(OCC[C@@H](Br)C[C@@H](Cl)Br)OCC[C@@H](Br)C[C@@H](Cl)Br |&1:6,9,15,18|')
+
+    # Stereogroup atoms are not in the reaction, but have multiple copies in the
+    # product.
+    products = _reactAndSummarize('[O:1].[C:2]=O>>[O:1][C:2][O:1]',
+                                  'Cl[C@@H](Br)C[C@H](Br)CCO |&1:1,4|', 'CC(=O)C')
+    # stereogroup manually checked, product SMILES assumed correct.
+    self.assertEqual(products,
+                     'CC(C)(OCC[C@@H](Br)C[C@@H](Cl)Br)OCC[C@@H](Br)C[C@@H](Cl)Br |&1:6,9,15,18|')
+
+  def test_github(self):
+    rxn = rdChemReactions.ReactionFromSmarts('[C:2][C:3]>>[C:2][C][*:3]')
+    mol = Chem.MolFromSmiles("C/C=C/C")
+    #  this shouldn't raise
+    rxn.RunReactants([mol])
+
+  def test_rxnblock_removehs(self):
+    rxnblock = """$RXN
+Dummy 0
+  Dummy        0123456789
+
+  1  1
+$MOL
+
+  Dummy   01234567892D
+
+ 10 10  0  0  0  0            999 V2000
+    7.0222  -11.1783    0.0000 C   0  0  0  0  0  0  0  0  0  1  0  0
+    8.0615  -11.7783    0.0000 O   0  0  0  0  0  0  0  0  0  2  0  0
+    7.0222   -9.6783    0.0000 N   0  0  0  0  0  0  0  0  0  3  0  0
+    5.7231   -8.9283    0.0000 C   0  0  0  0  0  0  0  0  0  4  0  0
+    5.7231   -7.7283    0.0000 A   0  0  0  0  0  0  0  0  0  5  0  0
+    4.4242   -9.6783    0.0000 C   0  0  0  0  0  0  0  0  0  6  0  0
+    4.4242  -11.1783    0.0000 C   0  0  0  0  0  0  0  0  0  7  0  0
+    3.3849  -11.7783    0.0000 A   0  0  0  0  0  0  0  0  0  8  0  0
+    5.7231  -11.9283    0.0000 N   0  0  0  0  0  0  0  0  0  9  0  0
+    5.7231  -13.1094    0.0000 H   0  0
+  1  2  2  0  0  0  8
+  1  3  1  0  0  0  8
+  3  4  2  0  0  0  8
+  4  5  1  0  0  0  2
+  4  6  1  0  0  0  8
+  6  7  2  0  0  0  8
+  7  8  1  0  0  0  2
+  7  9  1  0  0  0  8
+  9  1  1  0  0  0  8
+  9 10  1  0
+M  SUB  1   9   2
+M  END
+$MOL
+
+  Dummy   01234567892D
+
+  9  9  0  0  0  0            999 V2000
+   17.0447  -11.1783    0.0000 C   0  0  0  0  0  0  0  0  0  1  0  0
+   18.0840  -11.7783    0.0000 O   0  0  0  0  0  0  0  0  0  2  0  0
+   17.0447   -9.6783    0.0000 N   0  0  0  0  0  0  0  0  0  3  0  0
+   15.7457   -8.9283    0.0000 C   0  0  0  0  0  0  0  0  0  4  0  0
+   15.7457   -7.7283    0.0000 A   0  0  0  0  0  0  0  0  0  5  0  0
+   14.4467   -9.6783    0.0000 C   0  0  0  0  0  0  0  0  0  6  0  0
+   14.4467  -11.1783    0.0000 C   0  0  0  0  0  0  0  0  0  7  0  0
+   13.4074  -11.7783    0.0000 A   0  0  0  0  0  0  0  0  0  8  0  0
+   15.7457  -11.9283    0.0000 N   0  0  0  0  0  0  0  0  0  9  0  0
+  1  2  1  0  0  0  8
+  1  3  1  0  0  0  8
+  3  4  2  0  0  0  8
+  4  5  1  0  0  0  2
+  4  6  1  0  0  0  8
+  6  7  2  0  0  0  8
+  7  8  1  0  0  0  2
+  7  9  1  0  0  0  8
+  9  1  2  0  0  0  8
+M  END
+"""
+
+    mol = Chem.MolFromSmiles("c1(=O)nc([Cl])cc([F])[nH]1")
+    rxn = rdChemReactions.ReactionFromRxnBlock(rxnblock)
+    self.assertIsNotNone(rxn)
+    prods = rxn.RunReactants((mol,))
+    # if the explicit hydrogen is not removed and the reactant template
+    # is not sanitized, the reactant template is not aromatic and our
+    # aromatic reactant won't match
+    self.assertEqual(len(prods), 0)
+
+    rxn = rdChemReactions.ReactionFromRxnBlock(rxnblock, removeHs=True, sanitize=True)
+    self.assertIsNotNone(rxn)
+    prods = rxn.RunReactants((mol,))
+    self.assertEqual(len(prods), 2)
 
 
 if __name__ == '__main__':

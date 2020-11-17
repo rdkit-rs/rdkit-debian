@@ -33,6 +33,7 @@ from rdkit.Chem.rdPartialCharges import *
 from rdkit.Chem.rdReducedGraphs import *
 from rdkit.Chem.rdShapeHelpers import *
 from rdkit.Chem.rdqueries import *
+from rdkit.Chem.rdMolEnumerator import *
 from rdkit.Geometry import rdGeometry
 from rdkit.RDLogger import logger
 from rdkit.Chem.EnumerateStereoisomers import StereoEnumerationOptions, EnumerateStereoisomers
@@ -49,8 +50,8 @@ logger = logger()
 
 def TransformMol(mol, tform, confId=-1, keepConfs=False):
   """  Applies the transformation (usually a 4x4 double matrix) to a molecule
-  if keepConfs is False then all but that conformer are removed
-  """
+    if keepConfs is False then all but that conformer are removed
+    """
   refConf = mol.GetConformer(confId)
   TransformConformer(refConf, tform)
   if not keepConfs:
@@ -66,7 +67,7 @@ def TransformMol(mol, tform, confId=-1, keepConfs=False):
 
 def ComputeMolShape(mol, confId=-1, boxDim=(20, 20, 20), spacing=0.5, **kwargs):
   """ returns a grid representation of the molecule's shape
-  """
+    """
   res = rdGeometry.UniformGrid3D(boxDim[0], boxDim[1], boxDim[2], spacing=spacing)
   EncodeShape(mol, res, confId, **kwargs)
   return res
@@ -74,12 +75,27 @@ def ComputeMolShape(mol, confId=-1, boxDim=(20, 20, 20), spacing=0.5, **kwargs):
 
 def ComputeMolVolume(mol, confId=-1, gridSpacing=0.2, boxMargin=2.0):
   """ Calculates the volume of a particular conformer of a molecule
-  based on a grid-encoding of the molecular shape.
+    based on a grid-encoding of the molecular shape.
 
-  """
+    A bit of demo as well as a test of github #1883:
+
+    >>> from rdkit import Chem
+    >>> from rdkit.Chem import AllChem
+    >>> mol = Chem.AddHs(Chem.MolFromSmiles('C'))
+    >>> AllChem.EmbedMolecule(mol)
+    0
+    >>> ComputeMolVolume(mol)
+    28...
+    >>> mol = Chem.AddHs(Chem.MolFromSmiles('O'))
+    >>> AllChem.EmbedMolecule(mol)
+    0
+    >>> ComputeMolVolume(mol)
+    20...
+
+    """
   mol = rdchem.Mol(mol)
   conf = mol.GetConformer(confId)
-  CanonicalizeConformer(conf)
+  CanonicalizeConformer(conf, ignoreHs=False)
   box = ComputeConfBox(conf)
   sideLen = (box[1].x - box[0].x + 2 * boxMargin, box[1].y - box[0].y + 2 * boxMargin,
              box[1].z - box[0].z + 2 * boxMargin)
@@ -91,23 +107,24 @@ def ComputeMolVolume(mol, confId=-1, gridSpacing=0.2, boxMargin=2.0):
   vol = voxelVol * len(voxels)
   return vol
 
+
 def GetConformerRMS(mol, confId1, confId2, atomIds=None, prealigned=False):
   """ Returns the RMS between two conformations.
-  By default, the conformers will be aligned to the first conformer
-  before the RMS calculation and, as a side-effect, the second will be left
-  in the aligned state.
+    By default, the conformers will be aligned to the first conformer
+    before the RMS calculation and, as a side-effect, the second will be left
+    in the aligned state.
 
-  Arguments:
-    - mol:        the molecule
-    - confId1:    the id of the first conformer
-    - confId2:    the id of the second conformer
-    - atomIds:    (optional) list of atom ids to use a points for
-                  alingment - defaults to all atoms
-    - prealigned: (optional) by default the conformers are assumed
-                  be unaligned and the second conformer be aligned
-                  to the first
+    Arguments:
+      - mol:        the molecule
+      - confId1:    the id of the first conformer
+      - confId2:    the id of the second conformer
+      - atomIds:    (optional) list of atom ids to use a points for
+                    alingment - defaults to all atoms
+      - prealigned: (optional) by default the conformers are assumed
+                    be unaligned and the second conformer be aligned
+                    to the first
 
-  """
+    """
   # align the conformers if necessary
   # Note: the reference conformer is always the first one
   if not prealigned:
@@ -129,29 +146,31 @@ def GetConformerRMS(mol, confId1, confId2, atomIds=None, prealigned=False):
 
 def GetConformerRMSMatrix(mol, atomIds=None, prealigned=False):
   """ Returns the RMS matrix of the conformers of a molecule.
-  As a side-effect, the conformers will be aligned to the first
-  conformer (i.e. the reference) and will left in the aligned state.
+    As a side-effect, the conformers will be aligned to the first
+    conformer (i.e. the reference) and will left in the aligned state.
 
-  Arguments:
-    - mol:     the molecule
-    - atomIds: (optional) list of atom ids to use a points for
-               alingment - defaults to all atoms
-    - prealigned: (optional) by default the conformers are assumed
-                  be unaligned and will therefore be aligned to the
-                  first conformer
+    Arguments:
+      - mol:     the molecule
+      - atomIds: (optional) list of atom ids to use a points for
+                 alingment - defaults to all atoms
+      - prealigned: (optional) by default the conformers are assumed
+                    be unaligned and will therefore be aligned to the
+                    first conformer
 
-  Note that the returned RMS matrix is symmetrical, i.e. it is the
-  lower half of the matrix, e.g. for 5 conformers:
-  rmsmatrix = [ a,
-                b, c,
-                d, e, f,
-                g, h, i, j]
-  where a is the RMS between conformers 0 and 1, b is the RMS between
-  conformers 0 and 2, etc.
-  This way it can be directly used as distance matrix in e.g. Butina
-  clustering.
+    Note that the returned RMS matrix is symmetrical, i.e. it is the
+    lower half of the matrix, e.g. for 5 conformers::
 
-  """
+      rmsmatrix = [ a,
+                    b, c,
+                    d, e, f,
+                    g, h, i, j]
+
+    where a is the RMS between conformers 0 and 1, b is the RMS between
+    conformers 0 and 2, etc.
+    This way it can be directly used as distance matrix in e.g. Butina
+    clustering.
+
+    """
   # if necessary, align the conformers
   # Note: the reference conformer is always the first one
   rmsvals = []
@@ -163,7 +182,8 @@ def GetConformerRMSMatrix(mol, atomIds=None, prealigned=False):
       AlignMolConformers(mol, RMSlist=rmsvals)
   else:  # already prealigned
     for i in range(1, len(confIds)):
-      rmsvals.append(GetConformerRMS(mol, confIds[0], confIds[i], atomIds=atomIds, prealigned=prealigned))
+      rmsvals.append(
+        GetConformerRMS(mol, confIds[0], confIds[i], atomIds=atomIds, prealigned=prealigned))
   # loop over the conformations (except the reference one)
   cmat = []
   for i in range(1, len(confIds)):
@@ -175,35 +195,39 @@ def GetConformerRMSMatrix(mol, atomIds=None, prealigned=False):
 
 def EnumerateLibraryFromReaction(reaction, sidechainSets, returnReactants=False):
   """ Returns a generator for the virtual library defined by
-   a reaction and a sequence of sidechain sets
+    a reaction and a sequence of sidechain sets
 
-  >>> from rdkit import Chem
-  >>> from rdkit.Chem import AllChem
-  >>> s1=[Chem.MolFromSmiles(x) for x in ('NC','NCC')]
-  >>> s2=[Chem.MolFromSmiles(x) for x in ('OC=O','OC(=O)C')]
-  >>> rxn = AllChem.ReactionFromSmarts('[O:2]=[C:1][OH].[N:3]>>[O:2]=[C:1][N:3]')
-  >>> r = AllChem.EnumerateLibraryFromReaction(rxn,[s2,s1])
-  >>> [Chem.MolToSmiles(x[0]) for x in list(r)]
-  ['CNC=O', 'CCNC=O', 'CNC(C)=O', 'CCNC(C)=O']
+    >>> from rdkit import Chem
+    >>> from rdkit.Chem import AllChem
+    >>> s1=[Chem.MolFromSmiles(x) for x in ('NC','NCC')]
+    >>> s2=[Chem.MolFromSmiles(x) for x in ('OC=O','OC(=O)C')]
+    >>> rxn = AllChem.ReactionFromSmarts('[O:2]=[C:1][OH].[N:3]>>[O:2]=[C:1][N:3]')
+    >>> r = AllChem.EnumerateLibraryFromReaction(rxn,[s2,s1])
+    >>> [Chem.MolToSmiles(x[0]) for x in list(r)]
+    ['CNC=O', 'CCNC=O', 'CNC(C)=O', 'CCNC(C)=O']
 
-  Note that this is all done in a lazy manner, so "infinitely" large libraries can
-  be done without worrying about running out of memory. Your patience will run out first:
+    Note that this is all done in a lazy manner, so "infinitely" large libraries can
+    be done without worrying about running out of memory. Your patience will run out first:
 
-  Define a set of 10000 amines:
-  >>> amines = (Chem.MolFromSmiles('N'+'C'*x) for x in range(10000))
+    Define a set of 10000 amines:
 
-  ... a set of 10000 acids
-  >>> acids = (Chem.MolFromSmiles('OC(=O)'+'C'*x) for x in range(10000))
+    >>> amines = (Chem.MolFromSmiles('N'+'C'*x) for x in range(10000))
 
-  ... now the virtual library (1e8 compounds in principle):
-  >>> r = AllChem.EnumerateLibraryFromReaction(rxn,[acids,amines])
+    ... a set of 10000 acids
 
-  ... look at the first 4 compounds:
-  >>> [Chem.MolToSmiles(next(r)[0]) for x in range(4)]
-  ['NC=O', 'CNC=O', 'CCNC=O', 'CCCNC=O']
+    >>> acids = (Chem.MolFromSmiles('OC(=O)'+'C'*x) for x in range(10000))
+
+    ... now the virtual library (1e8 compounds in principle):
+
+    >>> r = AllChem.EnumerateLibraryFromReaction(rxn,[acids,amines])
+
+    ... look at the first 4 compounds:
+
+    >>> [Chem.MolToSmiles(next(r)[0]) for x in range(4)]
+    ['NC=O', 'CNC=O', 'CCNC=O', 'CCCNC=O']
 
 
-  """
+    """
   if len(sidechainSets) != reaction.GetNumReactantTemplates():
     raise ValueError('%d sidechains provided, %d required' %
                      (len(sidechainSets), reaction.GetNumReactantTemplates()))
@@ -232,21 +256,22 @@ def EnumerateLibraryFromReaction(reaction, sidechainSets, returnReactants=False)
 def ConstrainedEmbed(mol, core, useTethers=True, coreConfId=-1, randomseed=2342,
                      getForceField=UFFGetMoleculeForceField, **kwargs):
   """ generates an embedding of a molecule where part of the molecule
-  is constrained to have particular coordinates
+    is constrained to have particular coordinates
 
-  Arguments
-    - mol: the molecule to embed
-    - core: the molecule to use as a source of constraints
-    - useTethers: (optional) if True, the final conformation will be
-        optimized subject to a series of extra forces that pull the
-        matching atoms to the positions of the core atoms. Otherwise
-        simple distance constraints based on the core atoms will be
-        used in the optimization.
-    - coreConfId: (optional) id of the core conformation to use
-    - randomSeed: (optional) seed for the random number generator
+    Arguments
+      - mol: the molecule to embed
+      - core: the molecule to use as a source of constraints
+      - useTethers: (optional) if True, the final conformation will be
+          optimized subject to a series of extra forces that pull the
+          matching atoms to the positions of the core atoms. Otherwise
+          simple distance constraints based on the core atoms will be
+          used in the optimization.
+      - coreConfId: (optional) id of the core conformation to use
+      - randomSeed: (optional) seed for the random number generator
 
 
     An example, start by generating a template with a 3D structure:
+
     >>> from rdkit.Chem import AllChem
     >>> template = AllChem.MolFromSmiles("c1nn(Cc2ccccc2)cc1")
     >>> AllChem.EmbedMolecule(template)
@@ -255,12 +280,14 @@ def ConstrainedEmbed(mol, core, useTethers=True, coreConfId=-1, randomseed=2342,
     0
 
     Here's a molecule:
+
     >>> mol = AllChem.MolFromSmiles("c1nn(Cc2ccccc2)cc1-c3ccccc3")
 
     Now do the constrained embedding
     >>> newmol=AllChem.ConstrainedEmbed(mol, template)
 
     Demonstrate that the positions are the same:
+
     >>> newp=newmol.GetConformer().GetAtomPosition(0)
     >>> molp=mol.GetConformer().GetAtomPosition(0)
     >>> list(newp-molp)==[0.0,0.0,0.0]
@@ -270,7 +297,7 @@ def ConstrainedEmbed(mol, core, useTethers=True, coreConfId=-1, randomseed=2342,
     >>> list(newp-molp)==[0.0,0.0,0.0]
     True
 
-  """
+    """
   match = mol.GetSubstructMatch(core)
   if not match:
     raise ValueError("molecule doesn't match the core")
@@ -325,14 +352,15 @@ def ConstrainedEmbed(mol, core, useTethers=True, coreConfId=-1, randomseed=2342,
 
 def AssignBondOrdersFromTemplate(refmol, mol):
   """ assigns bond orders to a molecule based on the
-      bond orders in a template molecule
+    bond orders in a template molecule
 
-  Arguments
-    - refmol: the template molecule
-    - mol: the molecule to assign bond orders to
+    Arguments
+      - refmol: the template molecule
+      - mol: the molecule to assign bond orders to
 
     An example, start by generating a template from a SMILES
     and read in the PDB structure of the molecule
+
     >>> import os
     >>> from rdkit.Chem import AllChem
     >>> template = AllChem.MolFromSmiles("CN1C(=NC(C1=O)(c2ccccc2)c3ccccc3)N")
@@ -343,6 +371,7 @@ def AssignBondOrdersFromTemplate(refmol, mol):
     22
 
     Now assign the bond orders based on the template molecule
+
     >>> newMol = AllChem.AssignBondOrdersFromTemplate(template, mol)
     >>> len([1 for b in newMol.GetBonds() if b.GetBondTypeAsDouble() == 1.0])
     8
@@ -351,6 +380,7 @@ def AssignBondOrdersFromTemplate(refmol, mol):
     else the algorithm will fail.
 
     It also works if there are different formal charges (this was github issue 235):
+
     >>> template=AllChem.MolFromSmiles('CN(C)C(=O)Cc1ccc2c(c1)NC(=O)c3ccc(cc3N2)c4ccc(c(c4)OC)[N+](=O)[O-]')
     >>> mol = AllChem.MolFromMolFile(os.path.join(RDConfig.RDCodeDir, 'Chem', 'test_data', '4FTR_lig.mol'))
     >>> AllChem.MolToSmiles(mol)
@@ -359,7 +389,7 @@ def AssignBondOrdersFromTemplate(refmol, mol):
     >>> AllChem.MolToSmiles(newMol)
     'COc1cc(-c2ccc3c(c2)Nc2ccc(CC(=O)N(C)C)cc2NC3=O)ccc1[N+](=O)[O-]'
 
-  """
+    """
   refmol2 = rdchem.Mol(refmol)
   mol2 = rdchem.Mol(mol)
   # do the molecules match already?
@@ -406,6 +436,7 @@ def AssignBondOrdersFromTemplate(refmol, mol):
     else:
       raise ValueError("No matching found")
   return mol2
+
 
 # ------------------------------------
 #

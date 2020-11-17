@@ -111,7 +111,7 @@ void alignMolConfs(ROMol &mol, python::object atomIds, python::object confIds,
     delete cIds;
   }
   if (RMSvector) {
-    python::list &pyl = static_cast<python::list &>(RMSlist);
+    auto &pyl = static_cast<python::list &>(RMSlist);
     for (double &i : (*RMSvector)) {
       pyl.append(i);
     }
@@ -123,8 +123,8 @@ PyObject *generateRmsdTransPyTuple(double rmsd, RDGeom::Transform3D &trans) {
   npy_intp dims[2];
   dims[0] = 4;
   dims[1] = 4;
-  PyArrayObject *res = (PyArrayObject *)PyArray_SimpleNew(2, dims, NPY_DOUBLE);
-  double *resData = reinterpret_cast<double *>(PyArray_DATA(res));
+  auto *res = (PyArrayObject *)PyArray_SimpleNew(2, dims, NPY_DOUBLE);
+  auto *resData = reinterpret_cast<double *>(PyArray_DATA(res));
   unsigned int i, j, itab;
   const double *tdata = trans.getData();
   for (i = 0; i < trans.numRows(); ++i) {
@@ -212,13 +212,32 @@ double AlignMolecule(ROMol &prbMol, const ROMol &refMol, int prbCid = -1,
 double GetBestRMS(ROMol &prbMol, ROMol &refMol, int prbId, int refId,
                   python::object map, int maxMatches) {
   std::vector<MatchVectType> aMapVec;
-  if (map != python::object()) aMapVec = _translateAtomMapVector(map);
+  if (map != python::object()) {
+    aMapVec = _translateAtomMapVector(map);
+  }
 
   double rmsd;
   {
     NOGIL gil;
     rmsd =
         MolAlign::getBestRMS(prbMol, refMol, prbId, refId, aMapVec, maxMatches);
+  }
+  return rmsd;
+}
+
+double CalcRMS(ROMol &prbMol, ROMol &refMol, int prbCid, int refCid,
+               python::object map, int maxMatches,
+               python::object weights = python::list()) {
+  std::vector<MatchVectType> aMapVec;
+  if (map != python::object()) {
+    aMapVec = _translateAtomMapVector(map);
+  }
+  RDNumeric::DoubleVector *wtsVec = _translateWeights(weights);
+  double rmsd;
+  {
+    NOGIL gil;
+    rmsd =
+        MolAlign::CalcRMS(prbMol, refMol, prbCid, refCid, aMapVec, maxMatches, wtsVec);
   }
   return rmsd;
 }
@@ -323,8 +342,12 @@ PyO3A *getMMFFO3A(ROMol &prbMol, ROMol &refMol, python::object prbProps,
   }
   auto *pyO3A = new PyO3A(o3a);
 
-  if (!prbPyMMFFMolProperties) delete prbMolProps;
-  if (!refPyMMFFMolProperties) delete refMolProps;
+  if (!prbPyMMFFMolProperties) {
+    delete prbMolProps;
+  }
+  if (!refPyMMFFMolProperties) {
+    delete refMolProps;
+  }
   if (cMap) {
     delete cMap;
   }
@@ -401,8 +424,12 @@ python::tuple getMMFFO3AForConfs(
     pyres.append(new PyO3A(i));
   }
 
-  if (!prbPyMMFFMolProperties) delete prbMolProps;
-  if (!refPyMMFFMolProperties) delete refMolProps;
+  if (!prbPyMMFFMolProperties) {
+    delete prbMolProps;
+  }
+  if (!refPyMMFFMolProperties) {
+    delete refMolProps;
+  }
   if (cMap) {
     delete cMap;
   }
@@ -689,19 +716,52 @@ BOOST_PYTHON_MODULE(rdMolAlign) {
       docString.c_str());
 
   docString =
+      "Returns the RMS between two molecules, taking symmetry into account.\n\
+      \n\
+       Note:\n\
+       This function will attempt to align all permutations of matching atom\n\
+       orders in both molecules, for some molecules it will lead to\n\
+       'combinatorial explosion' especially if hydrogens are present.\n\
+       Use 'rdkit.Chem.AllChem.AlignMol' to align molecules without changing\n\
+       the atom order.\n\
+      \n\
+       ARGUMENTS\n\
+        - prbMol:      the molecule to be aligned to the reference\n\
+        - refMol:      the reference molecule\n\
+        - prbId:       (optional) probe conformation to use\n\
+        - refId:       (optional) reference conformation to use\n\
+        - map:         (optional) a list of lists of (probeAtomId,refAtomId)\n\
+                       tuples with the atom-atom mappings of the two\n\
+                       molecules. If not provided, these will be generated\n\
+                       using a substructure search.\n\
+        - maxMatches:  (optional) if map isn't specified, this will be\n\
+                       the max number of matches found in a SubstructMatch()\n\
+        - weights:     (optional) weights for mapping \n\
+       \n\
+      RETURNS\n\
+      The best RMSD found\n\
+    \n";
+  python::def(
+      "CalcRMS", RDKit::CalcRMS,
+      (python::arg("prbMol"), python::arg("refMol"), python::arg("prbId") = -1,
+       python::arg("refId") = -1, python::arg("map") = python::object(),
+       python::arg("maxMatches") = 1000000, python::arg("weights") = python::list()),
+      docString.c_str());
+
+  docString =
       "Alignment conformations in a molecule to each other\n\
      \n\
       The first conformation in the molecule is used as the reference\n\
      \n\
      ARGUMENTS\n\
-      - mol       molecule of interest\n\
-      - atomIds   List of atom ids to use a points for alingment - defaults to all atoms\n\
-      - confIds   Ids of conformations to align - defaults to all conformers \n\
-      - weights   Optionally specify weights for each of the atom pairs\n\
-      - reflect   if true reflect the conformation of the probe molecule\n\
-      - maxIters  maximum number of iterations used in mimizing the RMSD\n\
-      - RMSlist   if provided, fills in the RMS values between the reference\n\
-		  conformation and the other aligned conformations\n\
+      - mol          molecule of interest\n\
+      - atomIds      List of atom ids to use a points for alingment - defaults to all atoms\n\
+      - confIds      Ids of conformations to align - defaults to all conformers \n\
+      - weights      Optionally specify weights for each of the atom pairs\n\
+      - reflect      if true reflect the conformation of the probe molecule\n\
+      - maxIters     maximum number of iterations used in mimizing the RMSD\n\
+      - RMSlist      if provided, fills in the RMS values between the reference\n\
+		     conformation and the other aligned conformations\n\
        \n\
     \n";
   python::def(

@@ -14,7 +14,7 @@
 #include "DatastructsException.h"
 #include "DiscreteDistMat.h"
 #include <RDGeneral/Exceptions.h>
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 namespace RDKit {
 const int ci_DISCRETEVALUEVECTPICKLE_VERSION = 0x1;
@@ -26,11 +26,32 @@ DiscreteValueVect::DiscreteValueVect(const DiscreteValueVect &other) {
   d_length = other.getLength();
   d_valsPerInt = other.d_valsPerInt;
   d_mask = other.d_mask;
-  const boost::uint32_t *odata = other.getData();
-  auto *data = new boost::uint32_t[d_numInts];
+  const std::uint32_t *odata = other.getData();
+  auto *data = new std::uint32_t[d_numInts];
   memcpy(static_cast<void *>(data), static_cast<const void *>(odata),
-         d_numInts * sizeof(boost::uint32_t));
+         d_numInts * sizeof(std::uint32_t));
   d_data.reset(data);
+}
+
+DiscreteValueVect &DiscreteValueVect::operator=(
+    const DiscreteValueVect &other) {
+  if (this == &other) {
+    return *this;
+  }
+
+  d_type = other.getValueType();
+  d_bitsPerVal = other.getNumBitsPerVal();
+  d_numInts = other.getNumInts();
+  d_length = other.getLength();
+  d_valsPerInt = other.d_valsPerInt;
+  d_mask = other.d_mask;
+  const std::uint32_t *odata = other.getData();
+  auto *data = new std::uint32_t[d_numInts];
+  memcpy(static_cast<void *>(data), static_cast<const void *>(odata),
+         d_numInts * sizeof(std::uint32_t));
+  d_data.reset(data);
+
+  return *this;
 }
 
 unsigned int DiscreteValueVect::getVal(unsigned int i) const {
@@ -69,9 +90,7 @@ unsigned int DiscreteValueVect::getTotalVal() const {
 
 unsigned int DiscreteValueVect::getLength() const { return d_length; }
 
-const boost::uint32_t *DiscreteValueVect::getData() const {
-  return d_data.get();
-}
+const std::uint32_t *DiscreteValueVect::getData() const { return d_data.get(); }
 
 unsigned int computeL1Norm(const DiscreteValueVect &v1,
                            const DiscreteValueVect &v2) {
@@ -85,15 +104,15 @@ unsigned int computeL1Norm(const DiscreteValueVect &v1,
     throw ValueErrorException("Comparing vector of different value types");
   }
 
-  const boost::uint32_t *data1 = v1.getData();
-  const boost::uint32_t *data2 = v2.getData();
+  const std::uint32_t *data1 = v1.getData();
+  const std::uint32_t *data2 = v2.getData();
 
   unsigned int res = 0;
   if (valType <= DiscreteValueVect::EIGHTBITVALUE) {
     DiscreteDistMat *dmat = getDiscreteDistMat();
 
-    unsigned char *cd1 = (unsigned char *)(data1);
-    unsigned char *cd2 = (unsigned char *)(data2);
+    auto *cd1 = (unsigned char *)(data1);
+    auto *cd2 = (unsigned char *)(data2);
     const unsigned char *cend = cd1 + (v1.getNumInts() * 4);
     while (cd1 != cend) {
       if (*cd1 == *cd2) {
@@ -131,9 +150,9 @@ std::string DiscreteValueVect::toString() const {
   std::stringstream ss(std::ios_base::binary | std::ios_base::out |
                        std::ios_base::in);
 
-  boost::int32_t tVers = ci_DISCRETEVALUEVECTPICKLE_VERSION * -1;
+  std::int32_t tVers = ci_DISCRETEVALUEVECTPICKLE_VERSION * -1;
   streamWrite(ss, tVers);
-  boost::uint32_t tInt;
+  std::uint32_t tInt;
   tInt = d_type;
   streamWrite(ss, tInt);
   tInt = d_bitsPerVal;
@@ -146,7 +165,7 @@ std::string DiscreteValueVect::toString() const {
   streamWrite(ss, tInt);
 
 #if defined(BOOST_BIG_ENDIAN)
-  boost::uint32_t *td = new boost::uint32_t[d_numInts];
+  std::uint32_t *td = new std::uint32_t[d_numInts];
   for (unsigned int i = 0; i < d_numInts; ++i)
     td[i] = EndianSwapBytes<HOST_ENDIAN_ORDER, LITTLE_ENDIAN_ORDER>(
         d_data.get()[i]);
@@ -163,14 +182,14 @@ void DiscreteValueVect::initFromText(const char *pkl, const unsigned int len) {
   std::stringstream ss(std::ios_base::binary | std::ios_base::in |
                        std::ios_base::out);
   ss.write(pkl, len);
-  boost::int32_t tVers;
+  std::int32_t tVers;
   streamRead(ss, tVers);
   tVers *= -1;
   if (tVers == 0x1) {
   } else {
     throw ValueErrorException("bad version in DiscreteValueVect pickle");
   }
-  boost::uint32_t tInt;
+  std::uint32_t tInt;
   streamRead(ss, tInt);
   d_type = static_cast<DiscreteValueType>(tInt);
 
@@ -183,11 +202,11 @@ void DiscreteValueVect::initFromText(const char *pkl, const unsigned int len) {
   d_length = tInt;
   streamRead(ss, tInt);
   d_numInts = tInt;
-  auto *data = new boost::uint32_t[d_numInts];
-  ss.read((char *)data, d_numInts * sizeof(boost::uint32_t));
+  auto *data = new std::uint32_t[d_numInts];
+  ss.read((char *)data, d_numInts * sizeof(std::uint32_t));
 
 #if defined(BOOST_BIG_ENDIAN)
-  boost::uint32_t *td = new boost::uint32_t[d_numInts];
+  std::uint32_t *td = new std::uint32_t[d_numInts];
   for (unsigned int i = 0; i < d_numInts; ++i)
     td[i] = EndianSwapBytes<LITTLE_ENDIAN_ORDER, HOST_ENDIAN_ORDER>(data[i]);
   d_data.reset(td);

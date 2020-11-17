@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/export.h>
 #ifndef _RD_BOND_H
 #define _RD_BOND_H
 
@@ -43,7 +44,7 @@ class Atom;
           clients who need to store extra data on Bond objects.
 
 */
-class Bond : public RDProps {
+class RDKIT_GRAPHMOL_EXPORT Bond : public RDProps {
   friend class RWMol;
   friend class ROMol;
 
@@ -141,7 +142,10 @@ class Bond : public RDProps {
   //! returns the status of our \c isConjugated flag
   bool getIsConjugated() const { return df_isConjugated; };
 
-  //! returns a reference to the ROMol that owns this Bond
+  //! returns whether or not this instance belongs to a molecule
+  bool hasOwningMol() const { return dp_mol != nullptr; };
+
+  //! returns a reference to the ROMol that owns this instance
   ROMol &getOwningMol() const {
     PRECONDITION(dp_mol, "no owner");
     return *dp_mol;
@@ -328,9 +332,9 @@ class Bond : public RDProps {
   // void setOwningMol(ROMol &other) {setOwningMol(&other);};
   bool df_isAromatic;
   bool df_isConjugated;
-  boost::uint8_t d_bondType;
-  boost::uint8_t d_dirTag;
-  boost::uint8_t d_stereo;
+  std::uint8_t d_bondType;
+  std::uint8_t d_dirTag;
+  std::uint8_t d_stereo;
   atomindex_t d_index;
   atomindex_t d_beginAtomIdx, d_endAtomIdx;
   ROMol *dp_mol;
@@ -338,9 +342,10 @@ class Bond : public RDProps {
 
   void initBond();
 };
-};
+};  // namespace RDKit
 
 //! allows Bond objects to be dumped to streams
-extern std::ostream &operator<<(std::ostream &target, const RDKit::Bond &b);
+RDKIT_GRAPHMOL_EXPORT extern std::ostream &operator<<(std::ostream &target,
+                                                      const RDKit::Bond &b);
 
 #endif

@@ -12,6 +12,7 @@
 //  The license is here:
 //    http://cctbx.svn.sourceforge.net/viewvc/cctbx/trunk/boost_adaptbx/LICENSE_2_0.txt?revision=5148
 //
+#include <RDGeneral/export.h>
 #ifndef BOOST_ADAPTBX_PYTHON_STREAMBUF_H
 #define BOOST_ADAPTBX_PYTHON_STREAMBUF_H
 #include <RDGeneral/BoostStartInclude.h>
@@ -25,6 +26,7 @@
 
 //#include <tbxx/error_utils.hpp>
 #include <RDGeneral/Invariant.h>
+#include <RDGeneral/Exceptions.h>
 
 #include <streambuf>
 #include <iostream>
@@ -133,17 +135,17 @@ class streambuf : public std::basic_streambuf<char> {
 
   /// Construct from a Python file object
   /** if buffer_size is 0 the current default_buffer_size is used.
-  */
+   */
   streambuf(bp::object& python_file_obj, std::size_t buffer_size_ = 0)
       : py_read(getattr(python_file_obj, "read", bp::object())),
         py_write(getattr(python_file_obj, "write", bp::object())),
         py_seek(getattr(python_file_obj, "seek", bp::object())),
         py_tell(getattr(python_file_obj, "tell", bp::object())),
         buffer_size(buffer_size_ != 0 ? buffer_size_ : default_buffer_size),
-        write_buffer(0),
+        write_buffer(nullptr),
         pos_of_read_buffer_end_in_py_file(0),
         pos_of_write_buffer_end_in_py_file(buffer_size),
-        farthest_pptr(0) {
+        farthest_pptr(nullptr) {
     TEST_ASSERT(buffer_size != 0);
     /* Some Python file objects (e.g. sys.stdout and sys.stdin)
        have non-functional seek and tell. If so, assign None to
@@ -177,13 +179,55 @@ class streambuf : public std::basic_streambuf<char> {
       farthest_pptr = pptr();
     } else {
       // The first attempt at output will result in a call to overflow
-      setp(0, 0);
+      setp(nullptr, nullptr);
     }
 
     if (py_tell != bp::object()) {
       off_type py_pos = bp::extract<off_type>(py_tell());
       pos_of_read_buffer_end_in_py_file = py_pos;
       pos_of_write_buffer_end_in_py_file = py_pos;
+    }
+  }
+
+  /// constructor to enforce a mode (binary or text)
+  streambuf(bp::object& python_file_obj, char mode,
+            std::size_t buffer_size_ = 0)
+      : streambuf(python_file_obj, buffer_size_) {
+#if 1
+    bp::object io_mod = bp::import("io");
+    CHECK_INVARIANT(io_mod, "module not found");
+    bp::object iobase = io_mod.attr("TextIOBase");
+    CHECK_INVARIANT(iobase, "base class not found");
+#else
+    // using statics to save an undetermined amount of time results in
+    // alarming seg faults on windows. so we don't do it. Keep this here
+    // for the moment though in case someone manages to figure that out in
+    // the future
+    static bp::object io_mod = bp::object();
+    static bp::object iobase = bp::object();
+    if (!io_mod) io_mod = bp::import("io");
+    if (io_mod && !iobase) iobase = io_mod.attr("TextIOBase");
+    CHECK_INVARIANT(io_mod, "module not found");
+    CHECK_INVARIANT(iobase, "base class not found");
+#endif
+
+    bool isTextMode = PyObject_IsInstance(python_file_obj.ptr(), iobase.ptr());
+    switch (mode) {
+      case 's':  /// yeah, is redundant, but it is somehow natural to do "s"
+      case 't':
+        if (!isTextMode)
+          throw ValueErrorException(
+              "Need a text mode file object like StringIO or a file opened "
+              "with mode 't'");
+        break;
+      case 'b':
+        if (isTextMode)
+          throw ValueErrorException(
+              "Need a binary mode file object like BytesIO or a file opened "
+              "with mode 'b'");
+        break;
+      default:
+        throw std::invalid_argument("bad mode character");
     }
   }
 
@@ -215,7 +259,7 @@ class streambuf : public std::basic_streambuf<char> {
     bp::ssize_t py_n_read;
     if (PyBytes_AsStringAndSize(read_buffer.ptr(), &read_buffer_data,
                                 &py_n_read) == -1) {
-      setg(0, 0, 0);
+      setg(nullptr, nullptr, nullptr);
       throw std::invalid_argument(
           "The method 'read' of the Python file object "
           "did not return a string.");
@@ -458,20 +502,13 @@ struct ostream : private streambuf_capsule, streambuf::ostream {
       : streambuf_capsule(python_file_obj, buffer_size),
         streambuf::ostream(python_streambuf) {}
 
-  ~ostream() {
-    try {
-      if (this->good()) this->flush();
-    } catch (bp::error_already_set&) {
-      PyErr_Clear();
-      throw std::runtime_error(
-          "Problem closing python ostream.\n"
-          "  Known limitation: the error is unrecoverable. Sorry.\n"
-          "  Suggestion for programmer: add ostream.flush() before"
-          " returning.");
+  ~ostream() noexcept {
+    if (this->good()) {
+      this->flush();
     }
   }
 };
-}
-}  // boost_adaptbx::python
+}  // namespace python
+}  // namespace boost_adaptbx
 
 #endif  // GUARD

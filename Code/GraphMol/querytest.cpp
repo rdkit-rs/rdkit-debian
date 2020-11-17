@@ -7,6 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+#include <RDGeneral/test.h>
 #include <RDGeneral/Invariant.h>
 #include <RDGeneral/RDLog.h>
 #include <GraphMol/RDKitBase.h>
@@ -52,7 +53,7 @@ void test1() {
   qM.addAtom(qA);
   delete qA;
   qM.addAtom(new QueryAtom(8), true, true);
-  
+
   QueryBond *qB;
   qB = new QueryBond(Bond::UNSPECIFIED);
   qB->setOwningMol(qM);
@@ -118,6 +119,7 @@ void test2() {
   CHECK_INVARIANT(qB->Match(m.getBondWithIdx(1)), "");
   CHECK_INVARIANT(qB->Match(m.getBondWithIdx(2)), "");
 
+  delete qB;
   BOOST_LOG(rdErrorLog) << "Done!" << std::endl;
 }
 
@@ -236,6 +238,7 @@ void test3() {
   CHECK_INVARIANT(!beq->Match(m.getBondBetweenAtoms(5, 6)), "");
   CHECK_INVARIANT(!beq->Match(m.getBondBetweenAtoms(6, 5)), "");
 
+  delete beq;
   BOOST_LOG(rdErrorLog) << "Done!" << std::endl;
 }
 
@@ -505,14 +508,15 @@ void testIssue2892580() {
 
   int massVal;
   massVal = queryAtomMass(a);
-  TEST_ASSERT(massVal == static_cast<int>(RDKit::round(
+  TEST_ASSERT(massVal == static_cast<int>(std::round(
                              12.011 * massIntegerConversionFactor)));
 
   a->setIsotope(13);
   massVal = queryAtomMass(a);
-  TEST_ASSERT(massVal == static_cast<int>(RDKit::round(
+  TEST_ASSERT(massVal == static_cast<int>(std::round(
                              13.003 * massIntegerConversionFactor)));
 
+  delete a;
   BOOST_LOG(rdErrorLog) << "Done!" << std::endl;
 }
 
@@ -529,6 +533,9 @@ void testGithub153() {
   TEST_ASSERT(SubstructMatch(*m, *q, mvv));
   TEST_ASSERT(mvv.size() == 3);
   TEST_ASSERT(mvv[0].size() == 1);
+
+  delete m;
+  delete q;
 
   BOOST_LOG(rdErrorLog) << "Done!" << std::endl;
 }
@@ -832,6 +839,45 @@ void testNumHeteroatomNeighborQueries() {
   BOOST_LOG(rdErrorLog) << "Done!" << std::endl;
 }
 
+void testAtomTypeQueries() {
+  BOOST_LOG(rdErrorLog) << "---------------------- Test atom type queries"
+                        << std::endl;
+
+  RWMol *m = SmilesToMol("CCc1ccccc1");
+  {
+    QueryAtom qA1;
+    qA1.setQuery(makeAtomTypeQuery(6, true));
+    QueryAtom qA2;
+    qA2.setQuery(makeAtomTypeQuery(6, false));
+    QueryAtom qA3;
+    qA3.setQuery(makeAtomTypeQuery(7, true));
+    TEST_ASSERT(!qA1.Match(m->getAtomWithIdx(0)));
+    TEST_ASSERT(qA2.Match(m->getAtomWithIdx(0)));
+    TEST_ASSERT(!qA3.Match(m->getAtomWithIdx(0)));
+    TEST_ASSERT(qA1.Match(m->getAtomWithIdx(2)));
+    TEST_ASSERT(!qA2.Match(m->getAtomWithIdx(2)));
+    TEST_ASSERT(!qA3.Match(m->getAtomWithIdx(2)));
+  }
+
+  delete m;
+  BOOST_LOG(rdErrorLog) << "Done!" << std::endl;
+}
+
+void testGithub2471() {
+  BOOST_LOG(rdErrorLog) << "---------------------- Test Github #2471: dummy "
+                           "atom queries are flagged as complex"
+                        << std::endl;
+
+  auto m = "[*;$(CC)][*]"_smarts;
+  TEST_ASSERT(m);
+  TEST_ASSERT(m->getAtomWithIdx(0)->hasQuery());
+  TEST_ASSERT(m->getAtomWithIdx(1)->hasQuery());
+  TEST_ASSERT(isComplexQuery(m->getAtomWithIdx(0)));
+  TEST_ASSERT(!isComplexQuery(m->getAtomWithIdx(1)));
+
+  BOOST_LOG(rdErrorLog) << "Done!" << std::endl;
+}
+
 int main() {
   RDLog::InitLogs();
 #if 1
@@ -852,6 +898,7 @@ int main() {
   testExtraAtomQueries();
   testExtraBondQueries();
   testNumHeteroatomNeighborQueries();
-
+  testAtomTypeQueries();
+  testGithub2471();
   return 0;
 }

@@ -78,7 +78,7 @@ void readFormalChargesFromAttr(std::istream *inStream, RWMol *res) {
   PRECONDITION(inStream, "inStream not valid");
   PRECONDITION(!inStream->eof(), "inStream is at eof");
   PRECONDITION(res, "RWMol not valid");
-  typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+  typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
   boost::char_separator<char> sep(" \t\n");
   bool readNextAtomAttribs = true;
   unsigned int atomIdx = 0, noAtomAttr = 0;
@@ -203,8 +203,9 @@ void guessFormalCharges(RWMol *res) {
         std::string nm;
         res->getProp(common_properties::_Name, nm);
         BOOST_LOG(rdWarningLog)
-            << nm << ": warning - aromatic N with 3 aromatic bonds - "
-                     "skipping charge guess for this atom"
+            << nm
+            << ": warning - aromatic N with 3 aromatic bonds - "
+               "skipping charge guess for this atom"
             << std::endl;
         continue;
       }
@@ -212,7 +213,7 @@ void guessFormalCharges(RWMol *res) {
       // sometimes things like benzimidazoles can have only one bond of the
       // imidazole ring as aromatic and the other one as a single bond ...
       // catch that this way - see also the trick from GL
-      int expVal = static_cast<int>(round(accum + 0.1));
+      int expVal = static_cast<int>(std::round(accum + 0.1));
       const INT_VECT &valens =
           PeriodicTable::getTable()->getValenceList(at->getAtomicNum());
       INT_VECT_CI vi;
@@ -226,10 +227,11 @@ void guessFormalCharges(RWMol *res) {
       int nElectrons =
           PeriodicTable::getTable()->getNouterElecs(at->getAtomicNum());
       int assignChg;
-      if (nElectrons >= 4)
+      if (nElectrons >= 4) {
         assignChg = expVal - (*valens.begin());
-      else
+      } else {
         assignChg = (*valens.begin()) - expVal;
+      }
       if (assignChg > 0 && nElectrons >= 4) {
         for (vi = valens.begin(); vi != valens.end(); ++vi) {
           // Since we do this only for nocharged atoms we can get away without
@@ -305,10 +307,10 @@ bool cleanUpMol2Substructures(RWMol *res) {
       // negatively charged carboxylates with O.co2
       // according to Tripos, those should only appear in carboxylates and
       // phosphates,
-      // FIX: do it also for phsopahtes and sulphates ...
+      // FIX: do it also for phosphates and sulphates ...
       if (at->getDegree() != 1) {
-        BOOST_LOG(rdWarningLog) << "Warning - O.co2 with degree >1."
-                                << std::endl;
+        BOOST_LOG(rdWarningLog)
+            << "Warning - O.co2 with degree >1." << std::endl;
         return false;
       }
       ROMol::ADJ_ITER nbrIdxIt, endNbrsIdxIt;
@@ -323,7 +325,7 @@ bool cleanUpMol2Substructures(RWMol *res) {
         // this should return only the bond between C.2 and O.co2
         Bond *b = res->getBondBetweenAtoms(idx, *nbrIdxIt);
         if (!isFixed[*nbrIdxIt]) {
-          // the first occurence is negatively charged and has a single bond
+          // the first occurrence is negatively charged and has a single bond
           b->setBondType(Bond::SINGLE);
           b->setIsAromatic(false);
           at->setFormalCharge(-1);
@@ -332,7 +334,7 @@ bool cleanUpMol2Substructures(RWMol *res) {
           isFixed[idx] = 1;
           isFixed[*nbrIdxIt] = 1;
         } else {
-          // the other occurences are not charged and have a double bond
+          // the other occurrences are not charged and have a double bond
           b->setBondType(Bond::DOUBLE);
           b->setIsAromatic(false);
           at->setIsAromatic(false);
@@ -397,7 +399,7 @@ bool cleanUpMol2Substructures(RWMol *res) {
             res->getBondBetweenAtoms(idx, *nbrIdxIt)->setIsAromatic(false);
             res->getAtomWithIdx(*nbrIdxIt)->setIsAromatic(false);
             // FIX: what is happening if we hit an atom that was fixed before -
-            // propably nothing.
+            // probably nothing.
             // since I cannot think of a case where this is a problem - throw a
             // warning
             if (isFixed[*nbrIdxIt]) {
@@ -486,7 +488,7 @@ bool cleanUpMol2Substructures(RWMol *res) {
             // set N.pl3 as fixed
             isFixed[*nbrIdxIt] = 1;
           } else {
-            // the N is allready fixed - since we don't touch this atom make the
+            // the N is already fixed - since we don't touch this atom make the
             // bond to single
             // FIX: check on 3-way symmetric guanidinium mol -
             //     this could produce a only single bonded C.cat for bad H mols
@@ -509,7 +511,7 @@ bool cleanUpMol2Substructures(RWMol *res) {
 }
 
 Atom *ParseMol2FileAtomLine(const std::string atomLine, RDGeom::Point3D &pos) {
-  typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+  typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
   boost::char_separator<char> sep(" \t\n");
   std::string tAN, tAT;
   tokenizer tokens(atomLine, sep);
@@ -523,31 +525,37 @@ Atom *ParseMol2FileAtomLine(const std::string atomLine, RDGeom::Point3D &pos) {
   // skip TriposAtomId
   ++itemIt;
   if (itemIt == tokens.end()) {
+    delete res;
     throw FileParseException("premature end of mol2 atom line");
   }
   // the sybyl atom name does not necessarily make sense - into atom property
   tAN = *itemIt;
   ++itemIt;
   if (itemIt == tokens.end()) {
+    delete res;
     throw FileParseException("premature end of mol2 atom line");
   }
   try {
     pos.x = boost::lexical_cast<double>(*itemIt);
     ++itemIt;
     if (itemIt == tokens.end()) {
+      delete res;
       throw FileParseException("premature end of mol2 atom line");
     }
     pos.y = boost::lexical_cast<double>(*itemIt);
     ++itemIt;
     if (itemIt == tokens.end()) {
+      delete res;
       throw FileParseException("premature end of mol2 atom line");
     }
     pos.z = boost::lexical_cast<double>(*itemIt);
     ++itemIt;
     if (itemIt == tokens.end()) {
+      delete res;
       throw FileParseException("premature end of mol2 atom line");
     }
   } catch (boost::bad_lexical_cast &) {
+    delete res;
     throw FileParseException("Cannot process mol2 coordinates.");
   }
   // now it becomes interesting - this is the SYBYL atom type. I put this into
@@ -624,7 +632,7 @@ Bond *ParseMol2FileBondLine(const std::string bondLine,
                             const INT_VECT &idxCorresp) {
   unsigned int idx1, idx2;
 
-  typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+  typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
   boost::char_separator<char> sep(" \t\n");
 
   tokenizer tokens(bondLine, sep);
@@ -734,9 +742,10 @@ void ParseMol2AtomBlock(std::istream *inStream, RWMol *res, unsigned int nAtoms,
   if (!hasHAtoms) {
     std::string nm;
     res->getProp(common_properties::_Name, nm);
-    BOOST_LOG(rdWarningLog) << nm << ": Warning - no explicit hydrogens in "
-                                     "mol2 file but needed for formal charge "
-                                     "estimation."
+    BOOST_LOG(rdWarningLog) << nm
+                            << ": Warning - no explicit hydrogens in "
+                               "mol2 file but needed for formal charge "
+                               "estimation."
                             << std::endl;
   }
   // create conformer based on 3DPoints and add to RWMol
@@ -791,11 +800,11 @@ void ParseMol2BondBlock(std::istream *inStream, RWMol *res, unsigned int nBonds,
 //
 //------------------------------------------------
 RWMol *Mol2DataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
-                           Mol2Type variant) {
+                           Mol2Type variant, bool cleanupSubstructures) {
   RDUNUSED_PARAM(variant);
   PRECONDITION(inStream, "no stream");
   std::string tempStr, lineBeg;
-  typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+  typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
   boost::char_separator<char> sep(" \t\n");
   Utils::LocaleSwitcher ls;
 
@@ -804,7 +813,7 @@ RWMol *Mol2DataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
   // molecule than to find a new one or an eof. Hence I have to read until I
   // find one of the two ...
   std::streampos molStart = 0, atomStart = 0, bondStart = 0, chargeStart = 0;
-  while (!inStream->eof()) {
+  while (!inStream->eof() && !inStream->fail()) {
     tempStr = getLine(inStream);
     if (inStream->eof()) {
       break;
@@ -860,9 +869,7 @@ RWMol *Mol2DataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
   tempStr = getLine(inStream);
   tokenizer tokens(tempStr, sep);
   if (tokens.begin() == tokens.end()) {
-    if (res) {
-      delete res;
-    }
+    delete res;
     throw FileParseException("Empty counts line");
   }
 
@@ -877,18 +884,14 @@ RWMol *Mol2DataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
       nBonds = boost::lexical_cast<unsigned int>(*itemIt);
     }
   } catch (boost::bad_lexical_cast &) {
-    if (res) {
-      delete res;
-    }
+    delete res;
     std::ostringstream errout;
     errout << "Cannot convert " << *itemIt << " to unsigned int";
     throw FileParseException(errout.str());
   }
 
   if (nAtoms == 0) {
-    if (res) {
-      delete res;
-    }
+    delete res;
     throw FileParseException("molecule has no atoms");
   }
   tempStr = getLine(inStream);  // mol_type - ignore
@@ -901,9 +904,7 @@ RWMol *Mol2DataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
   try {
     ParseMol2AtomBlock(inStream, res, nAtoms, idxCorresp);
   } catch (const FileParseException &e) {
-    if (res) {
-      delete res;
-    }
+    delete res;
     throw e;
   }
   if (nBonds) {
@@ -912,15 +913,18 @@ RWMol *Mol2DataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
     try {
       ParseMol2BondBlock(inStream, res, nBonds, idxCorresp);
     } catch (const FileParseException &e) {
-      if (res) {
-        delete res;
-      }
+      delete res;
       throw e;
     }
   }
 
   if (!chargeStart) {
-    bool molFixed = cleanUpMol2Substructures(res);
+    bool molFixed;
+    if (cleanupSubstructures) {
+      molFixed = cleanUpMol2Substructures(res);
+    } else {
+      molFixed = true;
+    }
 
     if (!molFixed) {
       delete res;
@@ -936,9 +940,7 @@ RWMol *Mol2DataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
     try {
       readFormalChargesFromAttr(inStream, res);
     } catch (const FileParseException &e) {
-      if (res) {
-        delete res;
-      }
+      delete res;
       throw e;
     }
   }
@@ -982,9 +984,10 @@ RWMol *Mol2DataStreamToMol(std::istream *inStream, bool sanitize, bool removeHs,
 };
 
 RWMol *Mol2DataStreamToMol(std::istream &inStream, bool sanitize, bool removeHs,
-                           Mol2Type variant) {
+                           Mol2Type variant, bool cleanupSubstructures) {
   RDUNUSED_PARAM(variant);
-  return Mol2DataStreamToMol(&inStream, sanitize, removeHs);
+  return Mol2DataStreamToMol(&inStream, sanitize, removeHs, variant,
+                             cleanupSubstructures);
 };
 //------------------------------------------------
 //
@@ -992,10 +995,11 @@ RWMol *Mol2DataStreamToMol(std::istream &inStream, bool sanitize, bool removeHs,
 //
 //------------------------------------------------
 RWMol *Mol2BlockToMol(const std::string &molBlock, bool sanitize, bool removeHs,
-                      Mol2Type variant) {
+                      Mol2Type variant, bool cleanupSubstructures) {
   RDUNUSED_PARAM(variant);
   std::istringstream inStream(molBlock);
-  return Mol2DataStreamToMol(inStream, sanitize, removeHs);
+  return Mol2DataStreamToMol(inStream, sanitize, removeHs, variant,
+                             cleanupSubstructures);
 }
 
 //------------------------------------------------
@@ -1004,7 +1008,7 @@ RWMol *Mol2BlockToMol(const std::string &molBlock, bool sanitize, bool removeHs,
 //
 //------------------------------------------------
 RWMol *Mol2FileToMol(const std::string &fName, bool sanitize, bool removeHs,
-                     Mol2Type variant) {
+                     Mol2Type variant, bool cleanupSubstructures) {
   // FIX: this binary mode of opening file is here because of a bug in VC++ 6.0
   // the function "tellg" does not work correctly if we do not open it this way
   //   Jan 2009: Confirmed that this is still the case in visual studio 2008
@@ -1017,8 +1021,9 @@ RWMol *Mol2FileToMol(const std::string &fName, bool sanitize, bool removeHs,
   }
   RWMol *res = nullptr;
   if (!inStream.eof()) {
-    res = Mol2DataStreamToMol(inStream, sanitize, removeHs);
+    res = Mol2DataStreamToMol(inStream, sanitize, removeHs, variant,
+                              cleanupSubstructures);
   }
   return res;
 }
-}
+}  // namespace RDKit

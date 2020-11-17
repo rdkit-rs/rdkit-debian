@@ -7,7 +7,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
-#include <math.h>
+#include <cmath>
 #include <boost/format.hpp>
 
 #include "../RDKitBase.h"
@@ -44,7 +44,7 @@ static double Angle(double x1, double y1, double x2, double y2) {
   if (l1 < 0.00001 || l2 < 0.00001) return (0.0);
 
   cos_alpha = (x1 * x2 + y1 * y2) / (l1 * l2);
-  if (cos_alpha > 1.0)  // safeguard against round off erros
+  if (cos_alpha > 1.0)  // safeguard against round off errors
     cos_alpha = 1.0;
   else if (cos_alpha < -1.0)
     cos_alpha = -1.0;
@@ -363,22 +363,27 @@ static int Atom3Parity(struct stereo_bond_t ligands[3]) {
   int maxnum;
 
   maxnum = ligands[0].number;
-  for (unsigned i = 1; i < 3; i++)
+  for (unsigned i = 1; i < 3; i++) {
     if (maxnum < ligands[i].number) maxnum = ligands[i].number;
+  }
 
   reference = (-1);
-  for (unsigned i = 0; i < 3; i++)
-    if (ligands[i].direction != RDKit::Bond::NONE)
-      if (reference == (-1))
+  for (unsigned i = 0; i < 3; i++) {
+    if (ligands[i].direction != RDKit::Bond::NONE) {
+      if (reference == (-1)) {
         reference = i;
-      else {
+      } else {
         // stereo_error = "three attachments with more than 2 stereobonds";
         std::cerr << "three attachments with more than 2 stereobonds"
                   << std::endl;
         return (ILLEGAL_REPRESENTATION);
       }
+    }
+  }
 
-  if (reference == (-1)) return (UNDEFINED_PARITY);
+  if (reference == (-1)) {
+      return (UNDEFINED_PARITY);
+  }
 
   if (reference == 0) {
     a = 1;
@@ -685,7 +690,7 @@ bool AtomClash(RWMol &mol, double clash_limit) {
   bool twod=true;
   getMolAtomPoints(mol, atomPoint, twod);
 
-  // compute median of square of bond lenght (quick/dirty)
+  // compute median of square of bond length (quick/dirty)
   if (mol.getNumBonds() == 0) return false;
   std::vector<double> blengths(mol.getNumBonds());
   blengths[0] = 1.0;

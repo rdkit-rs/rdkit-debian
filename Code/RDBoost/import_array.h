@@ -1,3 +1,4 @@
+#include <RDGeneral/export.h>
 #ifndef RDKIT_IMPORT_ARRAY_INCLUDED
 #define RDKIT_IMPORT_ARRAY_INCLUDED
 
@@ -17,7 +18,7 @@ void rdkit_import_array()
   // returns void)
   import_array();
 #if PY_MAJOR_VERSION >= 3
-  return NULL;
+  return nullptr;
 #endif
 }
 

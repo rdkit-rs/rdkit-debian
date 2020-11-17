@@ -8,6 +8,7 @@
 //  of the RDKit source tree.
 //
 
+#include <RDGeneral/test.h>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/MonomerInfo.h>
 #include <GraphMol/RDKitQueries.h>
@@ -26,8 +27,12 @@ using namespace RDKit;
 // memory tests for valgrind
 void testRemoveAtomBond(RWMol &m, int atomidx, int bondidx) {
   const Bond *b = m.getBondWithIdx(bondidx);
-  if (bondidx >= 0) m.removeBond(b->getBeginAtomIdx(), b->getEndAtomIdx());
-  if (atomidx >= 0) m.removeAtom(atomidx);
+  if (bondidx >= 0) {
+    m.removeBond(b->getBeginAtomIdx(), b->getEndAtomIdx());
+  }
+  if (atomidx >= 0) {
+    m.removeAtom(atomidx);
+  }
 }
 
 void testRemovals(RWMol m) {
@@ -59,11 +64,18 @@ void test2() {
   }
 }
 
+void testCopyConstructor() {
+  RDKit::RWMol mol1;
+  RDKit::RWMol mol2(mol1);
+  RDKit::RWMol mol3;
+  mol3 = mol2;
+}
+
 // -------------------------------------------------------------------
 int main() {
   RDLog::InitLogs();
   // boost::logging::enable_logs("rdApp.info");
   test1();
-
+  testCopyConstructor();
   return 0;
 }

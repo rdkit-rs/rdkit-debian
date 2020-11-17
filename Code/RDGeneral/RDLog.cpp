@@ -13,21 +13,16 @@
 #if 1
 #include <iomanip>
 #include <string>
-#include <time.h>
+#include <ctime>
+#include <iostream>
+#include <sstream>
 
-namespace {
-// this is a "bit" of a hack to work around shared/static library problems
-// on windows
-boost::logging::rdLogger cerrLogger(&std::cerr);
-boost::logging::rdLogger coutLogger(&std::cout);
-}
-
-boost::logging::rdLogger *rdAppLog = nullptr;
-boost::logging::rdLogger *rdDebugLog = nullptr;
-boost::logging::rdLogger *rdInfoLog = &coutLogger;
-boost::logging::rdLogger *rdErrorLog = &cerrLogger;
-boost::logging::rdLogger *rdWarningLog = &cerrLogger;
-boost::logging::rdLogger *rdStatusLog = nullptr;
+RDLogger rdAppLog = nullptr;
+RDLogger rdDebugLog = nullptr;
+RDLogger rdInfoLog = nullptr;
+RDLogger rdErrorLog = nullptr;
+RDLogger rdWarningLog = nullptr;
+RDLogger rdStatusLog = nullptr;
 
 namespace boost {
 namespace logging {
@@ -36,43 +31,97 @@ void enable_logs(const char *arg) { enable_logs(std::string(arg)); };
 void enable_logs(const std::string &arg) {
   // Yes... this is extremely crude
   if (arg == "rdApp.debug" || arg == "rdApp.*") {
-    if (rdDebugLog) rdDebugLog->df_enabled = true;
+    if (rdDebugLog) {
+      rdDebugLog->df_enabled = true;
+    }
   }
   if (arg == "rdApp.info" || arg == "rdApp.*") {
-    if (rdInfoLog) rdInfoLog->df_enabled = true;
+    if (rdInfoLog) {
+      rdInfoLog->df_enabled = true;
+    }
   }
   if (arg == "rdApp.warning" || arg == "rdApp.*") {
-    if (rdWarningLog) rdWarningLog->df_enabled = true;
+    if (rdWarningLog) {
+      rdWarningLog->df_enabled = true;
+    }
   }
   if (arg == "rdApp.error" || arg == "rdApp.*") {
-    if (rdErrorLog) rdErrorLog->df_enabled = true;
+    if (rdErrorLog) {
+      rdErrorLog->df_enabled = true;
+    }
   }
 };
 void disable_logs(const char *arg) { disable_logs(std::string(arg)); };
 void disable_logs(const std::string &arg) {
   // Yes... this is extremely crude
   if (arg == "rdApp.debug" || arg == "rdApp.*") {
-    if (rdDebugLog) rdDebugLog->df_enabled = false;
+    if (rdDebugLog) {
+      rdDebugLog->df_enabled = false;
+    }
   }
   if (arg == "rdApp.info" || arg == "rdApp.*") {
-    if (rdInfoLog) rdInfoLog->df_enabled = false;
+    if (rdInfoLog) {
+      rdInfoLog->df_enabled = false;
+    }
   }
   if (arg == "rdApp.warning" || arg == "rdApp.*") {
-    if (rdWarningLog) rdWarningLog->df_enabled = false;
+    if (rdWarningLog) {
+      rdWarningLog->df_enabled = false;
+    }
   }
   if (arg == "rdApp.error" || arg == "rdApp.*") {
-    if (rdErrorLog) rdErrorLog->df_enabled = false;
+    if (rdErrorLog) {
+      rdErrorLog->df_enabled = false;
+    }
   }
 };
+
+bool is_log_enabled(RDLogger log) {
+  if (log && log.get() != nullptr) {
+    if( log->df_enabled ) {
+      return true;
+    }
+  }
+  return false;
 }
+
+void get_log_status(std::ostream &ss,
+		    const std::string &name,
+		    RDLogger log) {
+  ss << name << ":";
+  if (log && log.get() != nullptr) {
+    if( log->df_enabled ) {
+      ss << "enabled";
+    }
+    else {
+      ss << "disabled";
+    }
+  } else {
+    ss << "unitialized";
+  }
 }
+  
+std::string log_status() {
+  std::stringstream ss;
+  get_log_status(ss, "rdApp.debug", rdDebugLog);
+  ss << std::endl;
+  get_log_status(ss, "rdApp.info", rdInfoLog);
+  ss << std::endl;
+  get_log_status(ss, "rdApp.warning", rdWarningLog);
+  ss << std::endl;
+  get_log_status(ss, "rdApp.error", rdErrorLog);
+  return ss.str();
+}
+  
+}  // namespace logging
+}  // namespace boost
 
 namespace RDLog {
 void InitLogs() {
-  rdDebugLog = new boost::logging::rdLogger(&std::cerr);
-  rdInfoLog = new boost::logging::rdLogger(&std::cout);
-  rdWarningLog = new boost::logging::rdLogger(&std::cerr);
-  rdErrorLog = new boost::logging::rdLogger(&std::cerr);
+  rdDebugLog = std::make_shared<boost::logging::rdLogger>(&std::cerr);
+  rdInfoLog = std::make_shared<boost::logging::rdLogger>(&std::cout);
+  rdWarningLog = std::make_shared<boost::logging::rdLogger>(&std::cerr);
+  rdErrorLog = std::make_shared<boost::logging::rdLogger>(&std::cerr);
 }
 std::ostream &toStream(std::ostream &logstrm) {
   time_t t = time(nullptr);
@@ -82,7 +131,7 @@ std::ostream &toStream(std::ostream &logstrm) {
           << std::setw(2) << std::setfill('0') << int(details.tm_sec) << "] ";
   return logstrm;
 }
-}
+}  // namespace RDLog
 
 #else
 #include <boost/log/functions.hpp>
@@ -146,5 +195,27 @@ void InitLogs() {
   // start with the debug log disabled:
   logging::disable_logs("rdApp.debug");
 };
-}
+
+}  // namespace RDLog
 #endif
+
+namespace RDLog {
+  
+BlockLogs::BlockLogs() {
+  auto logs = {rdDebugLog, rdInfoLog, rdWarningLog, rdErrorLog};
+  for(auto log: logs) {
+    if(log != nullptr && is_log_enabled(log)) {
+      log->df_enabled = false;
+      logs_to_reenable.push_back(log);
+    }
+  }
+}
+
+BlockLogs::~BlockLogs() {
+  for(auto log : logs_to_reenable) {
+    if(log != nullptr && log.get() != nullptr)
+      log->df_enabled = true;
+  }
+}
+
+}

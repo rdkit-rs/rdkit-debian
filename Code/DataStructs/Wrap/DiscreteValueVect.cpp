@@ -30,7 +30,7 @@ std::string disValVectDoc =
     "A container class for storing unsigned integer\n\
 values within a particular range.\n\
 \n\
-The length of the vector and type of its elements (determines the maxium value\n\
+The length of the vector and type of its elements (determines the maximum value\n\
 that can be stored) are both set at construction time.\n\
 \n\
 As you would expect, _DiscreteValueVects_ support a set of binary operations\n\
@@ -69,7 +69,15 @@ struct discreteValVec_wrapper {
         .def(python::self & python::self)
         .def(python::self | python::self)
         .def(python::self - python::self)
-        .def(python::self -= python::self)
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wself-assign-overloaded"
+#endif
+        .def(python::self -=
+             python::self)  // clang warns incorrectly on this construct
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
         .def(python::self + python::self)
         .def(python::self += python::self)
 

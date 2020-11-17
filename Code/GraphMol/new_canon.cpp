@@ -11,16 +11,22 @@
 
 #include "new_canon.h"
 #include <GraphMol/RDKitBase.h>
-#include <boost/cstdint.hpp>
+#include <GraphMol/QueryOps.h>
+#include <cstdint>
 #include <boost/foreach.hpp>
 #include <cstring>
 #include <iostream>
 #include <cassert>
+// #define VERBOSE_CANON 1
 
 namespace RDKit {
 namespace Canon {
 void CreateSinglePartition(unsigned int nAtoms, int *order, int *count,
                            canon_atom *atoms) {
+  PRECONDITION(order, "bad pointer");
+  PRECONDITION(count, "bad pointer");
+  PRECONDITION(atoms, "bad pointer");
+
   for (unsigned int i = 0; i < nAtoms; i++) {
     atoms[i].index = 0;
     order[i] = i;
@@ -31,9 +37,15 @@ void CreateSinglePartition(unsigned int nAtoms, int *order, int *count,
 
 void ActivatePartitions(unsigned int nAtoms, int *order, int *count,
                         int &activeset, int *next, int *changed) {
+  PRECONDITION(order, "bad pointer");
+  PRECONDITION(count, "bad pointer");
+  PRECONDITION(next, "bad pointer");
+  PRECONDITION(changed, "bad pointer");
   unsigned int i, j;
   activeset = -1;
-  for (i = 0; i < nAtoms; i++) next[i] = -2;
+  for (i = 0; i < nAtoms; i++) {
+    next[i] = -2;
+  }
 
   i = 0;
   do {
@@ -42,8 +54,9 @@ void ActivatePartitions(unsigned int nAtoms, int *order, int *count,
       next[j] = activeset;
       activeset = j;
       i += count[j];
-    } else
+    } else {
       i++;
+    }
   } while (i < nAtoms);
 
   for (i = 0; i < nAtoms; i++) {
@@ -63,13 +76,12 @@ void ActivatePartitions(unsigned int nAtoms, int *order, int *count,
 void compareRingAtomsConcerningNumNeighbors(Canon::canon_atom *atoms,
                                             unsigned int nAtoms,
                                             const ROMol &mol) {
+  PRECONDITION(atoms, "bad pointer");
   RingInfo *ringInfo = mol.getRingInfo();
-  if (!ringInfo->isInitialized()) {
-    ringInfo->initialize();
-  }
   for (unsigned idx = 0; idx < nAtoms; ++idx) {
     const Canon::canon_atom &a = atoms[idx];
-    if (ringInfo->numAtomRings(a.atom->getIdx()) < 1) {
+    if (!ringInfo->isInitialized() ||
+        ringInfo->numAtomRings(a.atom->getIdx()) < 1) {
       continue;
     }
     std::deque<int> neighbors;
@@ -78,14 +90,18 @@ void compareRingAtomsConcerningNumNeighbors(Canon::canon_atom *atoms,
     atoms[idx].neighborNum.reserve(1000);
     atoms[idx].revistedNeighbors.assign(1000, 0);
     char *visited = (char *)malloc(nAtoms * sizeof(char));
+    CHECK_INVARIANT(visited, "allocation failed");
     memset(visited, 0, nAtoms * sizeof(char));
     unsigned count = 1;
     std::vector<int> nextLevelNbrs;
     char *lastLevelNbrs = (char *)malloc(nAtoms * sizeof(char));
+    CHECK_INVARIANT(lastLevelNbrs, "allocation failed");
     memset(lastLevelNbrs, 0, nAtoms * sizeof(char));
     char *currentLevelNbrs = (char *)malloc(nAtoms * sizeof(char));
+    CHECK_INVARIANT(currentLevelNbrs, "allocation failed");
     memset(currentLevelNbrs, 0, nAtoms * sizeof(char));
     int *revisitedNeighbors = (int *)malloc(nAtoms * sizeof(int));
+    CHECK_INVARIANT(revisitedNeighbors, "allocation failed");
     memset(revisitedNeighbors, 0, nAtoms * sizeof(int));
     while (!neighbors.empty()) {
       unsigned int numLevelNbrs = 0;
@@ -94,7 +110,8 @@ void compareRingAtomsConcerningNumNeighbors(Canon::canon_atom *atoms,
         int nidx = neighbors.front();
         neighbors.pop_front();
         const Canon::canon_atom &atom = atoms[nidx];
-        if (ringInfo->numAtomRings(atom.atom->getIdx()) < 1) {
+        if (!ringInfo->isInitialized() ||
+            ringInfo->numAtomRings(atom.atom->getIdx()) < 1) {
           continue;
         }
         lastLevelNbrs[nidx] = 1;
@@ -167,14 +184,19 @@ void rankWithFunctor(T &ftor, bool breakTies, int *order,
                      bool useSpecial = false, bool useChirality = false,
                      const boost::dynamic_bitset<> *atomsInPlay = nullptr,
                      const boost::dynamic_bitset<> *bondsInPlay = nullptr) {
+  PRECONDITION(order, "bad pointer");
   const ROMol &mol = *ftor.dp_mol;
   canon_atom *atoms = ftor.dp_atoms;
   unsigned int nAts = mol.getNumAtoms();
   int *count = (int *)malloc(nAts * sizeof(int));
+  CHECK_INVARIANT(count, "allocation failed");
   int activeset;
   int *next = (int *)malloc(nAts * sizeof(int));
+  CHECK_INVARIANT(next, "allocation failed");
   int *changed = (int *)malloc(nAts * sizeof(int));
+  CHECK_INVARIANT(changed, "allocation failed");
   char *touched = (char *)malloc(nAts * sizeof(char));
+  CHECK_INVARIANT(touched, "allocation failed");
   memset(touched, 0, nAts * sizeof(char));
   memset(changed, 1, nAts * sizeof(int));
   CreateSinglePartition(nAts, order, count, atoms);
@@ -234,16 +256,14 @@ void rankWithFunctor(T &ftor, bool breakTies, int *order,
   unsigned ringAtoms = 0;
   bool branchingRingAtom = false;
   RingInfo *ringInfo = mol.getRingInfo();
-  if (!ringInfo->isInitialized()) {
-    ringInfo->initialize();
-  }
   for (unsigned i = 0; i < nAts; ++i) {
-    if (ringInfo->numAtomRings(order[i])) {
+    if (ringInfo->isInitialized() && ringInfo->numAtomRings(order[i])) {
       if (count[order[i]] > 2) {
         symRingAtoms += count[order[i]];
       }
       ringAtoms++;
-      if (ringInfo->numAtomRings(order[i]) > 1 && count[order[i]] > 1) {
+      if (ringInfo->isInitialized() && ringInfo->numAtomRings(order[i]) > 1 &&
+          count[order[i]] > 1) {
         branchingRingAtom = true;
       }
     }
@@ -289,10 +309,11 @@ void rankWithFunctor(T &ftor, bool breakTies, int *order,
 
 namespace {
 bool hasRingNbr(const ROMol &mol, const Atom *at) {
+  PRECONDITION(at, "bad pointer");
   ROMol::ADJ_ITER beg, end;
   boost::tie(beg, end) = mol.getAtomNeighbors(at);
   while (beg != end) {
-    const Atom* nbr = mol[*beg];
+    const Atom *nbr = mol[*beg];
     ++beg;
     if ((nbr->getChiralTag() == Atom::CHI_TETRAHEDRAL_CW ||
          nbr->getChiralTag() == Atom::CHI_TETRAHEDRAL_CCW) &&
@@ -304,12 +325,14 @@ bool hasRingNbr(const ROMol &mol, const Atom *at) {
 }
 
 void getNbrs(const ROMol &mol, const Atom *at, int *ids) {
+  PRECONDITION(at, "bad pointer");
+  PRECONDITION(ids, "bad pointer");
   ROMol::OEDGE_ITER beg, end;
   boost::tie(beg, end) = mol.getAtomBonds(at);
   unsigned int idx = 0;
 
   while (beg != end) {
-    const Bond* bond = (mol)[*beg];
+    const Bond *bond = (mol)[*beg];
     ++beg;
     unsigned int nbrIdx = bond->getOtherAtomIdx(at->getIdx());
     ids[idx] = nbrIdx;
@@ -319,6 +342,7 @@ void getNbrs(const ROMol &mol, const Atom *at, int *ids) {
 
 bondholder makeBondHolder(const Bond *bond, unsigned int otherIdx,
                           bool includeChirality) {
+  PRECONDITION(bond, "bad pointer");
   Bond::BondStereo stereo = Bond::STEREONONE;
   if (includeChirality) {
     stereo = bond->getStereo();
@@ -332,23 +356,25 @@ bondholder makeBondHolder(const Bond *bond, unsigned int otherIdx,
 }
 void getBonds(const ROMol &mol, const Atom *at, std::vector<bondholder> &nbrs,
               bool includeChirality) {
+  PRECONDITION(at, "bad pointer");
   ROMol::OEDGE_ITER beg, end;
   boost::tie(beg, end) = mol.getAtomBonds(at);
   while (beg != end) {
-    const Bond* bond = (mol)[*beg];
+    const Bond *bond = (mol)[*beg];
     ++beg;
-    nbrs.push_back(makeBondHolder(
-        bond, bond->getOtherAtomIdx(at->getIdx()), includeChirality));
+    nbrs.push_back(makeBondHolder(bond, bond->getOtherAtomIdx(at->getIdx()),
+                                  includeChirality));
   }
   std::sort(nbrs.begin(), nbrs.end(), bondholder::greater);
 }
 
 void getChiralBonds(const ROMol &mol, const Atom *at,
                     std::vector<bondholder> &nbrs) {
+  PRECONDITION(at, "bad pointer");
   ROMol::OEDGE_ITER beg, end;
   boost::tie(beg, end) = mol.getAtomBonds(at);
   while (beg != end) {
-    const Bond* bond = (mol)[*beg];
+    const Bond *bond = (mol)[*beg];
     ++beg;
     unsigned int nbrIdx = bond->getOtherAtomIdx(at->getIdx());
     const Atom *nbr = mol.getAtomWithIdx(nbrIdx);
@@ -373,7 +399,7 @@ void getChiralBonds(const ROMol &mol, const Atom *at,
     }
     if (bond->getBondType() == Bond::DOUBLE && nbr->getAtomicNum() == 15 &&
         (degreeNbr == 4 || degreeNbr == 3)) {
-      // a special case for chiral phophorous compounds
+      // a special case for chiral phosphorous compounds
       // (this was leading to incorrect assignment of
       // R/S labels ):
       nReps = 1;
@@ -381,7 +407,7 @@ void getChiralBonds(const ROMol &mol, const Atom *at,
       // Paragraph 2.2. in the 1966 article is "Valence-Bond Conventions:
       // Multiple-Bond Unsaturation and Aromaticity". It contains several
       // conventions of which convention (b) is the one applying here:
-      // "(b) Contibutions by d orbitals to bonds of quadriligant atoms are
+      // "(b) Contributions by d orbitals to bonds of quadriligant atoms are
       // neglected."
       // FIX: this applies to more than just P
     } else {
@@ -398,10 +424,10 @@ void getChiralBonds(const ROMol &mol, const Atom *at,
 
   if (!at->needsUpdatePropertyCache()) {
     for (unsigned int ii = 0; ii < at->getTotalNumHs(); ++ii) {
-      nbrs.push_back(bondholder(Bond::SINGLE, Bond::STEREONONE,
-                                ATNUM_CLASS_OFFSET, ATNUM_CLASS_OFFSET));
-      nbrs.push_back(bondholder(Bond::SINGLE, Bond::STEREONONE,
-                                ATNUM_CLASS_OFFSET, ATNUM_CLASS_OFFSET));
+      nbrs.emplace_back(Bond::SINGLE, Bond::STEREONONE, ATNUM_CLASS_OFFSET,
+                        ATNUM_CLASS_OFFSET);
+      nbrs.emplace_back(Bond::SINGLE, Bond::STEREONONE, ATNUM_CLASS_OFFSET,
+                        ATNUM_CLASS_OFFSET);
     }
   }
 }
@@ -442,8 +468,13 @@ void initFragmentCanonAtoms(const ROMol &mol,
                             std::vector<Canon::canon_atom> &atoms,
                             bool includeChirality,
                             const std::vector<std::string> *atomSymbols,
+                            const std::vector<std::string> *bondSymbols,
                             const boost::dynamic_bitset<> &atomsInPlay,
                             const boost::dynamic_bitset<> &bondsInPlay) {
+  PRECONDITION(!atomSymbols || atomSymbols->size() == mol.getNumAtoms(),
+               "bad atom symbols");
+  PRECONDITION(!bondSymbols || bondSymbols->size() == mol.getNumBonds(),
+               "bad bond symbols");
   // start by initializing the atoms
   for (unsigned int i = 0; i < mol.getNumAtoms(); ++i) {
     atoms[i].atom = mol.getAtomWithIdx(i);
@@ -465,27 +496,32 @@ void initFragmentCanonAtoms(const ROMol &mol,
 
   // now deal with the bonds in the fragment.
   // these set the atomic degrees and update the neighbor lists
-  for (ROMol::ConstBondIterator bI = mol.beginBonds(); bI != mol.endBonds();
-       ++bI) {
-    if (!bondsInPlay[(*bI)->getIdx()] ||
-        !atomsInPlay[(*bI)->getBeginAtomIdx()] ||
-        !atomsInPlay[(*bI)->getEndAtomIdx()])
+  for (const auto bond : mol.bonds()) {
+    if (!bondsInPlay[bond->getIdx()] || !atomsInPlay[bond->getBeginAtomIdx()] ||
+        !atomsInPlay[bond->getEndAtomIdx()]) {
       continue;
-    Canon::canon_atom &begAt = atoms[(*bI)->getBeginAtomIdx()];
-    Canon::canon_atom &endAt = atoms[(*bI)->getEndAtomIdx()];
-    begAt.nbrIds[begAt.degree] = (*bI)->getEndAtomIdx();
-    endAt.nbrIds[endAt.degree] = (*bI)->getBeginAtomIdx();
+    }
+    Canon::canon_atom &begAt = atoms[bond->getBeginAtomIdx()];
+    Canon::canon_atom &endAt = atoms[bond->getEndAtomIdx()];
+    begAt.nbrIds[begAt.degree] = bond->getEndAtomIdx();
+    endAt.nbrIds[endAt.degree] = bond->getBeginAtomIdx();
     begAt.degree++;
     endAt.degree++;
     begAt.bonds.push_back(
-        makeBondHolder(*bI, (*bI)->getEndAtomIdx(), includeChirality));
+        makeBondHolder(bond, bond->getEndAtomIdx(), includeChirality));
     endAt.bonds.push_back(
-        makeBondHolder(*bI, (*bI)->getBeginAtomIdx(), includeChirality));
+        makeBondHolder(bond, bond->getBeginAtomIdx(), includeChirality));
+    if (bondSymbols) {
+      begAt.bonds.back().p_symbol = &(*bondSymbols)[bond->getIdx()];
+      endAt.bonds.back().p_symbol = &(*bondSymbols)[bond->getIdx()];
+    }
   }
 
   // and now we can do the last bit for each atom
   for (size_t i = 0; i < mol.getNumAtoms(); ++i) {
-    if (!atomsInPlay[i]) continue;
+    if (!atomsInPlay[i]) {
+      continue;
+    }
     // this is the fix for github #1567: we let the atom's degree
     // in the original molecule influence its degree in the fragment
     atoms[i].totalNumHs +=
@@ -515,6 +551,7 @@ void freeCanonAtoms(std::vector<Canon::canon_atom> &atoms) {
 }
 
 void updateAtomNeighborIndex(canon_atom *atoms, std::vector<bondholder> &nbrs) {
+  PRECONDITION(atoms, "bad pointer");
   for (auto &nbr : nbrs) {
     unsigned nbrIdx = nbr.nbrIdx;
     unsigned newSymClass = atoms[nbrIdx].index;
@@ -526,51 +563,56 @@ void updateAtomNeighborIndex(canon_atom *atoms, std::vector<bondholder> &nbrs) {
 void updateAtomNeighborNumSwaps(
     canon_atom *atoms, std::vector<bondholder> &nbrs, unsigned int atomIdx,
     std::vector<std::pair<unsigned int, unsigned int>> &result) {
+  bool isRingAtom = queryIsAtomInRing(atoms[atomIdx].atom);
   for (auto &nbr : nbrs) {
     unsigned nbrIdx = nbr.nbrIdx;
 
-    if (atoms[nbrIdx].atom->getChiralTag() != 0) {
+    if (isRingAtom && atoms[nbrIdx].atom->getChiralTag() != 0) {
       std::vector<int> ref, probe;
       for (unsigned i = 0; i < atoms[nbrIdx].degree; ++i) {
         ref.push_back(atoms[nbrIdx].nbrIds[i]);
       }
-
       probe.push_back(atomIdx);
       for (auto &bond : atoms[nbrIdx].bonds) {
         if (bond.nbrIdx != atomIdx) {
           probe.push_back(bond.nbrIdx);
         }
       }
-
       int nSwaps = static_cast<int>(countSwapsToInterconvert(ref, probe));
       if (atoms[nbrIdx].atom->getChiralTag() == Atom::CHI_TETRAHEDRAL_CW) {
         if (nSwaps % 2) {
-          result.push_back(std::make_pair(nbr.nbrSymClass, 2));
+          result.emplace_back(nbr.nbrSymClass, 2);
         } else {
-          result.push_back(std::make_pair(nbr.nbrSymClass, 1));
+          result.emplace_back(nbr.nbrSymClass, 1);
         }
       } else if (atoms[nbrIdx].atom->getChiralTag() ==
                  Atom::CHI_TETRAHEDRAL_CCW) {
         if (nSwaps % 2) {
-          result.push_back(std::make_pair(nbr.nbrSymClass, 1));
+          result.emplace_back(nbr.nbrSymClass, 1);
         } else {
-          result.push_back(std::make_pair(nbr.nbrSymClass, 2));
+          result.emplace_back(nbr.nbrSymClass, 2);
         }
       }
     } else {
-      result.push_back(std::make_pair(nbr.nbrSymClass, 0));
+      result.emplace_back(nbr.nbrSymClass, 0);
     }
   }
   sort(result.begin(), result.end());
 }
 
 void rankMolAtoms(const ROMol &mol, std::vector<unsigned int> &res,
-                  bool breakTies, bool includeChirality, bool includeIsotopes) { 
-  res.resize(mol.getNumAtoms());
- 
-  if (!mol.getNumAtoms())
+                  bool breakTies, bool includeChirality, bool includeIsotopes) {
+  if (!mol.getNumAtoms()) {
     return;
-  
+  }
+
+  bool clearRings = false;
+  if (!mol.getRingInfo()->isInitialized()) {
+    MolOps::fastFindRings(mol);
+    clearRings = true;
+  }
+  res.resize(mol.getNumAtoms());
+
   std::vector<Canon::canon_atom> atoms(mol.getNumAtoms());
   initCanonAtoms(mol, atoms, includeChirality);
   AtomCompareFunctor ftor(&atoms.front(), mol);
@@ -579,6 +621,7 @@ void rankMolAtoms(const ROMol &mol, std::vector<unsigned int> &res,
   ftor.df_useChiralityRings = includeChirality;
 
   int *order = (int *)malloc(mol.getNumAtoms() * sizeof(int));
+  PRECONDITION(order, "bad pointer");
   rankWithFunctor(ftor, breakTies, order, true, includeChirality);
 
   for (unsigned int i = 0; i < mol.getNumAtoms(); ++i) {
@@ -586,34 +629,47 @@ void rankMolAtoms(const ROMol &mol, std::vector<unsigned int> &res,
   }
   free(order);
   freeCanonAtoms(atoms);
+
+  if (clearRings) {
+    mol.getRingInfo()->reset();
+  }
 }  // end of rankMolAtoms()
 
 void rankFragmentAtoms(const ROMol &mol, std::vector<unsigned int> &res,
                        const boost::dynamic_bitset<> &atomsInPlay,
                        const boost::dynamic_bitset<> &bondsInPlay,
                        const std::vector<std::string> *atomSymbols,
+                       const std::vector<std::string> *bondSymbols,
                        bool breakTies, bool includeChirality,
                        bool includeIsotopes) {
   PRECONDITION(atomsInPlay.size() == mol.getNumAtoms(), "bad atomsInPlay size");
   PRECONDITION(bondsInPlay.size() == mol.getNumBonds(), "bad bondsInPlay size");
   PRECONDITION(!atomSymbols || atomSymbols->size() == mol.getNumAtoms(),
                "bad atomSymbols size");
+  PRECONDITION(!bondSymbols || bondSymbols->size() == mol.getNumBonds(),
+               "bad bondSymbols size");
 
-  res.resize(mol.getNumAtoms());
-  
-  if (!mol.getNumAtoms())
+  if (!mol.getNumAtoms()) {
     return;
-        
+  }
+
+  bool clearRings = false;
+  if (!mol.getRingInfo()->isInitialized()) {
+    MolOps::fastFindRings(mol);
+    clearRings = true;
+  }
+  res.resize(mol.getNumAtoms());
+
   std::vector<Canon::canon_atom> atoms(mol.getNumAtoms());
-  initFragmentCanonAtoms(mol, atoms, includeChirality, atomSymbols, atomsInPlay,
-                         bondsInPlay);
+  initFragmentCanonAtoms(mol, atoms, includeChirality, atomSymbols, bondSymbols,
+                         atomsInPlay, bondsInPlay);
 
   AtomCompareFunctor ftor(&atoms.front(), mol, &atomsInPlay, &bondsInPlay);
   ftor.df_useIsotopes = includeIsotopes;
   ftor.df_useChirality = includeChirality;
 
   int *order = (int *)malloc(mol.getNumAtoms() * sizeof(int));
-
+  PRECONDITION(order, "bad pointer");
   rankWithFunctor(ftor, breakTies, order, true, includeChirality, &atomsInPlay,
                   &bondsInPlay);
 
@@ -622,19 +678,29 @@ void rankFragmentAtoms(const ROMol &mol, std::vector<unsigned int> &res,
   }
   free(order);
   freeCanonAtoms(atoms);
+  if (clearRings) {
+    mol.getRingInfo()->reset();
+  }
 }  // end of rankFragmentAtoms()
 
 void chiralRankMolAtoms(const ROMol &mol, std::vector<unsigned int> &res) {
+  if (!mol.getNumAtoms()) {
+    return;
+  }
+
+  bool clearRings = false;
+  if (!mol.getRingInfo()->isInitialized()) {
+    MolOps::fastFindRings(mol);
+    clearRings = true;
+  }
   res.resize(mol.getNumAtoms());
 
-  if(!mol.getNumAtoms())
-    return;
-  
   std::vector<Canon::canon_atom> atoms(mol.getNumAtoms());
   initChiralCanonAtoms(mol, atoms);
   ChiralAtomCompareFunctor ftor(&atoms.front(), mol);
 
   int *order = (int *)malloc(mol.getNumAtoms() * sizeof(int));
+  PRECONDITION(order, "bad pointer");
   rankWithFunctor(ftor, false, order);
 
   for (unsigned int i = 0; i < mol.getNumAtoms(); ++i) {
@@ -642,6 +708,10 @@ void chiralRankMolAtoms(const ROMol &mol, std::vector<unsigned int> &res) {
   }
   free(order);
   freeCanonAtoms(atoms);
+  if (clearRings) {
+    mol.getRingInfo()->reset();
+  }
+
 }  // end of rankMolAtoms()
-}  // end of Canon namespace
-}  // end of RDKit namespace
+}  // namespace Canon
+}  // namespace RDKit

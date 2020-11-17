@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2001-2016 Greg Landrum and Rational Discovery LLC
+//  Copyright (C) 2001-2020 Greg Landrum and Rational Discovery LLC
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -7,32 +7,36 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
-#ifndef _RD_SMILESPARSE_H_
-#define _RD_SMILESPARSE_H_
+#include <RDGeneral/export.h>
+#ifndef RD_SMILESPARSE_H
+#define RD_SMILESPARSE_H
 
+#include <GraphMol/RWMol.h>
+#include <GraphMol/SanitException.h>
 #include <string>
 #include <exception>
 #include <map>
 
 namespace RDKit {
-class RWMol;
 
-struct SmilesParserParams {
-  int debugParse;
-  bool sanitize;
-  std::map<std::string, std::string> *replacements;
-  bool allowCXSMILES;
-  bool parseName;
-  bool removeHs;
-  SmilesParserParams()
-      : debugParse(0),
-        sanitize(true),
-        replacements(NULL),
-        allowCXSMILES(true),
-        parseName(false),
-        removeHs(true){};
+struct RDKIT_SMILESPARSE_EXPORT SmilesParserParams {
+  int debugParse = 0;   /**< enable debugging in the SMILES parser*/
+  bool sanitize = true; /**< sanitize the molecule after building it */
+  std::map<std::string, std::string> *replacements =
+      nullptr;               /**< allows SMILES "macros" */
+  bool allowCXSMILES = true; /**< recognize and parse CXSMILES*/
+  bool strictCXSMILES =
+      true; /**< throw an exception if the CXSMILES parsing fails */
+  bool parseName = false; /**< parse (and set) the molecule name as well */
+  bool removeHs = true;   /**< remove Hs after constructing the molecule */
+  bool useLegacyStereo =
+      true; /**< use the legacy stereochemistry perception code */
 };
-RWMol *SmilesToMol(const std::string &smi, const SmilesParserParams &params);
+RDKIT_SMILESPARSE_EXPORT RWMol *SmilesToMol(const std::string &smi,
+                                            const SmilesParserParams &params);
+
+RDKIT_SMILESPARSE_EXPORT Atom *SmilesToAtom(const std::string &smi);
+RDKIT_SMILESPARSE_EXPORT Bond *SmilesToBond(const std::string &smi);
 
 //! Construct a molecule from a SMILES string
 /*!
@@ -49,7 +53,7 @@ RWMol *SmilesToMol(const std::string &smi, const SmilesParserParams &params);
  abbreviations
  in the input SMILES. The set of substitutions is repeatedly looped through
  until
- the string no longer changes. It is the responsiblity of the caller to make
+ the string no longer changes. It is the responsibility of the caller to make
  sure
  that substitutions results in legal and sensible SMILES.
 
@@ -63,7 +67,7 @@ RWMol *SmilesToMol(const std::string &smi, const SmilesParserParams &params);
  */
 inline RWMol *SmilesToMol(
     const std::string &smi, int debugParse = 0, bool sanitize = true,
-    std::map<std::string, std::string> *replacements = 0) {
+    std::map<std::string, std::string> *replacements = nullptr) {
   SmilesParserParams params;
   params.debugParse = debugParse;
   params.replacements = replacements;
@@ -89,20 +93,44 @@ inline RWMol *SmilesToMol(
  \return a pointer to the new molecule; the caller is responsible for free'ing
  this.
  */
-RWMol *SmartsToMol(const std::string &sma, int debugParse = 0,
-                   bool mergeHs = false,
-                   std::map<std::string, std::string> *replacements = 0);
+RDKIT_SMILESPARSE_EXPORT RWMol *SmartsToMol(
+    const std::string &sma, int debugParse = 0, bool mergeHs = false,
+    std::map<std::string, std::string> *replacements = nullptr);
 
-class SmilesParseException : public std::exception {
+RDKIT_SMILESPARSE_EXPORT Atom *SmartsToAtom(const std::string &sma);
+RDKIT_SMILESPARSE_EXPORT Bond *SmartsToBond(const std::string &sma);
+
+class RDKIT_SMILESPARSE_EXPORT SmilesParseException : public std::exception {
  public:
   SmilesParseException(const char *msg) : _msg(msg){};
   SmilesParseException(const std::string msg) : _msg(msg){};
-  const char *message() const { return _msg.c_str(); };
-  ~SmilesParseException() throw(){};
+  const char *what() const noexcept override { return _msg.c_str(); };
+  ~SmilesParseException() noexcept {};
 
  private:
   std::string _msg;
 };
+
+inline std::unique_ptr<RDKit::RWMol> operator"" _smiles(const char *text,
+                                                        size_t len) {
+  std::string smi(text, len);
+  RWMol *ptr = nullptr;
+  try {
+    ptr = SmilesToMol(smi);
+  } catch (const RDKit::MolSanitizeException &) {
+    ptr = nullptr;
+  }
+  return std::unique_ptr<RWMol>(ptr);
 }
+inline std::unique_ptr<RDKit::RWMol> operator"" _smarts(const char *text,
+                                                        size_t len) {
+  std::string smi(text, len);
+  // no need for exception handling here: SmartsToMol() doesn't do
+  // sanitization
+  RWMol *ptr = SmartsToMol(smi);
+  return std::unique_ptr<RWMol>(ptr);
+}
+
+}  // namespace RDKit
 
 #endif
