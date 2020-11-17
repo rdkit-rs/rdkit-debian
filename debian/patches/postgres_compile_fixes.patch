@@ -1,17 +1,6 @@
---- a/Code/PgSQL/rdkit/adapter.cpp
-+++ b/Code/PgSQL/rdkit/adapter.cpp
-@@ -646,7 +646,7 @@
-     try {
-       MolOps::parseAdjustQueryParametersFromJSON(p, pstring);
-     } catch (const ValueErrorException &e) {
--      elog(ERROR, e.message());
-+      elog(ERROR, "%s", e.message());
-     } catch (...) {
-       elog(WARNING,
-            "adjustQueryProperties: Invalid argument \'params\' ignored");
 --- a/Code/PgSQL/rdkit/mol_op.c
 +++ b/Code/PgSQL/rdkit/mol_op.c
-@@ -613,7 +613,7 @@
+@@ -596,7 +596,7 @@
  //  int      tsmiles_len = VARSIZE(tsmiles);
    char    *smiles = pgstrdup(VARDATA(tsmiles), VARSIZE(tsmiles));
    char    *params = PG_GETARG_CSTRING(2);

@@ -1,13 +1,11 @@
-Index: rdkit/Docs/Book/conf.py
-===================================================================
---- rdkit.orig/Docs/Book/conf.py
-+++ rdkit/Docs/Book/conf.py
-@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath('exts
+--- a/Docs/Book/conf.py
++++ b/Docs/Book/conf.py
+@@ -27,7 +27,7 @@
  
  # Add any Sphinx extension module names here, as strings. They can be extensions
  # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
--extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest']  # , 'extapi']
-+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.imgconverter'] #, 'extapi']
+-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'recommonmark']  # , 'extapi']
++extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.imgconverter', 'recommonmark']  # , 'extapi']
  #autosummary_generate = True
  doctest_test_doctest_blocks = ""
  

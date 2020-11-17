@@ -17,4 +17,4 @@
 +include_directories(/usr/include/rapidjson)
  
  
- remove_definitions(-DRDKIT_GRAPHMOL_BUILD)
+ rdkit_library(MolInterchange
