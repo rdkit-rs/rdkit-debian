@@ -24,7 +24,7 @@
 
 using namespace RDKit;
 
-TEST_CASE("Github #1972", "[SMILES,bug]") {
+TEST_CASE("Github #1972", "[SMILES][bug]") {
   SECTION("basics") {
     std::vector<std::vector<std::string>> smiles = {
         {"[C@@]1(Cl)(F)(I).Br1", "[C@@](Br)(Cl)(F)(I)"},
@@ -63,7 +63,7 @@ TEST_CASE("Github #1972", "[SMILES,bug]") {
   }
 }
 
-TEST_CASE("Github #2029", "[SMILES,bug]") {
+TEST_CASE("Github #2029", "[SMILES][bug]") {
   SECTION("wedging") {
     std::unique_ptr<ROMol> m1(SmilesToMol("CN[C@H](Cl)C(=O)O"));
     REQUIRE(m1);
@@ -138,7 +138,7 @@ TEST_CASE(
 
   };
   SECTION("#2197") {
-    for (const auto sma : smarts) {
+    for (const auto &sma : smarts) {
       std::unique_ptr<ROMol> mol(SmartsToMol(sma));
       REQUIRE(mol);
       CHECK(6 == mol->getNumAtoms());
@@ -149,7 +149,7 @@ TEST_CASE(
     }
   }
   SECTION("#2237") {
-    for (const auto sma : smarts) {
+    for (const auto &sma : smarts) {
       std::unique_ptr<ROMol> mol(SmartsToMol(sma));
       REQUIRE(mol);
       REQUIRE(MolToSmarts(*mol) == sma);
@@ -157,7 +157,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE("github #2257: writing cxsmiles", "[smiles,cxsmiles]") {
+TEST_CASE("github #2257: writing cxsmiles", "[smiles][cxsmiles]") {
   SECTION("basics") {
     auto mol = "OCC"_smiles;
     REQUIRE(mol);
@@ -329,7 +329,7 @@ TEST_CASE("github #2257: writing cxsmiles", "[smiles,cxsmiles]") {
   }
 }
 
-TEST_CASE("Github #2148", "[bug, Smiles, Smarts]") {
+TEST_CASE("Github #2148", "[bug][Smiles][Smarts]") {
   SECTION("SMILES") {
     auto mol = "C(=C\\F)\\4.O=C1C=4CCc2ccccc21"_smiles;
     REQUIRE(mol);
@@ -367,7 +367,7 @@ TEST_CASE("Github #2148", "[bug, Smiles, Smarts]") {
   }
 }
 
-TEST_CASE("Github #2298", "[bug, Smarts, substructure]") {
+TEST_CASE("Github #2298", "[bug][Smarts][substructure]") {
   SubstructMatchParameters ps;
   ps.useQueryQueryMatches = true;
   SECTION("basics") {
@@ -388,7 +388,7 @@ TEST_CASE("Github #2298", "[bug, Smarts, substructure]") {
   }
 }
 
-TEST_CASE("dative ring closures", "[bug, smiles]") {
+TEST_CASE("dative ring closures", "[bug][smiles]") {
   SECTION("first closure1") {
     auto m1 = "N->1CCN->[Pt]1"_smiles;
     REQUIRE(m1);
@@ -493,7 +493,7 @@ TEST_CASE("MolFragmentToSmarts", "[Smarts]") {
 }
 
 TEST_CASE("github #2667: MolToCXSmiles generates error for empty molecule",
-          "[bug,cxsmiles]") {
+          "[bug][cxsmiles]") {
   SECTION("basics") {
     auto mol = ""_smiles;
     REQUIRE(mol);
@@ -503,7 +503,7 @@ TEST_CASE("github #2667: MolToCXSmiles generates error for empty molecule",
 }
 
 TEST_CASE("github #2604: support range-based charge queries from SMARTS",
-          "[ranges,smarts]") {
+          "[ranges][smarts]") {
   SECTION("positive") {
     auto query = "[N+{0-1}]"_smarts;
     REQUIRE(query);
@@ -567,7 +567,7 @@ TEST_CASE("_smarts fails gracefully", "[smarts]") {
 
 TEST_CASE(
     "github #2801: MolToSmarts may generate invalid SMARTS for bond queries",
-    "[bug,smarts]") {
+    "[bug][smarts]") {
   SECTION("original_report") {
     auto q1 = "*~CCC"_smarts;
     REQUIRE(q1);
@@ -715,5 +715,37 @@ TEST_CASE(
     CHECK(osz > 0);
     CHECK(osz < 200);
     CHECK(osz == sz);
+  }
+}
+
+TEST_CASE("d primitive in SMARTS", "[smarts][extension]") {
+  SmilesParserParams ps;
+  ps.removeHs = false;
+  std::unique_ptr<ROMol> m(SmilesToMol("[H]OCO[2H]", ps));
+  REQUIRE(m);
+  CHECK(m->getNumAtoms() == 5);
+  SECTION("basics") {
+    auto q = "[d2]"_smarts;
+    REQUIRE(q);
+    CHECK(SubstructMatch(*m, *q).size() == 2);
+  }
+  SECTION("comparison to D") {
+    auto q = "[D2]"_smarts;
+    REQUIRE(q);
+    CHECK(SubstructMatch(*m, *q).size() == 3);
+  }
+}
+
+TEST_CASE(
+    "github #3342: unspecified branch bonds in SMARTS don't have aromaticity "
+    "set",
+    "[smarts][bug]") {
+  SECTION("as reported") {
+    auto m = "c1(ccccc1)"_smarts;
+    REQUIRE(m);
+    REQUIRE(m->getBondBetweenAtoms(0, 1));
+    CHECK(m->getBondBetweenAtoms(0, 1)->getBondType() ==
+          Bond::BondType::AROMATIC);
+    CHECK(m->getBondBetweenAtoms(0, 1)->getIsAromatic());
   }
 }

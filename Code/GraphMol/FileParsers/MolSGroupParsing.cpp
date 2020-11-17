@@ -651,7 +651,11 @@ void ParseSGroupV2000SBTLine(IDX_TO_SGROUP_MAP &sGroupMap, RWMol *mol,
 
 template <class T>
 std::vector<T> ParseV3000Array(std::stringstream &stream) {
-  stream.get();  // discard parentheses
+  auto paren = stream.get();  // discard parentheses
+  if (paren != '(') {
+    BOOST_LOG(rdWarningLog)
+        << "WARNING: first character of V3000 array is not '('" << std::endl;
+  }
 
   unsigned int count;
   stream >> count;
@@ -662,9 +666,17 @@ std::vector<T> ParseV3000Array(std::stringstream &stream) {
     stream >> value;
     values.push_back(value);
   }
-  stream.get();  // discard parentheses
+  paren = stream.get();  // discard parentheses
+  if (paren != ')') {
+    BOOST_LOG(rdWarningLog)
+        << "WARNING: final character of V3000 array is not ')'" << std::endl;
+  }
   return values;
 }
+
+// force instantiation of the versions of this that we use
+template std::vector<unsigned int> ParseV3000Array(std::stringstream &stream);
+template std::vector<int> ParseV3000Array(std::stringstream &stream);
 
 void ParseV3000CStateLabel(RWMol *mol, SubstanceGroup &sgroup,
                            std::stringstream &stream, unsigned int line) {
@@ -725,12 +737,31 @@ void ParseV3000SAPLabel(RWMol *mol, SubstanceGroup &sgroup,
 std::string ParseV3000StringPropLabel(std::stringstream &stream) {
   std::string strValue;
 
-  // TODO: this should be improved to be able to handle escaped quotes
-
   auto nextChar = stream.peek();
   if (nextChar == '"') {
+    // skip the opening quote:
     stream.get();
-    std::getline(stream, strValue, '"');
+
+    // this is a bit gross because it's legal to include a \" in a value,
+    // but the way that's done is by doubling it. So
+    // FIELDINFO=""""
+    // should assign the value \" to FIELDINFO
+    char chr;
+    while (stream.get(chr)) {
+      if (chr == '"') {
+        nextChar = stream.peek();
+
+        // if the next element in the stream is a \" then we have a quoted \".
+        // Otherwise we're done
+        if (nextChar != '"') {
+          break;
+        } else {
+          // skip the second \"
+          stream.get();
+        }
+      }
+      strValue += chr;
+    }
   } else if (nextChar == '\'') {
     std::getline(stream, strValue, '\'');
   } else {
