@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: Debichem Team <debichem-devel@lists.alioth.debian.org>
 Uploaders: Michael Banck <mbanck@debian.org>
 Build-Depends: bison,
+               catch2,
                cmake,
                debhelper (>> 9),
                dh-python,
