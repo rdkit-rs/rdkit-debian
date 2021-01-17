@@ -1,12 +1,10 @@
-rdkit (202009.3-1) UNRELEASED; urgency=medium
+rdkit (202009.3-1) unstable; urgency=medium
 
   * New upstream point release.
-
-  [ Michael Banck ]
   * debian/patches/postgres_compile_fixes.patch: Updated, dropped hunks that
     got applied upstream.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 17 Jan 2021 18:22:55 +0100
+ -- Michael Banck <mbanck@debian.org>  Sun, 17 Jan 2021 22:35:22 +0100
 
 rdkit (202009.1-1) unstable; urgency=medium
 
