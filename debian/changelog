@@ -1,8 +1,12 @@
 rdkit (202009.1-1) UNRELEASED; urgency=medium
 
+  [ Andrius Merkys ]
   * Team upload.
   * New upstream version 202009.1
   * Refreshing patches.
+
+  [ Michael Banck ]
+  * debian/control.in,debian/control (Build-Depends): Added libfreetype6-dev.
 
  -- Andrius Merkys <merkys@debian.org>  Tue, 17 Nov 2020 06:42:28 -0500
 
