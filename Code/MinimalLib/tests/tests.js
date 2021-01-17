@@ -82,13 +82,33 @@ function test_sketcher_services2(){
     assert(molb2.search(" H ")<0); 
 }
 
+
+function test_abbreviations(){
+    var bmol = Module.get_mol("C1CCC1C(F)(F)F");
+    assert.equal(bmol.is_valid(),1);
+    bmol.condense_abbreviations();
+    assert.equal(bmol.get_cxsmiles(),"FC(F)(F)C1CCC1");
+    bmol.condense_abbreviations(1.0,false);
+    assert.equal(bmol.get_cxsmiles(),"*C1CCC1 |$CF3;;;;$|");
+}
+
+
+function test_generate_aligned_coords(){
+    var smiles = "CCC";
+    var mol = Module.get_mol(smiles);
+    var template = "CC";
+    var qmol = Module.get_mol(template);
+    assert.equal(mol.generate_aligned_coords(qmol, true), "");
+}
+
+
 Module.onRuntimeInitialized = () => {
     console.log(Module.version());
     test_basics();
     test_sketcher_services();
     test_sketcher_services2();
+    test_abbreviations();
+    test_generate_aligned_coords();
+    console.log("Tests finished successfully");
 };
-
-
-
 

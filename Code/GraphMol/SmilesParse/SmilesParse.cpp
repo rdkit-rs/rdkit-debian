@@ -30,6 +30,9 @@
 #include <boost/lexical_cast.hpp>
 #include <RDGeneral/BoostEndInclude.h>
 #include <GraphMol/RDKitBase.h>
+#include <GraphMol/QueryOps.h>
+#include <GraphMol/Chirality.h>
+
 #include "SmilesParseOps.h"
 #include <RDGeneral/RDLog.h>
 #include <RDGeneral/Invariant.h>
@@ -105,12 +108,14 @@ int smiles_parse_helper(const std::string &inp,
   std::list<unsigned int> branchPoints;
   void *scanner;
   int res = 1;  // initialize with fail code
-
+  unsigned numAtomsParsed = 0;
+  unsigned numBondsParsed = 0;
   TEST_ASSERT(!yysmiles_lex_init(&scanner));
   try {
     size_t ltrim = setup_smiles_string(inp, scanner);
     res = yysmiles_parse(inp.c_str() + ltrim, &molVect, atom, bond,
-                         &branchPoints, scanner, start_tok);
+                         numAtomsParsed, numBondsParsed, &branchPoints, scanner,
+                         start_tok);
   } catch (...) {
     yysmiles_lex_destroy(scanner);
     throw;
@@ -222,7 +227,6 @@ RWMol *toMol(const std::string &inp,
       if (res->hasAtomBookmark(ci_RIGHTMOST_ATOM)) {
         res->clearAtomBookmark(ci_RIGHTMOST_ATOM);
       }
-      SmilesParseOps::CleanupAfterParsing(res);
       molVect[0] = nullptr;  // NOTE: to avoid leaks on failures, this should
                              // occur last in this if.
     }
@@ -231,7 +235,7 @@ RWMol *toMol(const std::string &inp,
     if (func == smarts_parse) {
       nm = "SMARTS";
     }
-    BOOST_LOG(rdErrorLog) << nm << " Parse Error: " << e.message()
+    BOOST_LOG(rdErrorLog) << nm << " Parse Error: " << e.what()
                           << " for input: '" << origInp << "'" << std::endl;
     res = nullptr;
   }
@@ -259,7 +263,7 @@ Atom *toAtom(const std::string &inp, int func(const std::string &, Atom *&)) {
     if (func != smiles_atom_parse) {
       nm = "SMARTS";
     }
-    BOOST_LOG(rdErrorLog) << nm << " Parse Error: " << e.message()
+    BOOST_LOG(rdErrorLog) << nm << " Parse Error: " << e.what()
                           << " for input: '" << inp << "'" << std::endl;
     res = nullptr;
   }
@@ -279,7 +283,7 @@ Bond *toBond(const std::string &inp, int func(const std::string &, Bond *&)) {
     if (func != smiles_bond_parse) {
       nm = "SMARTS";
     }
-    BOOST_LOG(rdErrorLog) << nm << " Parse Error: " << e.message()
+    BOOST_LOG(rdErrorLog) << nm << " Parse Error: " << e.what()
                           << " for input: '" << inp << "'" << std::endl;
     res = nullptr;
   }
@@ -366,8 +370,9 @@ RWMol *SmilesToMol(const std::string &smiles,
     std::string::const_iterator pos = cxPart.cbegin();
     try {
       SmilesParseOps::parseCXExtensions(*res, cxPart, pos);
-    } catch (const SmilesParseException &e) {
+    } catch (...) {
       if (params.strictCXSMILES) {
+        delete res;
         throw;
       }
     }
@@ -391,11 +396,29 @@ RWMol *SmilesToMol(const std::string &smiles,
       throw;
     }
     // figure out stereochemistry:
-    bool cleanIt = true, force = true, flagPossible = true;
-    MolOps::assignStereochemistry(*res, cleanIt, force, flagPossible);
+    if (params.useLegacyStereo) {
+      bool cleanIt = true, force = true, flagPossible = true;
+      MolOps::assignStereochemistry(*res, cleanIt, force, flagPossible);
+    } else {
+      bool cleanIt = true, flagPossible = false;
+      Chirality::findPotentialStereo(*res, cleanIt, flagPossible);
+    }
   }
-  if (res && !name.empty()) {
-    res->setProp(common_properties::_Name, name);
+  if (res && res->hasProp(common_properties::_NeedsQueryScan)) {
+    res->clearProp(common_properties::_NeedsQueryScan);
+    if (!params.sanitize) {
+      // we know that this can be the ring bond query, do ring perception if we
+      // need to:
+      MolOps::fastFindRings(*res);
+    }
+    QueryOps::completeMolQueries(res, 0xDEADBEEF);
+  }
+
+  if (res) {
+    SmilesParseOps::CleanupAfterParsing(res);
+    if (!name.empty()) {
+      res->setProp(common_properties::_Name, name);
+    }
   }
   return res;
 };
@@ -459,6 +482,7 @@ RWMol *SmartsToMol(const std::string &smarts, int debugParse, bool mergeHs,
       }
     }
     MolOps::setBondStereoFromDirections(*res);
+    SmilesParseOps::CleanupAfterParsing(res);
   }
   return res;
 };

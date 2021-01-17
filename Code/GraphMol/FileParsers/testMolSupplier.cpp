@@ -103,7 +103,7 @@ int testMolSup() {
     }
     TEST_ASSERT(i == 16);
   }
-#ifdef RDK_BUILD_COORDGEN_SUPPORT
+#ifdef RDK_BUILD_MAEPARSER_SUPPORT
   {  // Test reading properties
     fname = rdbase + "/Code/GraphMol/FileParsers/test_data/props_test.mae";
 
@@ -121,7 +121,7 @@ int testMolSup() {
     TEST_ASSERT(nmol->getProp<std::string>("s_m_entry_name") ==
                 "NCI_aids_few.1");
     TEST_ASSERT(nmol->hasProp("r_f3d_dummy"));
-    TEST_ASSERT(abs(nmol->getProp<double>("r_f3d_dummy") - 42.123) < 0.0001);
+    TEST_ASSERT(std::abs(nmol->getProp<double>("r_f3d_dummy") - 42.123) < 0.0001);
 
     // Test atom properties
     TEST_ASSERT(nmol->getNumAtoms() == 19);
@@ -144,8 +144,8 @@ int testMolSup() {
       // The real property is only defined for i >= 10
       if (i >= 10) {
         TEST_ASSERT(atom->hasProp("r_f3d_dummy"));
-        TEST_ASSERT(
-            abs(atom->getProp<double>("r_f3d_dummy") - (19.1 - i) < 0.0001));
+        TEST_ASSERT(std::abs(atom->getProp<double>("r_f3d_dummy") - (19.1 - i)) <
+                    0.0001);
       } else {
         TEST_ASSERT(!atom->hasProp("r_f3d_dummy"));
       }
@@ -255,7 +255,7 @@ int testMolSup() {
       try {
         mol.reset(maesup.next());
       } catch (const FileParseException &e) {
-        const std::string err_msg(e.message());
+        const std::string err_msg(e.what());
         TEST_ASSERT(i == 1);
         TEST_ASSERT(err_msg.find(err_msg_substr) != std::string::npos);
         ok = true;
@@ -283,7 +283,7 @@ int testMolSup() {
     TEST_ASSERT(info->getChainId() == "A");
     TEST_ASSERT(info->getResidueNumber() == 5);
   }
-#endif  // RDK_BUILD_COORDGEN_SUPPORT
+#endif  // RDK_BUILD_MAEPARSER_SUPPORT
   return 1;
 }
 
@@ -2281,7 +2281,7 @@ int testForwardSDSupplier() {
   }
 #endif
 
-#ifdef RDK_BUILD_COORDGEN_SUPPORT
+#ifdef RDK_BUILD_MAEPARSER_SUPPORT
   // Now test that Maestro parsing of gz files works
   std::string maefname =
       rdbase + "/Code/GraphMol/FileParsers/test_data/NCI_aids_few.mae";
@@ -2335,7 +2335,7 @@ int testForwardSDSupplier() {
     }
     TEST_ASSERT(i == 16);
   }
-#endif  // RDK_BUILD_COORDGEN_SUPPORT
+#endif  // RDK_BUILD_MAEPARSER_SUPPORT
 
   return 1;
 }
@@ -2685,7 +2685,7 @@ M  END
   }
 }
 
-#ifdef RDK_BUILD_COORDGEN_SUPPORT
+#ifdef RDK_BUILD_MAEPARSER_SUPPORT
 void testGitHub2881() {
   std::string data = R"DATA(f_m_ct { 
  s_m_title
@@ -2786,7 +2786,7 @@ void testGitHub2881() {
     ROMol *mol = nullptr;
     try {
       mol = suppl.next();
-    } catch (Invar::Invariant) {
+    } catch (const Invar::Invariant &) {
     }
     TEST_ASSERT(!mol);
   }
@@ -2794,6 +2794,17 @@ void testGitHub2881() {
 #else
 void testGitHub2881() {}
 #endif
+
+void testGitHub3517() {
+  std::string rdbase = getenv("RDBASE");
+  std::string fname =
+      rdbase + "/Code/GraphMol/FileParsers/test_data/NCI_aids_few.sdf";
+
+  SDMolSupplier sdsup(fname);
+  TEST_ASSERT(!sdsup.atEnd());
+  size_t l = sdsup.length();
+  TEST_ASSERT(!sdsup.atEnd());
+}
 
 int main() {
   RDLog::InitLogs();
@@ -2982,6 +2993,11 @@ int main() {
   BOOST_LOG(rdErrorLog) << "-----------------------------------------\n";
   testGitHub2881();
   BOOST_LOG(rdErrorLog) << "Finished: testGitHub2881()\n";
+  BOOST_LOG(rdErrorLog) << "-----------------------------------------\n\n";
+
+  BOOST_LOG(rdErrorLog) << "-----------------------------------------\n";
+  testGitHub3517();
+  BOOST_LOG(rdErrorLog) << "Finished: testGitHub3517()\n";
   BOOST_LOG(rdErrorLog) << "-----------------------------------------\n\n";
 
   return 0;

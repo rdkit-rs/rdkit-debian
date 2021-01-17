@@ -286,7 +286,8 @@ const std::string GetMolFileQueryInfo(
   }
   for (const auto atom : mol.atoms()) {
     bool wrote_query = false;
-    if (!listQs[atom->getIdx()] && hasComplexQuery(atom)) {
+    if (!listQs[atom->getIdx()] && !queryListAtoms[atom->getIdx()] &&
+        hasComplexQuery(atom)) {
       std::string sma =
           SmartsWrite::GetAtomSmarts(static_cast<const QueryAtom *>(atom));
       ss << "V  " << std::setw(3) << atom->getIdx() + 1 << " " << sma
@@ -441,26 +442,49 @@ const std::string AtomGetMolFileSymbol(
     res = atom->getSymbol();
   } else {
     if (!atom->hasProp(common_properties::dummyLabel)) {
-      if (atom->hasQuery() && atom->getQuery()->getNegation() &&
-          atom->getQuery()->getDescription() == "AtomAtomicNum" &&
-          static_cast<ATOM_EQUALS_QUERY *>(atom->getQuery())->getVal() == 1) {
+      if (atom->hasQuery() &&
+          (atom->getQuery()->getTypeLabel() == "A" ||
+           (atom->getQuery()->getNegation() &&
+            atom->getQuery()->getDescription() == "AtomAtomicNum" &&
+            static_cast<ATOM_EQUALS_QUERY *>(atom->getQuery())->getVal() ==
+                1))) {
         res = "A";
-      } else if (atom->hasQuery() && atom->getQuery()->getNegation() &&
-                 atom->getQuery()->getDescription() == "AtomOr" &&
-                 atom->getQuery()->endChildren() -
-                         atom->getQuery()->beginChildren() ==
-                     2 &&
-                 (*atom->getQuery()->beginChildren())->getDescription() ==
-                     "AtomAtomicNum" &&
-                 static_cast<ATOM_EQUALS_QUERY *>(
-                     (*atom->getQuery()->beginChildren()).get())
-                         ->getVal() == 6 &&
-                 (*++(atom->getQuery()->beginChildren()))->getDescription() ==
-                     "AtomAtomicNum" &&
-                 static_cast<ATOM_EQUALS_QUERY *>(
-                     (*++(atom->getQuery()->beginChildren())).get())
-                         ->getVal() == 1) {
+      } else if (atom->hasQuery() &&
+                 (atom->getQuery()->getTypeLabel() == "Q" ||
+                  (atom->getQuery()->getNegation() &&
+                   atom->getQuery()->getDescription() == "AtomOr" &&
+                   atom->getQuery()->endChildren() -
+                           atom->getQuery()->beginChildren() ==
+                       2 &&
+                   (*atom->getQuery()->beginChildren())->getDescription() ==
+                       "AtomAtomicNum" &&
+                   static_cast<ATOM_EQUALS_QUERY *>(
+                       (*atom->getQuery()->beginChildren()).get())
+                           ->getVal() == 6 &&
+                   (*++(atom->getQuery()->beginChildren()))->getDescription() ==
+                       "AtomAtomicNum" &&
+                   static_cast<ATOM_EQUALS_QUERY *>(
+                       (*++(atom->getQuery()->beginChildren())).get())
+                           ->getVal() == 1))) {
         res = "Q";
+        queryListAtoms.set(atom->getIdx());
+      } else if (atom->hasQuery() && atom->getQuery()->getTypeLabel() == "X") {
+        res = "X";
+        queryListAtoms.set(atom->getIdx());
+      } else if (atom->hasQuery() && atom->getQuery()->getTypeLabel() == "M") {
+        res = "M";
+        queryListAtoms.set(atom->getIdx());
+      } else if (atom->hasQuery() && atom->getQuery()->getTypeLabel() == "AH") {
+        res = "AH";
+        queryListAtoms.set(atom->getIdx());
+      } else if (atom->hasQuery() && atom->getQuery()->getTypeLabel() == "QH") {
+        res = "QH";
+        queryListAtoms.set(atom->getIdx());
+      } else if (atom->hasQuery() && atom->getQuery()->getTypeLabel() == "XH") {
+        res = "XH";
+        queryListAtoms.set(atom->getIdx());
+      } else if (atom->hasQuery() && atom->getQuery()->getTypeLabel() == "MH") {
+        res = "MH";
         queryListAtoms.set(atom->getIdx());
       } else if (hasComplexQuery(atom)) {
         if (hasListQuery(atom)) {
@@ -532,7 +556,7 @@ unsigned int getAtomParityFlag(const Atom *atom, const Conformer *conf) {
     if (at->getAtomicNum() == 1) {
       idx += mol.getNumAtoms();
     }
-    vs.push_back(std::make_pair(idx, v));
+    vs.emplace_back(idx, v);
     ++nbrIdx;
   }
   std::sort(vs.begin(), vs.end(),
@@ -925,7 +949,7 @@ const std::string GetV3000MolFileAtomLine(
     }
   }
 
-  ss << " " << x << " " << y << " " << z;
+  ss << std::fixed << " " << x << " " << y << " " << z << std::defaultfloat;
   ss << " " << atomMapNumber;
 
   // Extra atom properties.
@@ -1353,8 +1377,7 @@ std::string MolToMolBlock(const ROMol &mol, bool includeStereo, int confId,
                           bool kekulize, bool forceV3000) {
   RDUNUSED_PARAM(includeStereo);
   RDKit::Utils::LocaleSwitcher switcher;
-  ROMol tromol(mol);
-  auto &trwmol = static_cast<RWMol &>(tromol);
+  RWMol trwmol(mol);
   // NOTE: kekulize the molecule before writing it out
   // because of the way mol files handle aromaticity
   if (trwmol.needsUpdatePropertyCache()) {
