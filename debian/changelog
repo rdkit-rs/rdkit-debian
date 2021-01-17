@@ -7,6 +7,7 @@ rdkit (202009.1-1) UNRELEASED; urgency=medium
 
   [ Michael Banck ]
   * debian/control.in,debian/control (Build-Depends): Added libfreetype6-dev.
+  * debian/patches/postgres_compile_fixes.patch: Updated.
 
  -- Andrius Merkys <merkys@debian.org>  Tue, 17 Nov 2020 06:42:28 -0500
 

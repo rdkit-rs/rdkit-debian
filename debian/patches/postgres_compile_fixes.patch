@@ -1,6 +1,21 @@
---- a/Code/PgSQL/rdkit/mol_op.c
-+++ b/Code/PgSQL/rdkit/mol_op.c
-@@ -596,7 +596,7 @@
+Index: rdkit/Code/PgSQL/rdkit/adapter.cpp
+===================================================================
+--- rdkit.orig/Code/PgSQL/rdkit/adapter.cpp
++++ rdkit/Code/PgSQL/rdkit/adapter.cpp
+@@ -646,7 +646,7 @@ extern "C" CROMol MolAdjustQueryProperti
+     try {
+       MolOps::parseAdjustQueryParametersFromJSON(p, pstring);
+     } catch (const ValueErrorException &e) {
+-      elog(ERROR, e.what());
++      elog(ERROR, "%s", e.what());
+     } catch (...) {
+       elog(WARNING,
+            "adjustQueryProperties: Invalid argument \'params\' ignored");
+Index: rdkit/Code/PgSQL/rdkit/mol_op.c
+===================================================================
+--- rdkit.orig/Code/PgSQL/rdkit/mol_op.c
++++ rdkit/Code/PgSQL/rdkit/mol_op.c
+@@ -596,7 +596,7 @@ fmcs_transition(PG_FUNCTION_ARGS) {
  //  int      tsmiles_len = VARSIZE(tsmiles);
    char    *smiles = pgstrdup(VARDATA(tsmiles), VARSIZE(tsmiles));
    char    *params = PG_GETARG_CSTRING(2);
@@ -9,8 +24,10 @@
  //  Assert(smiles != 0);
      if (AggCheckCallContext(fcinfo, NULL))
      {
---- a/Code/PgSQL/rdkit/bfp_gist.c
-+++ b/Code/PgSQL/rdkit/bfp_gist.c
+Index: rdkit/Code/PgSQL/rdkit/bfp_gist.c
+===================================================================
+--- rdkit.orig/Code/PgSQL/rdkit/bfp_gist.c
++++ rdkit/Code/PgSQL/rdkit/bfp_gist.c
 @@ -33,7 +33,6 @@
  #include <fmgr.h>
  #include <access/gist.h>
@@ -19,8 +36,10 @@
  #include <utils/memutils.h>
  
  #include <math.h>
---- a/Code/PgSQL/rdkit/low_gist.c
-+++ b/Code/PgSQL/rdkit/low_gist.c
+Index: rdkit/Code/PgSQL/rdkit/low_gist.c
+===================================================================
+--- rdkit.orig/Code/PgSQL/rdkit/low_gist.c
++++ rdkit/Code/PgSQL/rdkit/low_gist.c
 @@ -33,7 +33,6 @@
  #include <fmgr.h>
  #include <access/gist.h>
@@ -29,8 +48,10 @@
  #include <utils/memutils.h>
  
  #include "rdkit.h"
---- a/Code/PgSQL/rdkit/rdkit_gist.c
-+++ b/Code/PgSQL/rdkit/rdkit_gist.c
+Index: rdkit/Code/PgSQL/rdkit/rdkit_gist.c
+===================================================================
+--- rdkit.orig/Code/PgSQL/rdkit/rdkit_gist.c
++++ rdkit/Code/PgSQL/rdkit/rdkit_gist.c
 @@ -32,7 +32,6 @@
  #include <fmgr.h>
  #include <access/gist.h>
