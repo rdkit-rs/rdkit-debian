@@ -1,4 +1,4 @@
-rdkit (202009.1-1) UNRELEASED; urgency=medium
+rdkit (202009.1-1) unstable; urgency=medium
 
   [ Andrius Merkys ]
   * Team upload.
@@ -11,7 +11,7 @@ rdkit (202009.1-1) UNRELEASED; urgency=medium
   * debian/patches/sphinx_compile_fixes.patch: Add new compile fix.
   * debian/control.in,debian/control (Build-Depends): Added python3-sqlalchemy.
 
- -- Andrius Merkys <merkys@debian.org>  Tue, 17 Nov 2020 06:42:28 -0500
+ -- Michael Banck <mbanck@debian.org>  Sun, 17 Jan 2021 18:13:28 +0100
 
 rdkit (202003.4-4) unstable; urgency=medium
 
