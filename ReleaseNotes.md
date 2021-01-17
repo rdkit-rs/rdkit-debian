@@ -1,3 +1,75 @@
+# Release_2020.09.3
+(Changes relative to Release_2020.09.2)
+
+## Acknowledgements
+Ivan Chernyshov, David Cosgrove, James Gayvert, Mark Mackey, Philippe Schwaller, 
+Ricardo Rodriguez-Schmidt, Paolo Tosco, Piotr Wawrzyniak, James Gayvert
+
+## Bug Fixes:
+  - Error in ChemAxon SMILES "parsing"
+ (github #3320 from IvanChernyshov)
+  - Error adding PNG metadata when kekulize=False
+ (github #3543 from gayverjr)
+  - rdMolDraw2D, problems during generation of pictures from SMARTS, differences between Cairo and SVG
+ (github #3572 from wopozka)
+  - Get MolDraw2DQt working again
+ (github #3592 from greglandrum)
+  - Scientific notation in SDF V3000 files
+ (github #3597 from mark-cresset)
+  - Fix: add missing python wrappers for MolDraw2DQt
+ (github #3613 from greglandrum)
+  - V3K mol block parser not saving the chiral flag
+ (github #3620 from greglandrum)
+  - Inconsistent metal disconnectors
+ (github #3625 from pschwllr)
+  - Ring stereochemistry not properly removed from N atoms
+ (github #3631 from greglandrum)
+  - moldraw2djs should not close all polygonal paths
+ (github #3634 from greglandrum)
+
+# Release_2020.09.2
+(Changes relative to Release_2020.09.1)
+
+## Acknowledgements
+David Cosgrove, Steven Kearnes, Dan Nealschneider, Dan Skatov, Jaime
+Rodríguez-Guerra, Ricardo Rodriguez-Schmidt, Paolo Tosco, Kazuya Ujihara,
+Riccardo Vianello, Shuzhe Wang, 'amateurcat', 'GintasKam'
+
+## Bug Fixes:
+  - Problem with lifetime linkage of mols and conformers
+ (github #3492 from amateurcat)
+  - Traceback when pickling ROMol after BCUT descriptors are calculated
+ (github #3511 from d-b-w)
+  - Fix AUTOCORR2D descriptors
+ (github #3512 from ricrogz)
+  - SDMolSupplier requires several attempts to load a SDF file in Python 3.6/3.7
+ (github #3517 from jaimergp)
+  - Remove accidentally included boost header
+ (github #3518 from ricrogz)
+  - legend_height_ should be preserved after drawing the molecule
+ (github #3520 from greglandrum)
+  - remove the include directive for unused <access/tuptoaster.h> header
+ (github #3525 from rvianello)
+  - C++ build fails when configured with RDKIT_USE_BOOST_SERIALIZATION=OFF
+ (github #3529 from rvianello)
+  - Newest RDKIT version allowing chemically invalid smiles
+ (github #3531 from GintasKam)
+  - Behaviour of generate_aligned_coords for erroneous inputs
+ (github #3539 from dskatov)
+  - Drawing artifacts in draw_to_canvas_with_offset
+ (github #3540 from dskatov)
+  - Add missing methods to remove SubstanceGroup attributes
+ (github #3547 from greglandrum)
+  - Error writing SDF data containing UTF-8 to a StringIO object
+ (github #3553 from greglandrum)
+  - correct handling of amide distances for macrocycles
+ (github #3559 from hjuinj)
+  - Fix example of SmilesToMol
+ (github #3575 from kazuyaujihara)
+  - atom/bond notes handle capital letters incorrectly
+ (github #3577 from greglandrum)
+
+
 # Release_2020.09.1
 (Changes relative to Release_2020.03.1)
 

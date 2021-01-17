@@ -7,8 +7,6 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
-#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do
-                           // this in one cpp file
 #include "catch.hpp"
 
 #include <GraphMol/RDKitBase.h>
@@ -816,5 +814,53 @@ TEST_CASE("includeRadicals", "[options]") {
       outs.flush();
       CHECK(text.find("<path d='M") == std::string::npos);
     }
+  }
+}
+
+TEST_CASE("including legend in drawing results in offset drawing later",
+          "[bug]") {
+  SECTION("basics") {
+    auto m = "c1ccccc1"_smiles;
+    REQUIRE(m);
+    MolDraw2DUtils::prepareMolForDrawing(*m);
+    auto &conf = m->getConformer();
+    std::vector<Point2D> polyg;
+    for (const auto &pt : conf.getPositions()) {
+      polyg.emplace_back(pt);
+    }
+    MolDraw2DSVG drawer(350, 300);
+    drawer.drawMolecule(*m, "molecule legend");
+    drawer.setFillPolys(true);
+    drawer.setColour(DrawColour(1.0, 0.3, 1.0));
+    drawer.drawPolygon(polyg);
+    drawer.finishDrawing();
+    auto text = drawer.getDrawingText();
+    std::ofstream outs("testLegendsAndDrawing-1.svg");
+    outs << text;
+    outs.flush();
+
+    // make sure the polygon starts at a bond
+    CHECK(text.find("<path class='bond-0' d='M 321.962,140") !=
+          std::string::npos);
+    CHECK(text.find("<path d='M 321.962,140") != std::string::npos);
+  }
+}
+
+TEST_CASE("Github #3577", "[bug]") {
+  SECTION("basics") {
+    auto m = "CCC"_smiles;
+    REQUIRE(m);
+    MolDraw2DUtils::prepareMolForDrawing(*m);
+    m->getAtomWithIdx(1)->setProp("atomNote", "CCC");
+    m->getAtomWithIdx(2)->setProp("atomNote", "ccc");
+    m->getBondWithIdx(0)->setProp("bondNote", "CCC");
+
+    MolDraw2DSVG drawer(350, 300);
+    drawer.drawMolecule(*m);
+    drawer.finishDrawing();
+    auto text = drawer.getDrawingText();
+    std::ofstream outs("testGithub3577-1.svg");
+    outs << text;
+    outs.flush();
   }
 }
