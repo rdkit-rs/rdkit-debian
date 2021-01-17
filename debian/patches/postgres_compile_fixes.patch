@@ -24,39 +24,3 @@ Index: rdkit/Code/PgSQL/rdkit/mol_op.c
  //  Assert(smiles != 0);
      if (AggCheckCallContext(fcinfo, NULL))
      {
-Index: rdkit/Code/PgSQL/rdkit/bfp_gist.c
-===================================================================
---- rdkit.orig/Code/PgSQL/rdkit/bfp_gist.c
-+++ rdkit/Code/PgSQL/rdkit/bfp_gist.c
-@@ -33,7 +33,6 @@
- #include <fmgr.h>
- #include <access/gist.h>
- #include <access/skey.h>
--#include <access/tuptoaster.h>
- #include <utils/memutils.h>
- 
- #include <math.h>
-Index: rdkit/Code/PgSQL/rdkit/low_gist.c
-===================================================================
---- rdkit.orig/Code/PgSQL/rdkit/low_gist.c
-+++ rdkit/Code/PgSQL/rdkit/low_gist.c
-@@ -33,7 +33,6 @@
- #include <fmgr.h>
- #include <access/gist.h>
- #include <access/skey.h>
--#include <access/tuptoaster.h>
- #include <utils/memutils.h>
- 
- #include "rdkit.h"
-Index: rdkit/Code/PgSQL/rdkit/rdkit_gist.c
-===================================================================
---- rdkit.orig/Code/PgSQL/rdkit/rdkit_gist.c
-+++ rdkit/Code/PgSQL/rdkit/rdkit_gist.c
-@@ -32,7 +32,6 @@
- #include <fmgr.h>
- #include <access/gist.h>
- #include <access/skey.h>
--#include <access/tuptoaster.h>
- #include <utils/memutils.h>
- 
- #include "rdkit.h"
