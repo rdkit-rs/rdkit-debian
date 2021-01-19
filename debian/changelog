@@ -1,3 +1,8 @@
+rdkit (202009.3-3) UNRELEASED; urgency=medium
+
+
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Tue, 19 Jan 2021 15:42:20 +0100
+
 rdkit (202009.3-2) unstable; urgency=medium
 
   * debian/control.in,debian/control (Build-Depends): Added libeigen3-dev.
