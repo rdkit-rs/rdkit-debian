@@ -748,6 +748,7 @@ TEST_CASE(
           Bond::BondType::AROMATIC);
     CHECK(m->getBondBetweenAtoms(0, 1)->getIsAromatic());
   }
+<<<<<<< HEAD
 }
 
 TEST_CASE("github #3320: incorrect bond properties from CXSMILES",
@@ -776,4 +777,6 @@ TEST_CASE("github #3320: incorrect bond properties from CXSMILES",
       CHECK(bnd->getBeginAtomIdx() == pr.first);
     }
   }
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 }

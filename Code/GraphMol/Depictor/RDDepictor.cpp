@@ -33,7 +33,11 @@
 #include <algorithm>
 
 namespace RDDepict {
+<<<<<<< HEAD
 
+=======
+#ifdef RDK_BUILD_COORDGEN_SUPPORT
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 bool preferCoordGen = false;
 
 namespace DepictorLocal {

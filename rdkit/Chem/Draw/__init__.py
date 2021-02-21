@@ -148,6 +148,7 @@ def _legacyMolToImage(mol, size, kekulize, wedgeBonds, fitImage, options, canvas
     return img
 
 
+<<<<<<< HEAD
 if hasattr(rdMolDraw2D, 'MolDraw2DQt'):
   try:
     from PyQt5.Qt import *
@@ -182,6 +183,8 @@ if hasattr(rdMolDraw2D, 'MolDraw2DQt'):
       return d2d
 
 
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 def MolToImage(mol, size=(300, 300), kekulize=True, wedgeBonds=True, fitImage=False, options=None,
                canvas=None, **kwargs):
   """Returns a PIL image containing a drawing of the molecule

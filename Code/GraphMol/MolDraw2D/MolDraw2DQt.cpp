@@ -104,8 +104,20 @@ void MolDraw2DQt::drawChar(char c, const Point2D &cds) {
 // ****************************************************************************
 void MolDraw2DQt::drawPolygon(const vector<Point2D> &cds) {
   PRECONDITION(cds.size() >= 3, "must have at least three points");
+<<<<<<< HEAD
   d_qp.save();
   QBrush brush = d_qp.brush();
+=======
+#ifdef NOTYET
+  QBrush brush("Black");
+  brush.setStyle(Qt::SolidPattern);
+  DrawColour cc = colour();
+  brush.setColor(QColor(255.0 * cc.r, 255.0 * cc.g, 255.0 * cc.b));
+#endif
+
+  qp_.save();
+  QBrush brush = qp_.brush();
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   if (fillPolys())
     brush.setStyle(Qt::SolidPattern);
   else
@@ -128,6 +140,38 @@ void MolDraw2DQt::clearDrawing() {
                   int(255.0 * drawOptions().backgroundColour.g),
                   int(255.0 * drawOptions().backgroundColour.b),
                   int(255.0 * drawOptions().backgroundColour.a));
+<<<<<<< HEAD
+=======
+
+  qp_.setBackground(QBrush(this_col));
+  qp_.fillRect(0, 0, width(), height(), this_col);
+}
+
+// ****************************************************************************
+void MolDraw2DQt::setFontSize(double new_size) {
+  MolDraw2D::setFontSize(new_size);
+  double font_size_in_points = fontSize() * scale();
+#ifdef NOTYET
+  cout << "initial font size in points : " << qp_.font().pointSizeF() << endl;
+  cout << "font_size_in_points : " << font_size_in_points << endl;
+#endif
+  QFont font(qp_.font());
+  font.setPointSizeF(font_size_in_points);
+  qp_.setFont(font);
+
+  while (1) {
+    double old_font_size_in_points = font_size_in_points;
+    double font_size_in_points = fontSize() * scale();
+    if (fabs(font_size_in_points - old_font_size_in_points) < 0.1) {
+      break;
+    }
+    QFont font(qp_.font());
+    font.setPointSizeF(font_size_in_points);
+    qp_.setFont(font);
+    calculateScale();
+  }
+}
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
   d_qp.setBackground(QBrush(this_col));
   d_qp.fillRect(offset().x, offset().y, width(), height(), this_col);

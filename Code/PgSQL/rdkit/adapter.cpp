@@ -1761,7 +1761,11 @@ extern "C" int ReactionSubstructFP(CChemicalReaction rxn,
 namespace {
 
 struct MoleculeDescriptors {
+<<<<<<< HEAD
   MoleculeDescriptors() {}
+=======
+  MoleculeDescriptors()  {}
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   unsigned nAtoms{0};
   unsigned nBonds{0};
   unsigned nRings{0};
@@ -2007,6 +2011,7 @@ extern "C" char *findMCSsmiles(char *smiles, char *params) {
     if (0 == strlen(s)) {
       continue;
     }
+<<<<<<< HEAD
     ROMol *molptr = nullptr;
     try {
       molptr = RDKit::SmilesToMol(s);
@@ -2021,6 +2026,9 @@ extern "C" char *findMCSsmiles(char *smiles, char *params) {
       return strdup("");
     }
     molecules.push_back(RDKit::ROMOL_SPTR(molptr));
+=======
+    molecules.push_back(RDKit::ROMOL_SPTR(RDKit::SmilesToMol(s)));
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     // elog(WARNING, s);
     s += len;
     s++;  // do s++; while(*s && *s <= ' ');

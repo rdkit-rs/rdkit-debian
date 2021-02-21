@@ -7,6 +7,11 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 //
+<<<<<<< HEAD
+=======
+#define CATCH_CONFIG_MAIN  // This tells Catch to provide a main() - only do
+                           // this in one cpp file
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 #include "catch.hpp"
 
 #include <GraphMol/RDKitBase.h>
@@ -22,7 +27,10 @@
 #include <GraphMol/ChemReactions/Reaction.h>
 #include <GraphMol/ChemReactions/ReactionParser.h>
 #include <GraphMol/CIPLabeler/CIPLabeler.h>
+<<<<<<< HEAD
 #include <regex>
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 #ifdef RDK_BUILD_CAIRO_SUPPORT
 #include <cairo.h>
@@ -816,6 +824,7 @@ TEST_CASE("includeRadicals", "[options]") {
       CHECK(text.find("<path d='M") == std::string::npos);
     }
   }
+<<<<<<< HEAD
 }
 
 TEST_CASE("including legend in drawing results in offset drawing later",
@@ -954,4 +963,6 @@ M  END)CTAB"));
     float innerBondsDistance = (bond0InnerCtd - bond2InnerCtd).length();
     CHECK(outerBondsDistance / innerBondsDistance > 1.3f);
   }
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 }

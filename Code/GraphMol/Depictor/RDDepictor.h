@@ -22,8 +22,14 @@ class ROMol;
 
 namespace RDDepict {
 
+<<<<<<< HEAD
 RDKIT_DEPICTOR_EXPORT extern bool
     preferCoordGen;  // Ignored if coordgen support isn't active
+=======
+#ifdef RDK_BUILD_COORDGEN_SUPPORT
+RDKIT_DEPICTOR_EXPORT extern bool preferCoordGen;
+#endif
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 typedef boost::shared_array<double> DOUBLE_SMART_PTR;
 

@@ -17,8 +17,11 @@
 #include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmartsWrite.h>
+<<<<<<< HEAD
 #include <GraphMol/FileParsers/SequenceParsers.h>
 #include <GraphMol/FileParsers/SequenceWriters.h>
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 #include <GraphMol/FileParsers/PNGParser.h>
 #include <RDGeneral/FileParseException.h>
 #include <boost/algorithm/string.hpp>
@@ -2059,6 +2062,7 @@ M  END
     CHECK(sgs[0].getProp<std::string>("QUERYOP") == "\"");
   }
 }
+<<<<<<< HEAD
 
 TEST_CASE("github #3597: Scientific notation in SDF V3000 files", "[bug]") {
   SECTION("basics") {
@@ -2160,3 +2164,5 @@ TEST_CASE("test bond flavors when writing PDBs", "[bug]") {
     }
   }
 }
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0

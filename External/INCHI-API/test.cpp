@@ -777,6 +777,7 @@ void testGithub3365() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+<<<<<<< HEAD
 void testGithub3645() {
   BOOST_LOG(rdErrorLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdInfoLog) << "testing github #3645: Seg fault when parsing InChI"
@@ -810,6 +811,8 @@ void testGithub3645() {
   BOOST_LOG(rdInfoLog) << "done" << std::endl;
 }
 
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 //-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 //
 //-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -830,5 +833,8 @@ int main() {
 #endif
   testGithubIssue562();
   testGithub3365();
+<<<<<<< HEAD
   testGithub3645();
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 }

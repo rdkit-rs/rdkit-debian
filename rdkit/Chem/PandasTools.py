@@ -18,11 +18,11 @@ If the dataframe is containing a molecule format in a column (e.g. smiles), like
 ...   'Name':'Ampicilline'}, ignore_index=True)#Ampicilline
 >>> print([str(x) for x in  antibiotics.columns])
 ['Name', 'Smiles']
->>> print(antibiotics)
+>>> print(antibiotics) # doctest: +ELLIPSIS
             Name                                             Smiles
 0  Penicilline G    CC1(C(N2C(S1)C(C2=O)NC(=O)CC3=CC=CC=C3)C(=O)O)C
-1   Tetracycline  CC1(C2CC3C(C(=O)C(=C(C3(C(=O)C2=C(C4=C1C=CC=C4...
-2  Ampicilline  CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=CC=C3)N)C(=O...
+1   Tetracycline  CC1(C2CC3C(C(=O)C(=C(C3(C(=O)C2=C(C4=C1C=CC=C4*...*
+2  Ampicilline  CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=CC=C3)N)C(=O*...*
 
 a new column can be created holding the respective RDKit molecule objects. The fingerprint can be
 included to accelerate substructure searches on the dataframe.
@@ -37,10 +37,10 @@ Such the antibiotics containing the beta-lactam ring "C1C(=O)NC1" can be obtaine
 
 >>> beta_lactam = Chem.MolFromSmiles('C1C(=O)NC1')
 >>> beta_lactam_antibiotics = antibiotics[antibiotics['Molecule'] >= beta_lactam]
->>> print(beta_lactam_antibiotics[['Name','Smiles']])
+>>> print(beta_lactam_antibiotics[['Name','Smiles']]) # doctest: +ELLIPSIS
             Name                                             Smiles
 0  Penicilline G    CC1(C(N2C(S1)C(C2=O)NC(=O)CC3=CC=CC=C3)C(=O)O)C
-2  Ampicilline  CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=CC=C3)N)C(=O...
+2  Ampicilline  CC1(C(N2C(S1)C(C2=O)NC(=O)C(C3=CC=CC=C3)N)C(=O*...*
 
 
 It is also possible to load an SDF file can be load into a dataframe.
@@ -82,8 +82,13 @@ The standard ForwardSDMolSupplier keywords are also available:
 
 Conversion to html is quite easy:
 
+<<<<<<< HEAD
 >>> htm = frame.to_html() # doctest:
 ...
+=======
+>>> htm = frame.to_html() # doctest: +ELLIPSIS
+*...*
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 >>> str(htm[:36])
 '<table border="1" class="dataframe">'
 
@@ -198,6 +203,7 @@ def patchPandasrepr(self, **kwargs):
   import pandas.io.formats.html  # necessary for loading HTMLFormatter
   defHTMLFormatter_write_cell = pandas.io.formats.html.HTMLFormatter._write_cell
   pandas.io.formats.html.HTMLFormatter._write_cell = _patched_HTMLFormatter_write_cell
+<<<<<<< HEAD
   # Github #3701 was a problem with a private function being renamed (made public) in
   # pandas v1.2. Rather than relying on version numbers we just use getattr:
   if hasattr(pandas.io.formats.format, '_get_adjustment'):
@@ -211,6 +217,12 @@ def patchPandasrepr(self, **kwargs):
   setattr(pandas.io.formats.format, attr, _patched_get_adjustment)
   res = defPandasRepr(self, **kwargs)
   setattr(pandas.io.formats.format, attr, defPandasGetAdjustment)
+=======
+  defPandasGetAdjustment = pandas.io.formats.format._get_adjustment
+  pandas.io.formats.format._get_adjustment = _patched_get_adjustment
+  res = defPandasRepr(self, **kwargs)
+  pandas.io.formats.format._get_adjustment = defPandasGetAdjustment
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   pandas.io.formats.html.HTMLFormatter._write_cell = defHTMLFormatter_write_cell
   return res
 
@@ -424,8 +436,8 @@ def AddMoleculeColumnToFrame(frame, smilesCol='Smiles', molCol='ROMol', includeF
   if not includeFingerprints:
     frame[molCol] = frame[smilesCol].map(Chem.MolFromSmiles)
   else:
-    frame[molCol] = frame[smilesCol].map(
-      lambda smiles: _MolPlusFingerprint(Chem.MolFromSmiles(smiles)))
+    frame[molCol] = frame[smilesCol].map(lambda smiles: _MolPlusFingerprint(
+      Chem.MolFromSmiles(smiles)))
   RenderImagesInAllDataFrames(images=True)
 
 

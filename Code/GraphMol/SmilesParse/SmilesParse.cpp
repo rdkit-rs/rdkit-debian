@@ -108,14 +108,22 @@ int smiles_parse_helper(const std::string &inp,
   std::list<unsigned int> branchPoints;
   void *scanner;
   int res = 1;  // initialize with fail code
+<<<<<<< HEAD
   unsigned numAtomsParsed = 0;
   unsigned numBondsParsed = 0;
+=======
+
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   TEST_ASSERT(!yysmiles_lex_init(&scanner));
   try {
     size_t ltrim = setup_smiles_string(inp, scanner);
     res = yysmiles_parse(inp.c_str() + ltrim, &molVect, atom, bond,
+<<<<<<< HEAD
                          numAtomsParsed, numBondsParsed, &branchPoints, scanner,
                          start_tok);
+=======
+                         &branchPoints, scanner, start_tok);
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   } catch (...) {
     yysmiles_lex_destroy(scanner);
     throw;
@@ -329,6 +337,7 @@ void preprocessSmiles(const std::string &smiles,
       }
     }
     lsmiles = smi;
+<<<<<<< HEAD
   }
 }
 }  // namespace
@@ -358,6 +367,37 @@ RWMol *SmilesToMol(const std::string &smiles,
   if (yysmiles_debug != params.debugParse) {
     yysmiles_debug = params.debugParse;
   }
+=======
+  }
+}
+}  // namespace
+
+Atom *SmilesToAtom(const std::string &smiles) {
+  yysmiles_debug = false;
+
+  Atom *res = nullptr;
+  res = toAtom(smiles, smiles_atom_parse);
+  return res;
+};
+
+Bond *SmilesToBond(const std::string &smiles) {
+  yysmiles_debug = false;
+
+  Bond *res = nullptr;
+  res = toBond(smiles, smiles_bond_parse);
+  return res;
+};
+
+RWMol *SmilesToMol(const std::string &smiles,
+                   const SmilesParserParams &params) {
+  // Calling SmilesToMol in a multithreaded context is generally safe *unless*
+  // the value of debugParse is different for different threads. The if
+  // statement below avoids a TSAN warning in the case where multiple threads
+  // all use the same value for debugParse.
+  if (yysmiles_debug != params.debugParse) {
+    yysmiles_debug = params.debugParse;
+  }
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
   std::string lsmiles, name, cxPart;
   preprocessSmiles(smiles, params, lsmiles, name, cxPart);
@@ -414,11 +454,16 @@ RWMol *SmilesToMol(const std::string &smiles,
     QueryOps::completeMolQueries(res, 0xDEADBEEF);
   }
 
+<<<<<<< HEAD
   if (res) {
     SmilesParseOps::CleanupAfterParsing(res);
     if (!name.empty()) {
       res->setProp(common_properties::_Name, name);
     }
+=======
+  if (res && !name.empty()) {
+    res->setProp(common_properties::_Name, name);
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   }
   return res;
 };
@@ -482,7 +527,10 @@ RWMol *SmartsToMol(const std::string &smarts, int debugParse, bool mergeHs,
       }
     }
     MolOps::setBondStereoFromDirections(*res);
+<<<<<<< HEAD
     SmilesParseOps::CleanupAfterParsing(res);
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   }
   return res;
 };

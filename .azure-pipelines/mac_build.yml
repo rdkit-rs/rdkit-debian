@@ -20,7 +20,10 @@ steps:
     conda create --name rdkit_build $(compiler) cmake \
         boost-cpp=$(boost_version) boost=$(boost_version) \
         py-boost=$(boost_version) libboost=$(boost_version) \
+<<<<<<< HEAD
         qt \
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
         numpy matplotlib cairo pillow eigen pandas  \
         sphinx=3.1.2 recommonmark jupyter
   displayName: Setup build environment
@@ -45,7 +48,10 @@ steps:
     -DRDK_BUILD_AVALON_SUPPORT=ON \
     -DRDK_BUILD_INCHI_SUPPORT=ON \
     -DRDK_BUILD_CAIRO_SUPPORT=ON \
+<<<<<<< HEAD
     -DRDK_BUILD_QT_SUPPORT=ON \
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     -DRDK_BUILD_SWIG_WRAPPERS=OFF \
     -DRDK_SWIG_STATIC=OFF \
     -DRDK_BUILD_THREADSAFE_SSS=ON \

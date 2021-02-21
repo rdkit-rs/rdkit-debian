@@ -82,7 +82,11 @@ extern int yysmiles_debug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
+<<<<<<< HEAD
 #line 82 "smiles.yy"
+=======
+#line 89 "smiles.yy"
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
   int                      moli;
   RDKit::Atom * atom;
@@ -99,9 +103,15 @@ typedef union YYSTYPE YYSTYPE;
 
 
 
+<<<<<<< HEAD
 int yysmiles_parse (const char *input, std::vector<RDKit::RWMol *> *molList, RDKit::Atom* &lastAtom, RDKit::Bond* &lastBond, unsigned &numAtomsParsed, unsigned &numBondsParsed, std::list<unsigned int> *branchPoints, void *scanner, int& start_token);
 /* "%code provides" blocks.  */
 #line 77 "smiles.yy"
+=======
+int yysmiles_parse (const char *input, std::vector<RDKit::RWMol *> *molList, RDKit::Atom* &lastAtom, RDKit::Bond* &lastBond, std::list<unsigned int> *branchPoints, void *scanner, int& start_token);
+/* "%code provides" blocks.  */
+#line 84 "smiles.yy"
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 #define YY_DECL int yylex \
                (YYSTYPE * yylval_param , yyscan_t yyscanner, int& start_token)

@@ -460,6 +460,7 @@ M  END''')
     self.assertGreater(
       molb.find('M  V30 1 SUP 0 ATOMS=(3 2 3 4) XBONDS=(1 1) LABEL=CO2H SAP=(3 2 1 1)'), 0)
 
+<<<<<<< HEAD
   def testClearValues(self):
     mol = Chem.MolFromMolBlock('''example
  -ISIS-  10171405052D
@@ -520,6 +521,8 @@ M  END''')
     sgs[0].ClearAttachPoints()
     self.assertEqual(len(sgs[0].GetAttachPoints()), 0)
 
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 if __name__ == '__main__':
   print("Testing SubstanceGroups wrapper")

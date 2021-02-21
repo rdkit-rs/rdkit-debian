@@ -1031,7 +1031,11 @@ BOOST_PYTHON_MODULE(rdmolfiles) {
  \n\
      CC{Q}C with {'{Q}':'OCCO'} -> CCOCCOC  \n\n\
      C{A}C{Q}C with {'{Q}':'OCCO', '{A}':'C1(CC1)'} -> CC1(CC1)COCCOC  \n\n\
+<<<<<<< HEAD
      C{A}C{Q}C with {'{Q}':'{X}CC{X}', '{A}':'C1CC1', '{X}':'N'} -> CC1CC1CNCCNC  \n\n\
+=======
+     C{A}C{Q}C with {'{Q}':'{X}CC{X}', '{A}':'C1CC1', '{X}':'N'} -> CC1CC1CCNCCNC  \n\n\
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 \n";
   python::def("MolFromSmiles", RDKit::MolFromSmiles,
               (python::arg("SMILES"), python::arg("sanitize") = true,

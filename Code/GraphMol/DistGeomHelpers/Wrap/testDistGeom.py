@@ -584,6 +584,7 @@ class TestCase(unittest.TestCase):
             self.assertTrue((conf2.GetAtomPosition(3)-conf2.GetAtomPosition(0)).Length() > (conf1.GetAtomPosition(3)-conf1.GetAtomPosition(0)).Length())
 
         
+<<<<<<< HEAD
     def testETKDGv3amide(self):
         """
         test for a macrocycle molecule, ETKDGv3 samples trans amide
@@ -612,6 +613,8 @@ class TestCase(unittest.TestCase):
         for torsion in get_atom_mapping(mol):
             a1,a2,a3,a4 = [conf.GetAtomPosition(i) for i in torsion]
             self.assertAlmostEqual(abs(ComputeSignedDihedralAngle(a1,a2,a3,a4)), 3.14, delta = 0.1)
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 
 if __name__ == '__main__':

@@ -14,6 +14,11 @@ import numpy
 from rdkit import Chem, RDConfig
 from rdkit.ML.Descriptors import Descriptors, MoleculeDescriptors
 from rdkit.TestRunner import redirect_stdout
+<<<<<<< HEAD
+=======
+from io import BytesIO, StringIO
+import pickle
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 
 class TestCase(unittest.TestCase):
@@ -73,6 +78,7 @@ class TestDescriptors(unittest.TestCase):
         self.assertRaises(NotImplementedError, calc.ShowDescriptors)
         self.assertRaises(NotImplementedError, calc.GetDescriptorNames)
         self.assertRaises(NotImplementedError, calc.CalcDescriptors, None)
+<<<<<<< HEAD
 
         calc.simpleList = ['simple1', 'simple2']
         calc.compoundList = ['cmpd1', 'cmpd2']
@@ -95,6 +101,19 @@ class TestDescriptors(unittest.TestCase):
         pickle.dumps(mol)
 
 
+=======
+
+        calc.simpleList = ['simple1', 'simple2']
+        calc.compoundList = ['cmpd1', 'cmpd2']
+        f = StringIO()
+        with redirect_stdout(f):
+            calc.ShowDescriptors()
+        s = f.getvalue()
+        for name in calc.simpleList:
+            self.assertIn(name, s)
+        for name in calc.compoundList:
+            self.assertIn(name, s)
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 
 if __name__ == '__main__':  # pragma: nocover

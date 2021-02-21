@@ -557,7 +557,10 @@ void CleanupAfterParsing(RWMol *mol) {
   }
   for (auto bond : mol->bonds()) {
     bond->clearProp(common_properties::_unspecifiedOrder);
+<<<<<<< HEAD
     bond->clearProp("_cxsmilesBondIdx");
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   }
 }
 

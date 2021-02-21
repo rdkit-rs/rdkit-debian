@@ -2124,7 +2124,11 @@ std::string MolBlockToInchi(const std::string& molBlock,
   // call DLL
   std::string inchi;
   {
+<<<<<<< HEAD
 #ifdef RDK_TEST_MULTITHREADED
+=======
+#if RDK_TEST_MULTITHREADED
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     std::lock_guard<std::mutex> lock(inchiMutex);
 #endif
     char* _options = nullptr;

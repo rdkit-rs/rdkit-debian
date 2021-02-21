@@ -162,6 +162,7 @@ class TestCase(unittest.TestCase):
       f = getattr(Descriptors, n)
       self.assertEqual(results[i], f(m))
 
+<<<<<<< HEAD
   def testVectorDescriptorsInDescList(self):
     # First try only bcuts should exist
     descriptors = set([n for n,_ in Descriptors.descList])
@@ -177,6 +178,20 @@ class TestCase(unittest.TestCase):
 
     names = set(["AUTOCORR2D_%s"%str(i+1) for i in range(192)])
     self.assertEqual(descriptors2.intersection(names), names)
+=======
+    def testVectorDescriptorsInDescList(self):
+      # First try only bcuts should exist
+      descriptors = set([n for n,_ in Descriptors.descList])
+      names = set(["BCUT2D_%s"%str(i+1) for i in range(8)])
+      self.assertEqual(descriptors.intersection(names), names)
+      
+      Descriptors.setupAUTOCORRDescriptors()
+      descriptors2 = set([n for n,_ in Descriptors.descList])
+      self.assertEqual(descriptors2.intersection(descriptors), descriptors)
+
+      names = ["AUTOCORR2D_%s"%str(i+1) for i in range(192)]
+      self.assertEqual(descriptors.intersection(names), names)
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 
 if __name__ == '__main__':

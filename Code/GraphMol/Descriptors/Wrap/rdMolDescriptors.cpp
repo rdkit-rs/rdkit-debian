@@ -340,7 +340,11 @@ double hkAlphaHelper(const RDKit::ROMol &mol, python::object atomContribs) {
 }
 
 RDKit::SparseIntVect<std::uint32_t> *MorganFingerprintHelper(
+<<<<<<< HEAD
     const RDKit::ROMol &mol, unsigned int radius, int nBits, python::object invariants,
+=======
+    const RDKit::ROMol &mol, int radius, int nBits, python::object invariants,
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     python::object fromAtoms, bool useChirality, bool useBondTypes,
     bool useFeatures, bool useCounts, python::object bitInfo,
     bool includeRedundantEnvironments) {
@@ -415,10 +419,13 @@ RDKit::SparseIntVect<std::uint32_t> *MorganFingerprintHelper(
 }
 
 #ifdef RDK_HAS_EIGEN3
+<<<<<<< HEAD
 python::list BCUT(const RDKit::ROMol &mol) {
   return python::list(RDKit::Descriptors::BCUT2D(mol));
 }
 
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 std::pair<double, double> BCUT2D_list(const RDKit::ROMol &m,
                                       python::list atomprops) {
   std::vector<double> dvec;
@@ -426,6 +433,7 @@ std::pair<double, double> BCUT2D_list(const RDKit::ROMol &m,
     dvec.push_back(boost::python::extract<double>(atomprops[i]));
   }
   return RDKit::Descriptors::BCUT2D(m, dvec);
+<<<<<<< HEAD
 }
 
 std::pair<double, double> BCUT2D_tuple(const RDKit::ROMol &m,
@@ -437,6 +445,19 @@ std::pair<double, double> BCUT2D_tuple(const RDKit::ROMol &m,
   return RDKit::Descriptors::BCUT2D(m, dvec);
 }
 
+=======
+}
+
+std::pair<double, double> BCUT2D_tuple(const RDKit::ROMol &m,
+                                       python::tuple atomprops) {
+  std::vector<double> dvec;
+  for (int i = 0; i < len(atomprops); ++i) {
+    dvec.push_back(boost::python::extract<double>(atomprops[i]));
+  }
+  return RDKit::Descriptors::BCUT2D(m, dvec);
+}
+
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 // From boost::python examples
 // Converts a std::pair instance to a Python tuple.
 template <typename T1, typename T2>
@@ -461,7 +482,11 @@ struct std_pair_to_python_converter {
 #endif
 }  // namespace
 RDKit::SparseIntVect<std::uint32_t> *GetMorganFingerprint(
+<<<<<<< HEAD
     const RDKit::ROMol &mol, unsigned int radius, python::object invariants,
+=======
+    const RDKit::ROMol &mol, int radius, python::object invariants,
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     python::object fromAtoms, bool useChirality, bool useBondTypes,
     bool useFeatures, bool useCounts, python::object bitInfo,
     bool includeRedundantEnvironments) {
@@ -470,7 +495,11 @@ RDKit::SparseIntVect<std::uint32_t> *GetMorganFingerprint(
       useFeatures, useCounts, bitInfo, includeRedundantEnvironments);
 }
 RDKit::SparseIntVect<std::uint32_t> *GetHashedMorganFingerprint(
+<<<<<<< HEAD
     const RDKit::ROMol &mol, unsigned int radius, unsigned int nBits, python::object invariants,
+=======
+    const RDKit::ROMol &mol, int radius, int nBits, python::object invariants,
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     python::object fromAtoms, bool useChirality, bool useBondTypes,
     bool useFeatures, python::object bitInfo,
     bool includeRedundantEnvironments) {
@@ -512,9 +541,14 @@ ExplicitBitVect *GetMorganFingerprintBV(
   }
   ExplicitBitVect *res;
   res = RDKit::MorganFingerprints::getFingerprintAsBitVect(
+<<<<<<< HEAD
       mol, radius, nBits,
       invars, froms.get(), useChirality,
       useBondTypes, false, bitInfoMap,
+=======
+      mol, static_cast<unsigned int>(radius), nBits, invars, froms.get(),
+      useChirality, useBondTypes, false, bitInfoMap,
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
       includeRedundantEnvironments);
   if (bitInfoMap) {
     bitInfo.attr("clear")();
@@ -1711,6 +1745,11 @@ BOOST_PYTHON_MODULE(rdMolDescriptors) {
 
 #ifdef RDK_HAS_EIGEN3
   python::scope().attr("_BCUT2D_version") = RDKit::Descriptors::BCUT2DVersion;
+<<<<<<< HEAD
+=======
+  std::vector<double> (*BCUT)(const RDKit::ROMol &) =
+      &RDKit::Descriptors::BCUT2D;
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   std::pair<double, double> (*BCUT_atomprops)(
       const RDKit::ROMol &, const std::string &) = &RDKit::Descriptors::BCUT2D;
   docString =

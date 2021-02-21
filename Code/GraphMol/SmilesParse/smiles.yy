@@ -38,12 +38,25 @@ namespace {
 void
 yysmiles_error( const char *input,
                 std::vector<RDKit::RWMol *> *ms,
+<<<<<<< HEAD
                 RDKit::Atom* &,
                 RDKit::Bond* &,
                 unsigned int &,unsigned int &,
                 std::list<unsigned int> *,
 		void *,int, const char * msg )
+=======
+                RDKit::Atom* &lastAtom,
+                RDKit::Bond* &lastBond,
+                std::list<unsigned int> *branchPoints,
+		void *scanner,int start_token, const char * msg )
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 {
+  RDUNUSED_PARAM(input);
+  RDUNUSED_PARAM(lastAtom);
+  RDUNUSED_PARAM(lastBond);
+  RDUNUSED_PARAM(branchPoints);
+  RDUNUSED_PARAM(scanner);
+  RDUNUSED_PARAM(start_token);
   yyErrorCleanup(ms);
   BOOST_LOG(rdErrorLog) << "SMILES Parse Error: " << msg << " while parsing: " << input << std::endl;
 }
@@ -51,9 +64,19 @@ yysmiles_error( const char *input,
 void
 yysmiles_error( const char *input,
                 std::vector<RDKit::RWMol *> *ms,
+<<<<<<< HEAD
                 std::list<unsigned int> *,
 		void *,int, const char * msg )
 {
+=======
+                std::list<unsigned int> *branchPoints,
+		void *scanner,int start_token, const char * msg )
+{
+  RDUNUSED_PARAM(input);
+  RDUNUSED_PARAM(branchPoints);
+  RDUNUSED_PARAM(scanner);
+  RDUNUSED_PARAM(start_token);
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   yyErrorCleanup(ms);
   BOOST_LOG(rdErrorLog) << "SMILES Parse Error: " << msg << " while parsing: " << input << std::endl;
 }
@@ -68,8 +91,11 @@ yysmiles_error( const char *input,
 %parse-param {std::vector<RDKit::RWMol *> *molList}
 %parse-param {RDKit::Atom* &lastAtom}
 %parse-param {RDKit::Bond* &lastBond}
+<<<<<<< HEAD
 %parse-param {unsigned &numAtomsParsed}
 %parse-param {unsigned &numBondsParsed}
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 %parse-param {std::list<unsigned int> *branchPoints}
 %parse-param {void *scanner}
 %parse-param {int& start_token}

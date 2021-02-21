@@ -144,14 +144,22 @@ std::unique_ptr<MolSupplier> getSupplier(const std::string& path,
     std::unique_ptr<MolSupplier> p(smsup);
     return p;
   }
+<<<<<<< HEAD
 #ifdef RDK_BUILD_MAEPARSER_SUPPORT
+=======
+
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   else if (fileFormat == "mae") {
     MaeMolSupplier* maesup =
         new MaeMolSupplier(strm, true, opt.sanitize, opt.removeHs);
     std::unique_ptr<MolSupplier> p(maesup);
     return p;
   }
+<<<<<<< HEAD
 #endif
+=======
+
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   else if (fileFormat == "tdt") {
     TDTMolSupplier* tdtsup = new TDTMolSupplier(
         strm, true, opt.nameRecord, opt.confId2D, opt.confId3D, opt.sanitize);

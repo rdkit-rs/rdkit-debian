@@ -1200,6 +1200,7 @@ TEST_CASE("ring stereo finding is overly aggressive", "[chirality][bug]") {
     CHECK(stereoInfo.size() == 2);
   }
 }
+<<<<<<< HEAD
 
 TEST_CASE(
     "github #3631: Ring stereochemistry not properly removed from N atoms",
@@ -1284,3 +1285,5 @@ TEST_CASE(
     }
   }
 }
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0

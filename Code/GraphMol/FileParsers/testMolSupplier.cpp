@@ -2795,6 +2795,7 @@ void testGitHub2881() {
 void testGitHub2881() {}
 #endif
 
+<<<<<<< HEAD
 void testGitHub3517() {
   std::string rdbase = getenv("RDBASE");
   std::string fname =
@@ -2806,6 +2807,8 @@ void testGitHub3517() {
   TEST_ASSERT(!sdsup.atEnd());
 }
 
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 int main() {
   RDLog::InitLogs();
 
@@ -2995,10 +2998,13 @@ int main() {
   BOOST_LOG(rdErrorLog) << "Finished: testGitHub2881()\n";
   BOOST_LOG(rdErrorLog) << "-----------------------------------------\n\n";
 
+<<<<<<< HEAD
   BOOST_LOG(rdErrorLog) << "-----------------------------------------\n";
   testGitHub3517();
   BOOST_LOG(rdErrorLog) << "Finished: testGitHub3517()\n";
   BOOST_LOG(rdErrorLog) << "-----------------------------------------\n\n";
 
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   return 0;
 }

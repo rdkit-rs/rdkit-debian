@@ -121,7 +121,11 @@ set(RDK_PYTHON_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/rdkit")
 # Config variables:
 set(RDKit_Year "2020")
 set(RDKit_Month "09")
+<<<<<<< HEAD
 set(RDKit_Revision "4")
+=======
+set(RDKit_Revision "1")
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 set(RDKit_RevisionModifier "")
 set(RDKit_ABI "1")
 
@@ -182,6 +186,7 @@ endif(RDK_BUILD_SWIG_WRAPPERS)
 
 if(RDK_BUILD_COORDGEN_SUPPORT)
     add_definitions(-DRDK_BUILD_COORDGEN_SUPPORT)
+<<<<<<< HEAD
     include_directories(${RDKit_ExternalDir})
 endif()
 
@@ -190,6 +195,16 @@ if(RDK_BUILD_MAEPARSER_SUPPORT)
     include_directories(${RDKit_ExternalDir})
 endif()
 
+=======
+    include_directories(${RDKit_ExternalDir})
+endif()
+
+if(RDK_BUILD_MAEPARSER_SUPPORT)
+    add_definitions(-DRDK_BUILD_MAEPARSER_SUPPORT)
+    include_directories(${RDKit_ExternalDir})
+endif()
+
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 if(RDK_USE_URF)
   ADD_DEFINITIONS("-DRDK_USE_URF")
   include_directories(${RDKit_ExternalDir}/RingFamilies/RingDecomposerLib/src/RingDecomposerLib)
@@ -389,11 +404,15 @@ if(RDK_USE_BOOST_SERIALIZATION)
       set(Boost_LIBRARIES ${T_LIBS} ${Boost_LIBRARIES})
     else()
       set(Boost_LIBRARIES ${T_LIBS})
+<<<<<<< HEAD
     endif()
     target_compile_definitions(rdkit_base INTERFACE -DRDK_USE_BOOST_SERIALIZATION)
     if(NOT Boost_USE_STATIC_LIBS)
       target_compile_definitions(rdkit_base INTERFACE -DBOOST_SERIALIZATION_DYN_LINK)
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     endif()
+  target_compile_definitions(rdkit_base INTERFACE -DRDK_USE_BOOST_SERIALIZATION -DBOOST_SERIALIZATION_DYN_LINK)
 endif()
 
 

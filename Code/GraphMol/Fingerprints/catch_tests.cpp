@@ -18,8 +18,11 @@
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/FileParsers/FileParsers.h>
 #include <GraphMol/Fingerprints/Fingerprints.h>
+<<<<<<< HEAD
 #include <GraphMol/Fingerprints/MorganFingerprints.h>
 #include <RDGeneral/Exceptions.h>
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 #include <GraphMol/Fingerprints/RDKitFPGenerator.h>
 #include <GraphMol/Substruct/SubstructMatch.h>
 #include <DataStructs/ExplicitBitVect.h>
@@ -63,6 +66,7 @@ TEST_CASE("Github 2614", "[patternfp][bug]") {
   }
 }
 
+<<<<<<< HEAD
 TEST_CASE("Github 1761", "[patternfp][bug]") {
     SECTION("throw ValueErrorException") {
         auto mol = "CCC1CC1"_smiles;
@@ -78,6 +82,8 @@ TEST_CASE("Github 1761", "[patternfp][bug]") {
     }
 }
 
+=======
+>>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 TEST_CASE("RDKit bits per feature", "[fpgenerator][rdkit]") {
   auto m1 = "CCCO"_smiles;
   REQUIRE(m1);
