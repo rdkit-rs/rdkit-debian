@@ -228,7 +228,6 @@ bool parse_coordinate_bonds(Iterator &first, Iterator last, RDKit::RWMol &mol) {
     unsigned int aidx;
     unsigned int bidx;
     if (read_int_pair(first, last, aidx, bidx)) {
-<<<<<<< HEAD
       Bond *bnd = nullptr;
       for (auto bond : mol.bonds()) {
         unsigned int smilesIdx;
@@ -240,10 +239,6 @@ bool parse_coordinate_bonds(Iterator &first, Iterator last, RDKit::RWMol &mol) {
       }
       if (!bnd ||
           (bnd->getBeginAtomIdx() != aidx && bnd->getEndAtomIdx() != aidx)) {
-=======
-      Bond *bnd = mol.getBondWithIdx(bidx);
-      if (bnd->getBeginAtomIdx() != aidx && bnd->getEndAtomIdx() != aidx) {
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
         BOOST_LOG(rdWarningLog) << "BOND NOT FOUND! " << bidx
                                 << " involving atom " << aidx << std::endl;
         return false;
@@ -591,61 +586,8 @@ bool parse_radicals(Iterator &first, Iterator last, RDKit::RWMol &mol) {
       default:
         BOOST_LOG(rdWarningLog)
             << "Radical specification " << *first << " ignored.";
-<<<<<<< HEAD
     }
   }
-  return true;
-}
-
-template <typename Iterator>
-bool parse_enhanced_stereo(Iterator &first, Iterator last, RDKit::RWMol &mol) {
-  StereoGroupType group_type = StereoGroupType::STEREO_ABSOLUTE;
-  if (*first == 'a') {
-    group_type = StereoGroupType::STEREO_ABSOLUTE;
-  } else if (*first == 'o') {
-    group_type = StereoGroupType::STEREO_OR;
-  } else if (*first == '&') {
-    group_type = StereoGroupType::STEREO_AND;
-  }
-  ++first;
-
-  // OR and AND groups carry a group number
-  if (group_type != StereoGroupType::STEREO_ABSOLUTE) {
-    unsigned int group_id = 0;
-    read_int(first, last, group_id);
-  }
-
-  if (first >= last || *first != ':') {
-    return false;
-  }
-  ++first;
-
-  std::vector<Atom *> atoms;
-  while (first != last && *first >= '0' && *first <= '9') {
-    unsigned int aidx;
-    if (read_int(first, last, aidx)) {
-      Atom *atom = mol.getAtomWithIdx(aidx);
-      if (!atom) {
-        BOOST_LOG(rdWarningLog)
-            << "Atom " << aidx << " not found!" << std::endl;
-        return false;
-      }
-      atoms.push_back(atom);
-    } else {
-      return false;
-    }
-
-    if (first < last && *first == ',') {
-      ++first;
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
-    }
-  }
-
-  std::vector<StereoGroup> mol_stereo_groups(mol.getStereoGroups());
-  mol_stereo_groups.emplace_back(group_type, std::move(atoms));
-  mol.setStereoGroups(std::move(mol_stereo_groups));
-
   return true;
 }
 

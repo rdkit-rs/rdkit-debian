@@ -33,11 +33,7 @@ if(RDK_BUILD_INCHI_SUPPORT)
   include_directories(${CMAKE_SOURCE_DIR}/External)
   add_definitions(-DRDK_BUILD_INCHI_SUPPORT)
 endif(RDK_BUILD_INCHI_SUPPORT)
-<<<<<<< HEAD
 add_definitions(-DRDKITVER="007500")
-=======
-add_definitions(-DRDKITVER="007400")
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 if(NOT DEFINED PostgreSQL_ROOT)
   if(DEFINED ENV{PostgreSQL_ROOT})
     set(PostgreSQL_ROOT "$ENV{PostgreSQL_ROOT}")

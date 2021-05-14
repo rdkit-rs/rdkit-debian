@@ -195,7 +195,6 @@ EndFeature
     cfac = None
     self.assertEqual(feats[0].GetFamily(), 'Donor')
 
-<<<<<<< HEAD
   def testGithub2530(self):
     cfac = ChemicalFeatures.BuildFeatureFactory(
       os.path.join(RDConfig.RDDataDir, "BaseFeatures.fdef"))
@@ -218,8 +217,6 @@ EndFeature
     self.assertNotEqual(feats_5[1], feats_0[1])
     self.assertNotEqual(feats_5[2], feats_0[2])
 
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 if __name__ == '__main__':
   unittest.main()

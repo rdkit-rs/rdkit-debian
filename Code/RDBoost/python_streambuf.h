@@ -211,29 +211,17 @@ class streambuf : public std::basic_streambuf<char> {
     CHECK_INVARIANT(iobase, "base class not found");
 #endif
 
-<<<<<<< HEAD
     df_isTextMode = PyObject_IsInstance(python_file_obj.ptr(), iobase.ptr());
     switch (mode) {
       case 's':  /// yeah, is redundant, but it is somehow natural to do "s"
       case 't':
         if (!df_isTextMode)
-=======
-    bool isTextMode = PyObject_IsInstance(python_file_obj.ptr(), iobase.ptr());
-    switch (mode) {
-      case 's':  /// yeah, is redundant, but it is somehow natural to do "s"
-      case 't':
-        if (!isTextMode)
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
           throw ValueErrorException(
               "Need a text mode file object like StringIO or a file opened "
               "with mode 't'");
         break;
       case 'b':
-<<<<<<< HEAD
         if (df_isTextMode)
-=======
-        if (isTextMode)
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
           throw ValueErrorException(
               "Need a binary mode file object like BytesIO or a file opened "
               "with mode 'b'");

@@ -824,7 +824,6 @@ bool _checkAmideEster14(const Bond *bnd1, const Bond *bnd3, const Atom *atm1,
   return false;
 }
 
-<<<<<<< HEAD
 // checking for amide/ester when all three bonds are
 // part of the macrocycle ring
 // here we look for something like this:
@@ -836,9 +835,6 @@ bool _checkAmideEster14(const Bond *bnd1, const Bond *bnd3, const Atom *atm1,
 //     \ / \                                         T.S.I.Left Blank
 //      2   4  <- 2 is an oxygen/nitrogen
 bool _checkMacrocycleAllInSameRingAmideEster14(const ROMol &mol, const Bond *bnd1,
-=======
-bool _checkMacrocycleAmideEster14(const ROMol &mol, const Bond *bnd1,
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
                                   const Bond *bnd3, const Atom *atm1,
                                   const Atom *atm2, const Atom *atm3,
                                   const Atom *atm4) {
@@ -861,11 +857,7 @@ bool _checkMacrocycleAmideEster14(const ROMol &mol, const Bond *bnd1,
         if (*nbrIdx != atm1->getIdx() && *nbrIdx != atm3->getIdx()) {
           const auto &res = mol.getAtomWithIdx(*nbrIdx);
           const auto &resbnd = mol.getBondBetweenAtoms(atm2->getIdx(), *nbrIdx);
-<<<<<<< HEAD
           if ((res->getAtomicNum() != 6 && res->getAtomicNum() != 1) || //check is (methylated)amide
-=======
-          if ((res->getAtomicNum() != 6 && res->getAtomicNum() != 1) ||
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
               resbnd->getBondType() != Bond::SINGLE) {
             return false;
           }
@@ -879,11 +871,7 @@ bool _checkMacrocycleAmideEster14(const ROMol &mol, const Bond *bnd1,
         if (*nbrIdx != atm2->getIdx() && *nbrIdx != atm4->getIdx()) {
           const auto &res = mol.getAtomWithIdx(*nbrIdx);
           const auto &resbnd = mol.getBondBetweenAtoms(atm3->getIdx(), *nbrIdx);
-<<<<<<< HEAD
           if (res->getAtomicNum() != 8 || //check for the carbonyl oxygen
-=======
-          if (res->getAtomicNum() != 8 ||
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
               resbnd->getBondType() != Bond::DOUBLE) {
             return false;
           }
@@ -1199,7 +1187,6 @@ void _record14Path(const ROMol &mol, unsigned int bid1, unsigned int bid2,
                        bid3] = 1;
     accumData.cisPaths[static_cast<unsigned long>(bid3) * nb * nb + bid2 * nb +
                        bid1] = 1;
-<<<<<<< HEAD
   } else {
     path14.type = Path14Configuration::OTHER;
   }
@@ -1312,8 +1299,6 @@ void _setMacrocycleTwoInSameRing14Bounds(const ROMol &mol, const Bond *bnd1,
     accumData.transPaths[bid1 * nb * nb + bid2 * nb + bid3] = 1;
     accumData.transPaths[bid3 * nb * nb + bid2 * nb + bid1] = 1;
 
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   } else {
     // here we will assume anything is possible
     dl = RDGeom::compute14DistCis(bl1, bl2, bl3, ba12, ba23);
@@ -1337,11 +1322,7 @@ void _setMacrocycleTwoInSameRing14Bounds(const ROMol &mol, const Bond *bnd1,
   accumData.paths14.push_back(path14);
 }
 
-<<<<<<< HEAD
 void _setMacrocycleAllInSameRing14Bounds(const ROMol &mol, const Bond *bnd1,
-=======
-void _setMacrocycle14Bounds(const ROMol &mol, const Bond *bnd1,
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
                             const Bond *bnd2, const Bond *bnd3,
                             ComputedData &accumData,
                             DistGeom::BoundsMatPtr mmat, double *dmat) {
@@ -1467,15 +1448,9 @@ void _setMacrocycle14Bounds(const ROMol &mol, const Bond *bnd1,
         path14.type = Path14Configuration::OTHER;
         // BOOST_LOG(rdDebugLog) << "Special 9 " << aid1 << " " << aid4 <<
         // "\n";
-<<<<<<< HEAD
       } else if ((_checkMacrocycleAllInSameRingAmideEster14(mol, bnd1, bnd3, atm1, atm2,
                                                atm3, atm4)) ||
                  (_checkMacrocycleAllInSameRingAmideEster14(mol, bnd3, bnd1, atm4, atm3,
-=======
-      } else if ((_checkMacrocycleAmideEster14(mol, bnd1, bnd3, atm1, atm2,
-                                               atm3, atm4)) ||
-                 (_checkMacrocycleAmideEster14(mol, bnd3, bnd1, atm4, atm3,
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
                                                atm2, atm1))) {
         dl =
             RDGeom::compute14DistTrans(bl1, bl2, bl3, ba12, ba23) +
@@ -1596,16 +1571,10 @@ void set14Bounds(const ROMol &mol, DistGeom::BoundsMatPtr mmat,
 
       if (rSize > 5) {
         if (useMacrocycle14config && rSize >= minMacrocycleRingSize) {
-<<<<<<< HEAD
           _setMacrocycleAllInSameRing14Bounds(
               mol, mol.getBondWithIdx(bid1), mol.getBondWithIdx(bid2),
               mol.getBondWithIdx(bid3), accumData, mmat, distMatrix);
           bidIsMacrocycle.insert(bid2);
-=======
-          _setMacrocycle14Bounds(
-              mol, mol.getBondWithIdx(bid1), mol.getBondWithIdx(bid2),
-              mol.getBondWithIdx(bid3), accumData, mmat, distMatrix);
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
         } else {
           _setInRing14Bounds(mol, mol.getBondWithIdx(bid1),
                              mol.getBondWithIdx(bid2), mol.getBondWithIdx(bid3),
@@ -1646,17 +1615,12 @@ void set14Bounds(const ROMol &mol, DistGeom::BoundsMatPtr mmat,
                 // either (bid1, bid2) or (bid2, bid3) are in the
                 // same ring (note all three cannot be in the same
                 // ring; we dealt with that before)
-<<<<<<< HEAD
                 if (useMacrocycle14config && bidIsMacrocycle.find(bid2) != bidIsMacrocycle.end()) {		
                   _setMacrocycleTwoInSameRing14Bounds(mol, bnd1, (*bi), bnd3, accumData,
                                             mmat, distMatrix);
                 }
 		else{
                   _setTwoInSameRing14Bounds(mol, bnd1, (*bi), bnd3, accumData,
-=======
-
-                _setTwoInSameRing14Bounds(mol, bnd1, (*bi), bnd3, accumData,
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
                                           mmat, distMatrix);
 		}
               } else if (((rinfo->numBondRings(bid1) > 0) &&

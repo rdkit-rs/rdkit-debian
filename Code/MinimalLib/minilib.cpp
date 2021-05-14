@@ -455,11 +455,7 @@ std::string JSMol::condense_abbreviations_from_defs(
 }
 
 std::string JSMol::generate_aligned_coords(const JSMol &templateMol,bool useCoordGen){
-<<<<<<< HEAD
   if (!d_mol || !templateMol.d_mol || !templateMol.d_mol->getNumConformers()) return "";
-=======
-  if (!d_mol || !templateMol.d_mol) return "";
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 #ifdef RDK_BUILD_COORDGEN_SUPPORT
   bool oprefer = RDDepict::preferCoordGen;

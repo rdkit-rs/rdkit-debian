@@ -365,7 +365,6 @@ M  END
     CHECK(molb.find("QUERYOP") == std::string::npos);
     CHECK(molb.find("FIELDNAME") != std::string::npos);
   }
-<<<<<<< HEAD
 }
 
 TEST_CASE("Allow brackets, cstates, and attachment points to be removed",
@@ -440,6 +439,4 @@ M  END)CTAB"_ctab;
     sgs[0].clearAttachPoints();
     CHECK(sgs[0].getAttachPoints().size() == 0);
   }
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 }

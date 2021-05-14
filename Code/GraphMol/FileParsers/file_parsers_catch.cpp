@@ -17,11 +17,8 @@
 #include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmartsWrite.h>
-<<<<<<< HEAD
 #include <GraphMol/FileParsers/SequenceParsers.h>
 #include <GraphMol/FileParsers/SequenceWriters.h>
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 #include <GraphMol/FileParsers/PNGParser.h>
 #include <RDGeneral/FileParseException.h>
 #include <boost/algorithm/string.hpp>
@@ -2062,7 +2059,6 @@ M  END
     CHECK(sgs[0].getProp<std::string>("QUERYOP") == "\"");
   }
 }
-<<<<<<< HEAD
 
 TEST_CASE("github #3597: Scientific notation in SDF V3000 files", "[bug]") {
   SECTION("basics") {
@@ -2164,5 +2160,72 @@ TEST_CASE("test bond flavors when writing PDBs", "[bug]") {
     }
   }
 }
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
+
+TEST_CASE(
+    "github #3768: SubstanceGroup output doesn't properly quote double "
+    "quotes") {
+  SECTION("basics") {
+    auto m = R"CTAB(
+  Mrv2014 01292104542D
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -1.3343 -0.7691 0 0
+M  V30 2 C -1.333 0.7709 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 2 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 1) FIELDNAME=[DUP]Tempstruct FIELDINFO="""" -
+M  V30 FIELDDISP="   -0.1770   -0.5034    DA    ALL  0       0" -
+M  V30 QUERYOP="""""" FIELDDATA=Foo1
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(m);
+    auto sgs = getSubstanceGroups(*m);
+    REQUIRE(sgs.size() == 1);
+    auto sg = sgs[0];
+    CHECK(sg.getProp<std::string>("FIELDINFO") == "\"");
+    CHECK(sg.getProp<std::string>("QUERYOP") == "\"\"");
+    auto mb = MolToV3KMolBlock(*m);
+    CHECK(mb.find("FIELDINFO=\"\"\"\"") != std::string::npos);
+    CHECK(mb.find("QUERYOP=\"\"\"\"\"") != std::string::npos);
+  }
+  SECTION("parens and quote not at beginning") {
+    auto m = R"CTAB(
+  Mrv2014 01292104542D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -1.3343 -0.7691 0 0
+M  V30 2 C -1.333 0.7709 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 2 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 1) FIELDNAME=[DUP]Tempstruct FIELDINFO="foo""" -
+M  V30 FIELDDISP="   -0.1770   -0.5034    DA    ALL  0       0" -
+M  V30 QUERYOP="(bar)" FIELDDATA=Foo1
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(m);
+    auto sgs = getSubstanceGroups(*m);
+    REQUIRE(sgs.size() == 1);
+    auto sg = sgs[0];
+    CHECK(sg.getProp<std::string>("FIELDINFO") == "foo\"");
+    CHECK(sg.getProp<std::string>("QUERYOP") == "(bar)");
+    auto mb = MolToV3KMolBlock(*m);
+    CHECK(mb.find("FIELDINFO=\"foo\"\"\"") != std::string::npos);
+    CHECK(mb.find("QUERYOP=\"(bar)\"") != std::string::npos);
+  }
+}

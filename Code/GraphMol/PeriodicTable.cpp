@@ -41,14 +41,8 @@ PeriodicTable::PeriodicTable() {
       // atomic numbers in the atomic_data data structure. It's ok to have
       // multiple symbols map to the same atomic number (above), but we need to
       // be sure that we only store one entry per atomic number.
-<<<<<<< HEAD
       // Note that this only works because the first atom in the adata list is
       // the dummy atom (atomic number 0). This was #2784
-=======
-      // Note that this only works because the first atom in the adata list is the
-      // dummy atom (atomic number 0).
-      // This was #2784
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
       if (rdcast<size_t>(adata.AtomicNum()) == byanum.size()) {
         byanum.push_back(adata);
       }

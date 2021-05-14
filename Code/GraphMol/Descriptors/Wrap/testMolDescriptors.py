@@ -610,15 +610,12 @@ class TestCase(unittest.TestCase):
       nTPSA = rdMD.CalcTPSA(mol, force=True, includeSandP=True)
       self.assertAlmostEqual(nTPSA, new_tpsa[i], 2)
 
-<<<<<<< HEAD
   def testGithub1761(self):
     mol = Chem.MolFromSmiles('CC(F)(Cl)C(F)(Cl)C')
     self.assertRaises(OverflowError, lambda: rdMD.GetMorganFingerprint(mol, -1))
     self.assertRaises(OverflowError, lambda: rdMD.GetHashedMorganFingerprint(mol, 0, -1))
     self.assertRaises(ValueError, lambda: rdMD.GetHashedMorganFingerprint(mol, 0, 0))
 
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   @unittest.skipIf(not haveBCUT, "BCUT descriptors not present")
   def testBCUT(self):
     smiles = ("c1ccccc1S", "c1cscc1", "CC(=S)C", "CSC", "CS(=O)C", "CP(C)C", "CP=O", "CP(C)(C)=O",

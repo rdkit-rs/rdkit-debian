@@ -27,7 +27,6 @@ target_compile_definitions(MolDraw2D PRIVATE RDKIT_MOLDRAW2D_BUILD)
 if(RDK_BUILD_QT_SUPPORT)
   target_compile_definitions(MolDraw2D PUBLIC "-DRDK_BUILD_QT_SUPPORT")
   find_package(Qt5 COMPONENTS Widgets OpenGL REQUIRED)
-<<<<<<< HEAD
   target_sources(MolDraw2D PRIVATE MolDraw2DQt.cpp DrawTextQt.cpp)
   target_link_libraries(MolDraw2D PRIVATE Qt5::Widgets Qt5::OpenGL)
   rdkit_headers(MolDraw2DQt.h DrawTextQt.h DEST GraphMol/MolDraw2D)
@@ -35,12 +34,6 @@ if(RDK_BUILD_QT_SUPPORT)
      target_link_libraries(MolDraw2D_static PRIVATE Qt5::Widgets Qt5::OpenGL)
      target_sources(MolDraw2D_static PRIVATE MolDraw2DQt.cpp DrawTextQt.cpp)
   endif()
-=======
-  target_sources(MolDraw2D PRIVATE MolDraw2DQt.cpp)
-  target_compile_options(MolDraw2D PRIVATE "-std=c++11")
-  target_link_libraries(MolDraw2D PUBLIC Qt5::Widgets Qt5::OpenGL)
-  rdkit_headers(MolDraw2DQt.h DEST GraphMol/MolDraw2D)
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 endif(RDK_BUILD_QT_SUPPORT)
 
 if(RDK_BUILD_CAIRO_SUPPORT)
@@ -89,7 +82,6 @@ if(RDK_BUILD_FREETYPE_SUPPORT)
     endif()
     rdkit_headers(DrawTextFTCairo.h DEST GraphMol/MolDraw2D)
   endif()
-<<<<<<< HEAD
   if(RDK_BUILD_QT_SUPPORT)
     target_sources(MolDraw2D PRIVATE DrawTextFTQt.cpp)
     if(RDK_INSTALL_STATIC_LIBS)
@@ -97,14 +89,11 @@ if(RDK_BUILD_FREETYPE_SUPPORT)
     endif()
     rdkit_headers(DrawTextFTQt.h DEST GraphMol/MolDraw2D)
   endif()
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 endif(RDK_BUILD_FREETYPE_SUPPORT)
 
 rdkit_test(moldraw2DTest1 test1.cpp LINK_LIBRARIES
   MolDraw2D )
 
-<<<<<<< HEAD
 rdkit_catch_test(moldraw2DTestCatch catch_main.cpp catch_tests.cpp LINK_LIBRARIES
   MolDraw2D CIPLabeler )
 
@@ -112,10 +101,6 @@ if(RDK_BUILD_QT_SUPPORT)
 rdkit_catch_test(moldraw2DTestQt catch_qt.cpp LINK_LIBRARIES
   MolDraw2D Qt5::Widgets Qt5::OpenGL)
 endif(RDK_BUILD_QT_SUPPORT)
-=======
-rdkit_catch_test(moldraw2DTestCatch catch_tests.cpp LINK_LIBRARIES
-  MolDraw2D CIPLabeler )
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 rdkit_test(moldraw2DRxnTest1 rxn_test1.cpp LINK_LIBRARIES
   MolDraw2D )

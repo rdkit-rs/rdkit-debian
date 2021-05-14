@@ -528,7 +528,6 @@ void drawAttachmentLineHelper(RDKit::MolDraw2D &self, const Point2D &cds1,
                               double len, unsigned int nSegments) {
   auto col = pyTupleToDrawColour(pycol);
   self.drawAttachmentLine(cds1, cds2, col, len, nSegments);
-<<<<<<< HEAD
 }
 
 void drawWavyLineHelper(RDKit::MolDraw2D &self, const Point2D &cds1,
@@ -558,26 +557,6 @@ MolDraw2DQt *moldrawFromQPainter(int width, int height, unsigned long ptr,
   return new MolDraw2DQt(width, height, *qptr, panelWidth, panelHeight);
 }
 #endif
-=======
-}
-
-void drawWavyLineHelper(RDKit::MolDraw2D &self, const Point2D &cds1,
-                        const Point2D &cds2, python::tuple &pycol1,
-                        python::tuple &pycol2, unsigned int nSegments,
-                        double vertOffset) {
-  auto col1 = pyTupleToDrawColour(pycol1);
-  auto col2 = pyTupleToDrawColour(pycol2);
-  self.drawWavyLine(cds1, cds2, col1, col2, nSegments, vertOffset);
-}
-
-void setDrawOptions(RDKit::MolDraw2D &self, const MolDrawOptions &opts) {
-  self.drawOptions() = opts;
-}
-
-void setDrawerColour(RDKit::MolDraw2D &self, python::tuple tpl) {
-  self.setColour(pyTupleToDrawColour(tpl));
-}
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
 }  // namespace RDKit
 

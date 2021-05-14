@@ -261,14 +261,10 @@ std::string addMolToPNGStream(const ROMol &mol, std::istream &iStream,
     metadata.push_back(std::make_pair(augmentTagName(PNGData::smilesTag), smi));
   }
   if (includeMol) {
-<<<<<<< HEAD
     bool includeStereo = true;
     int confId = -1;
     bool kekulize = false;
     std::string mb = MolToMolBlock(mol, includeStereo, confId, kekulize);
-=======
-    std::string mb = MolToMolBlock(mol);
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     metadata.push_back(std::make_pair(augmentTagName(PNGData::molTag), mb));
   }
   return addMetadataToPNGStream(iStream, metadata);

@@ -82,20 +82,12 @@ class RDKIT_GRAPHMOL_EXPORT SubstanceGroup : public RDProps {
     }
   };
 
-<<<<<<< HEAD
 //! No default constructor
 #ifndef SWIG
   // Unfortunately, SWIG generated wrapper code uses temporary variables that
   // require a default ctor not be deleted.
   SubstanceGroup() = delete;
 #endif  // !SWIG
-=======
-  //! No default constructor
-  #ifndef SWIG
-   // Unfortunately, SWIG generated wrapper code uses temporary variables that require a default ctor not be deleted.
-   SubstanceGroup() = delete;
-  #endif // !SWIG
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
   //! Main Constructor. Ownership is only set on this side of the relationship:
   //! mol->addSubstanceGroup(sgroup) still needs to be called to get ownership
@@ -146,13 +138,10 @@ class RDKIT_GRAPHMOL_EXPORT SubstanceGroup : public RDProps {
   const std::vector<CState> &getCStates() const { return d_cstates; }
   const std::vector<AttachPoint> &getAttachPoints() const { return d_saps; }
 
-<<<<<<< HEAD
   void clearBrackets() { d_brackets.clear(); };
   void clearCStates() { d_cstates.clear(); };
   void clearAttachPoints() { d_saps.clear(); };
 
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   //! adjusts our atom IDs to reflect that an atom has been removed from the
   //! parent molecule
   //!   decrements all atom IDs that are higher than \c atomIdx

@@ -298,11 +298,7 @@ void MolDraw2DSVG::clearDrawing() {
   d_os << "<rect";
   d_os << " style='opacity:1.0;fill:" << col << ";stroke:none'";
   d_os << " width='" << width() << "' height='" << height() << "'";
-<<<<<<< HEAD
   d_os << " x='" << offset().x << "' y='" << offset().y << "'";
-=======
-  d_os << " x='0' y='0'";
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   d_os << "> </rect>\n";
 }
 

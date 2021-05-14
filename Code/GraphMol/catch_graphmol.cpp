@@ -1413,18 +1413,10 @@ TEST_CASE("Github #3470: Hydrogen is incorrectly identified as an early atom",
 
 TEST_CASE("Additional oxidation states", "[chemistry]") {
   SECTION("Basics") {
-<<<<<<< HEAD
     std::vector<std::string> smiles = {"F[Po](F)(F)(F)", "F[Po](F)(F)(F)(F)F",
                                        "F[Xe](F)(F)(F)", "F[Xe](F)(F)(F)(F)F",
                                        "F[I](F)F",       "F[I](F)(F)(F)F",
                                        "F[At](F)F",      "F[At](F)(F)(F)F"};
-=======
-    std::vector<std::string> smiles = {
-        "F[Po](F)(F)(F)",     "F[Po](F)(F)(F)(F)F", "F[Xe](F)(F)(F)",
-        "F[Xe](F)(F)(F)(F)F", "F[Cl](F)F",          "F[Cl](F)(F)(F)F",
-        "F[Br](F)F",          "F[Br](F)(F)(F)F",    "F[I](F)F",
-        "F[I](F)(F)(F)F",     "F[At](F)F",          "F[At](F)(F)(F)F"};
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     for (const auto &smi : smiles) {
       std::unique_ptr<ROMol> m(SmilesToMol(smi));
       REQUIRE(m);
@@ -1432,3 +1424,35 @@ TEST_CASE("Additional oxidation states", "[chemistry]") {
     }
   }
 }
+
+TEST_CASE("Github #3805: radicals on [He]", "[chemistry]") {
+  SECTION("Basics") {
+    {
+      auto m = "[He]"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(0)->getNumRadicalElectrons() == 0);
+      CHECK(m->getAtomWithIdx(0)->getTotalNumHs() == 0);
+    }
+    {
+      auto m = "[Ne]"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(0)->getNumRadicalElectrons() == 0);
+      CHECK(m->getAtomWithIdx(0)->getTotalNumHs() == 0);
+    }
+  }
+  SECTION("Basics") {
+    {
+      auto m = "[He+]"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(0)->getNumRadicalElectrons() == 1);
+      CHECK(m->getAtomWithIdx(0)->getTotalNumHs() == 0);
+    }
+    {
+      auto m = "[Ne+]"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(0)->getNumRadicalElectrons() == 1);
+      CHECK(m->getAtomWithIdx(0)->getTotalNumHs() == 0);
+    }
+  }
+}
+

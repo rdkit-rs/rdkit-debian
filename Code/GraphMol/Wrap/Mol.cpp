@@ -97,20 +97,6 @@ Conformer *GetMolConformer(ROMol &mol, int id = -1) {
   return &(mol.getConformer(id));
 }
 
-<<<<<<< HEAD
-=======
-PyObject *GetMolConformers(ROMol &mol) {
-  PyObject *res = PyTuple_New(mol.getNumConformers());
-  ROMol::ConformerIterator ci;
-  unsigned int i = 0;
-  for (ci = mol.beginConformers(); ci != mol.endConformers(); ci++) {
-    PyTuple_SetItem(res, i, python::converter::shared_ptr_to_python(*ci));
-    i++;
-  }
-  return res;
-}
-
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 void MolDebug(const ROMol &mol, bool useStdout) {
   if (useStdout) {
     mol.debugMol(std::cout);

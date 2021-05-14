@@ -121,7 +121,8 @@ int testMolSup() {
     TEST_ASSERT(nmol->getProp<std::string>("s_m_entry_name") ==
                 "NCI_aids_few.1");
     TEST_ASSERT(nmol->hasProp("r_f3d_dummy"));
-    TEST_ASSERT(std::abs(nmol->getProp<double>("r_f3d_dummy") - 42.123) < 0.0001);
+    TEST_ASSERT(std::abs(nmol->getProp<double>("r_f3d_dummy") - 42.123) <
+                0.0001);
 
     // Test atom properties
     TEST_ASSERT(nmol->getNumAtoms() == 19);
@@ -144,8 +145,8 @@ int testMolSup() {
       // The real property is only defined for i >= 10
       if (i >= 10) {
         TEST_ASSERT(atom->hasProp("r_f3d_dummy"));
-        TEST_ASSERT(std::abs(atom->getProp<double>("r_f3d_dummy") - (19.1 - i)) <
-                    0.0001);
+        TEST_ASSERT(std::abs(atom->getProp<double>("r_f3d_dummy") -
+                             (19.1 - i)) < 0.0001);
       } else {
         TEST_ASSERT(!atom->hasProp("r_f3d_dummy"));
       }
@@ -212,7 +213,32 @@ int testMolSup() {
         TEST_ASSERT(!at->hasProp(common_properties::_CIPCode));
       }
     }
-
+    {  // intentionally bad chirality label, intended to
+      // make sure we can step over parse errors
+      std::unique_ptr<ROMol> nmol;
+      try {
+        nmol.reset(maesup.next());
+      } catch (const Invar::Invariant &) {
+        // just ignore this failure
+      }
+      TEST_ASSERT(!nmol);
+    }
+    {  // "Undefined" chirality label
+      std::unique_ptr<ROMol> nmol(maesup.next());
+      TEST_ASSERT(nmol);
+      {
+        Atom *at = nmol->getAtomWithIdx(2);
+        TEST_ASSERT(at);
+        TEST_ASSERT(at->getChiralTag() == Atom::CHI_UNSPECIFIED);
+        TEST_ASSERT(!at->hasProp(common_properties::_CIPCode));
+      }
+      {
+        Atom *at = nmol->getAtomWithIdx(5);
+        TEST_ASSERT(at);
+        TEST_ASSERT(at->getChiralTag() == Atom::CHI_UNSPECIFIED);
+        TEST_ASSERT(!at->hasProp(common_properties::_CIPCode));
+      }
+    }
     TEST_ASSERT(maesup.atEnd());
   }
   {  // Test loop reading
@@ -2795,7 +2821,6 @@ void testGitHub2881() {
 void testGitHub2881() {}
 #endif
 
-<<<<<<< HEAD
 void testGitHub3517() {
   std::string rdbase = getenv("RDBASE");
   std::string fname =
@@ -2807,8 +2832,6 @@ void testGitHub3517() {
   TEST_ASSERT(!sdsup.atEnd());
 }
 
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 int main() {
   RDLog::InitLogs();
 
@@ -2998,13 +3021,10 @@ int main() {
   BOOST_LOG(rdErrorLog) << "Finished: testGitHub2881()\n";
   BOOST_LOG(rdErrorLog) << "-----------------------------------------\n\n";
 
-<<<<<<< HEAD
   BOOST_LOG(rdErrorLog) << "-----------------------------------------\n";
   testGitHub3517();
   BOOST_LOG(rdErrorLog) << "Finished: testGitHub3517()\n";
   BOOST_LOG(rdErrorLog) << "-----------------------------------------\n\n";
 
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
   return 0;
 }

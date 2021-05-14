@@ -157,7 +157,6 @@ PyObject *createExceptionClass(const char *name,
   }
   python::scope().attr(name) = python::handle<>(python::borrowed(typeObj));
   return typeObj;
-<<<<<<< HEAD
 }
 
 template <typename O, typename T>
@@ -168,8 +167,6 @@ T *get_item_ptr(O &self, int i) {
 template <typename O, typename T>
 T *next_ptr(O &self) {
   return self.next().get();
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 }
 
 BOOST_PYTHON_MODULE(rdchem) {
@@ -261,12 +258,8 @@ BOOST_PYTHON_MODULE(rdchem) {
            python::return_internal_reference<
                1, python::with_custodian_and_ward_postcall<0, 1>>())
       .def("__next__", &AtomIterSeq::next,
-<<<<<<< HEAD
            python::return_internal_reference<
                1, python::with_custodian_and_ward_postcall<0, 1>>())
-=======
-           python::return_value_policy<python::reference_existing_object>())
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 
       .def("__len__", &AtomIterSeq::len)
       .def("__getitem__", &AtomIterSeq::get_item,
@@ -280,12 +273,8 @@ BOOST_PYTHON_MODULE(rdchem) {
            python::return_internal_reference<
                1, python::with_custodian_and_ward_postcall<0, 1>>())
       .def("__next__", &QueryAtomIterSeq::next,
-<<<<<<< HEAD
            python::return_internal_reference<
                1, python::with_custodian_and_ward_postcall<0, 1>>())
-=======
-           python::return_value_policy<python::reference_existing_object>())
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
       .def("__len__", &QueryAtomIterSeq::len)
       .def("__getitem__", &QueryAtomIterSeq::get_item,
            python::return_internal_reference<

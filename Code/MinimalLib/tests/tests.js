@@ -93,7 +93,6 @@ function test_abbreviations(){
 }
 
 
-<<<<<<< HEAD
 function test_generate_aligned_coords(){
     var smiles = "CCC";
     var mol = Module.get_mol(smiles);
@@ -103,18 +102,13 @@ function test_generate_aligned_coords(){
 }
 
 
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
 Module.onRuntimeInitialized = () => {
     console.log(Module.version());
     test_basics();
     test_sketcher_services();
     test_sketcher_services2();
     test_abbreviations();
-<<<<<<< HEAD
     test_generate_aligned_coords();
-=======
->>>>>>> d24111c9f5ea0c129a2416f0888f8fadb42d53c0
     console.log("Tests finished successfully");
 };
 
