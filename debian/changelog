@@ -5,6 +5,8 @@ rdkit (202009.5-1) UNRELEASED; urgency=medium
 
   [ Michael Banck ]
   * debian/watch: Updated.
+  * debian/patches/sphinx_compile_fixes.patch: Drop hunk that got applied
+    upstream.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 21 Feb 2021 11:49:54 +0100
 
