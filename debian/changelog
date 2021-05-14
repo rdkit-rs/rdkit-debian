@@ -1,15 +1,12 @@
-rdkit (202009.5-1) UNRELEASED; urgency=medium
+rdkit (202009.5-1) unstable; urgency=medium
 
-  [ Debichem Team ]
   * New upstream point release.
-
-  [ Michael Banck ]
   * debian/watch: Updated.
   * debian/patches/sphinx_compile_fixes.patch: Drop hunk that got applied
     upstream.
   * debian/patches/postgres_compile_fixes.patch: Refreshed. 
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 21 Feb 2021 11:49:54 +0100
+ -- Michael Banck <mbanck@debian.org>  Fri, 14 May 2021 23:46:40 +0200
 
 rdkit (202009.4-1) unstable; urgency=medium
 
