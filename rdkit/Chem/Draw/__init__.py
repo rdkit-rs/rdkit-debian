@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2019 Greg Landrum
+# Copyright (C) 2006-2021 Greg Landrum
 #  All Rights Reserved
 #
 #  This file is part of the RDKit.
@@ -475,8 +475,11 @@ def _moltoimg(mol, sz, highlights, legend, returnPNG=False, drawOptions=None, **
     # we already prepared the molecule:
     d2d.drawOptions().prepareMolsBeforeDrawing = False
     bondHighlights = kwargs.get('highlightBonds', None)
-    d2d.DrawMolecule(mc, legend=legend or "", highlightAtoms=highlights or [],
-                     highlightBonds=bondHighlights or [])
+    if bondHighlights is not None:
+      d2d.DrawMolecule(mc, legend=legend or "", highlightAtoms=highlights or [],
+                       highlightBonds=bondHighlights)
+    else:
+      d2d.DrawMolecule(mc, legend=legend or "", highlightAtoms=highlights or [])
     d2d.FinishDrawing()
     if returnPNG:
       img = d2d.GetDrawingText()
@@ -504,8 +507,11 @@ def _moltoSVG(mol, sz, highlights, legend, kekulize, drawOptions=None, **kwargs)
     d2d.SetDrawOptions(drawOptions)
 
   bondHighlights = kwargs.get('highlightBonds', None)
-  d2d.DrawMolecule(mc, legend=legend or "", highlightAtoms=highlights or [],
-                   highlightBonds=bondHighlights or [])
+  if bondHighlights is not None:
+    d2d.DrawMolecule(mc, legend=legend or "", highlightAtoms=highlights or [],
+                     highlightBonds=bondHighlights)
+  else:
+    d2d.DrawMolecule(mc, legend=legend or "", highlightAtoms=highlights or [])
   d2d.FinishDrawing()
   svg = d2d.GetDrawingText()
   return svg
@@ -823,11 +829,10 @@ def DrawMorganEnvs(envs, molsPerRow=3, subImgSize=(150, 150), baseRad=0.3, useSV
     drawer = rdMolDraw2D.MolDraw2DCairo(fullSize[0], fullSize[1], subImgSize[0], subImgSize[1])
 
   if drawOptions is None:
-    drawopt = drawer.drawOptions()
-    drawopt.continuousHighlight = False
-  else:
-    drawOptions.continuousHighlight = False
-    drawer.SetDrawOptions(drawOptions)
+    drawOptions = drawer.drawOptions()
+  drawOptions.continuousHighlight = False
+  drawOptions.includeMetadata = False
+  drawer.SetDrawOptions(drawOptions)
   drawer.DrawMolecules(submols, legends=legends, highlightAtoms=highlightAtoms,
                        highlightAtomColors=atomColors, highlightBonds=highlightBonds,
                        highlightBondColors=bondColors, highlightAtomRadii=highlightRadii, **kwargs)
@@ -849,12 +854,10 @@ def DrawMorganEnv(mol, atomId, radius, molSize=(150, 150), baseRad=0.3, useSVG=T
     drawer = rdMolDraw2D.MolDraw2DCairo(molSize[0], molSize[1])
 
   if drawOptions is None:
-    drawopt = drawer.drawOptions()
-    drawopt.continuousHighlight = False
-  else:
-    drawOptions.continuousHighlight = False
-    drawer.SetDrawOptions(drawOptions)
-
+    drawOptions = drawer.drawOptions()
+  drawOptions.continuousHighlight = False
+  drawOptions.includeMetadata = False
+  drawer.SetDrawOptions(drawOptions)
   drawer.DrawMolecule(menv.submol, highlightAtoms=menv.highlightAtoms,
                       highlightAtomColors=menv.atomColors, highlightBonds=menv.highlightBonds,
                       highlightBondColors=menv.bondColors, highlightAtomRadii=menv.highlightRadii,
@@ -968,11 +971,10 @@ def DrawRDKitEnvs(envs, molsPerRow=3, subImgSize=(150, 150), baseRad=0.3, useSVG
     drawer = rdMolDraw2D.MolDraw2DCairo(fullSize[0], fullSize[1], subImgSize[0], subImgSize[1])
 
   if drawOptions is None:
-    drawopt = drawer.drawOptions()
-    drawopt.continuousHighlight = False
-  else:
-    drawOptions.continuousHighlight = False
-    drawer.SetDrawOptions(drawOptions)
+    drawOptions = drawer.drawOptions()
+  drawOptions.continuousHighlight = False
+  drawOptions.includeMetadata = False
+  drawer.SetDrawOptions(drawOptions)
   drawer.DrawMolecules(submols, legends=legends, highlightAtoms=highlightAtoms,
                        highlightAtomColors=atomColors, highlightBonds=highlightBonds,
                        highlightBondColors=bondColors, highlightAtomRadii=highlightRadii, **kwargs)
@@ -992,12 +994,10 @@ def DrawRDKitEnv(mol, bondPath, molSize=(150, 150), baseRad=0.3, useSVG=True,
     drawer = rdMolDraw2D.MolDraw2DCairo(molSize[0], molSize[1])
 
   if drawOptions is None:
-    drawopt = drawer.drawOptions()
-    drawopt.continuousHighlight = False
-  else:
-    drawOptions.continuousHighlight = False
-    drawer.SetDrawOptions(drawOptions)
-
+    drawOptions = drawer.drawOptions()
+  drawOptions.continuousHighlight = False
+  drawOptions.includeMetadata = False
+  drawer.SetDrawOptions(drawOptions)
   drawer.DrawMolecule(menv.submol, highlightAtoms=menv.highlightAtoms,
                       highlightAtomColors=menv.atomColors, highlightBonds=menv.highlightBonds,
                       highlightBondColors=menv.bondColors, highlightAtomRadii=menv.highlightRadii,
