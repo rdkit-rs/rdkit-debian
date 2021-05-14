@@ -2,7 +2,7 @@ Index: rdkit/Code/PgSQL/rdkit/adapter.cpp
 ===================================================================
 --- rdkit.orig/Code/PgSQL/rdkit/adapter.cpp
 +++ rdkit/Code/PgSQL/rdkit/adapter.cpp
-@@ -646,7 +646,7 @@ extern "C" CROMol MolAdjustQueryProperti
+@@ -650,7 +650,7 @@ extern "C" CROMol MolAdjustQueryProperti
      try {
        MolOps::parseAdjustQueryParametersFromJSON(p, pstring);
      } catch (const ValueErrorException &e) {
