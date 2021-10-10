@@ -1,6 +1,10 @@
 rdkit (202103.5-1) UNRELEASED; urgency=medium
 
+  [ Debichem Team ]
   * New upstream release.
+
+  [ Michael Banck ]
+  * debian/patches/sphinx_compile_fixes.patch: Refreshed. 
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Fri, 14 May 2021 23:49:09 +0200
 
