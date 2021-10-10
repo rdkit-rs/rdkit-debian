@@ -5,6 +5,7 @@ rdkit (202103.5-1) UNRELEASED; urgency=medium
 
   [ Michael Banck ]
   * debian/patches/sphinx_compile_fixes.patch: Refreshed. 
+  * debian/control (postgresql-PGVERSION-rdkit): Bump PostgreSQL version to 14.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Fri, 14 May 2021 23:49:09 +0200
 
