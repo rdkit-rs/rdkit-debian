@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.7)
 
 project (RDKit)
 
@@ -18,7 +18,6 @@ set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/Code/cmake/Modules/")
 
 add_library(rdkit_base INTERFACE)
-add_dependencies(rdkit_base catch)
 
 option(RDK_BUILD_SWIG_WRAPPERS "build the SWIG wrappers" OFF )
 option(RDK_BUILD_PYTHON_WRAPPERS "build the standard python wrappers" ON )
@@ -68,8 +67,8 @@ if(NOT MSVC)
   if(RDK_OPTIMIZE_POPCNT)
     if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
       message("RDK_OPTIMIZE_POPCNT is not available on aarch64")
-    elseif(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "ppc64le")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntb")
+    elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
     else()
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
     endif()
@@ -83,7 +82,7 @@ if(NOT UNIX OR APPLE)
   endif(RDK_USE_BOOST_STACKTRACE)
 endif()
 
-if(RDK_BUILD_SWIG_WRAPPERS!=ON)
+if(NOT RDK_BUILD_SWIG_WRAPPERS)
   set(RDK_BUILD_SWIG_JAVA_WRAPPER OFF)
   set(RDK_BUILD_SWIG_CSHARP_WRAPPER OFF)
 endif()
@@ -95,7 +94,7 @@ if(RDK_SWIG_STATIC AND RDK_BUILD_SWIG_WRAPPERS)
   endif(NOT MSVC AND NOT RDK_INSTALL_STATIC_LIBS)
 endif()
 
-if(NOT (MSVC AND (NOT RDK_INSTALL_DLLS_MSVC)))
+if((NOT (MSVC AND (NOT RDK_INSTALL_DLLS_MSVC))) AND NOT (WIN32 AND RDK_INSTALL_STATIC_LIBS))
   add_definitions(-DRDKIT_DYN_LINK)
 endif()
 
@@ -119,8 +118,8 @@ set(RDK_PYTHON_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/rdkit")
 
 #-------
 # Config variables:
-set(RDKit_Year "2020")
-set(RDKit_Month "09")
+set(RDKit_Year "2021")
+set(RDKit_Month "03")
 set(RDKit_Revision "5")
 set(RDKit_RevisionModifier "")
 set(RDKit_ABI "1")
@@ -131,10 +130,10 @@ string(REGEX REPLACE "^0" "" RDKit_intMonth ${RDKit_Month} )
 
 set(RDKit_CodeDir "${CMAKE_CURRENT_SOURCE_DIR}/Code")
 set(RDKit_ExternalDir "${CMAKE_CURRENT_SOURCE_DIR}/External")
+set(RDKit_DataDir "${CMAKE_CURRENT_SOURCE_DIR}/Data")
 
 #include catch
 add_subdirectory(${RDKit_ExternalDir}/catch)
-include_directories(${CATCH_INCLUDE_DIR})
 message("CATCH: ${CATCH_INCLUDE_DIR}")
 
 if(RDK_INSTALL_INTREE)
@@ -196,7 +195,7 @@ if(RDK_USE_URF)
 endif()
 
 
-if(CMAKE_SIZEOF_VOID_P MATCHES 4)
+if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   target_compile_definitions(rdkit_base INTERFACE "-DRDK_32BIT_BUILD")
 else()
   target_compile_definitions(rdkit_base INTERFACE "-DRDK_64BIT_BUILD")
@@ -227,6 +226,9 @@ endif(MSVC)
 if(MSVC)
   # FIX: do we still need this?
   target_compile_definitions(rdkit_base INTERFACE "-DBOOST_ALL_NO_LIB")
+  if(RDK_INSTALL_DLLS_MSVC)
+    target_compile_definitions(rdkit_base INTERFACE "-DBOOST_ALL_DYN_LINK")
+  endif(RDK_INSTALL_DLLS_MSVC)
 endif(MSVC)
 
 if(RDK_BUILD_INCHI_SUPPORT)
@@ -346,6 +348,18 @@ if(RDK_BUILD_PYTHON_WRAPPERS)
   install(TARGETS rdkit_py_base EXPORT ${RDKit_EXPORTED_TARGETS}
           COMPONENT dev )
 
+  # check to see if we can find nbval,
+  execute_process(
+    COMMAND
+    ${PYTHON_EXECUTABLE} -c "import nbval"
+    ERROR_VARIABLE nbvalERR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(NOT nbvalERR)
+    set(RDK_NBVAL_AVAILABLE ON)
+  else()
+    message("nbval not found, disabling the jupyter tests")
+  endif()
+
 else(RDK_BUILD_PYTHON_WRAPPERS)
   find_package(Boost ${RDK_BOOST_VERSION} REQUIRED)
 endif(RDK_BUILD_PYTHON_WRAPPERS)
@@ -367,24 +381,27 @@ if(RDK_BUILD_DESCRIPTORS3D)
 endif(RDK_BUILD_DESCRIPTORS3D)
 
 
-find_package (Threads)
-set(RDKit_THREAD_LIBS Threads::Threads)
 if(RDK_BUILD_THREADSAFE_SSS)
+  find_package (Threads)
+  set(RDKit_THREAD_LIBS Threads::Threads)
   target_compile_definitions(rdkit_base INTERFACE -DRDK_THREADSAFE_SSS)
   if(RDK_TEST_MULTITHREADED)
     target_compile_definitions(rdkit_base INTERFACE "-DRDK_TEST_MULTITHREADED")
   endif()
   target_link_libraries(rdkit_base INTERFACE Threads::Threads)
 else()
+  # otherwise boost flyweight links against pthreads and causes the
+  # RDK_BUILD_THREADSAFE_SSS=OFF build to fail
+  target_compile_definitions(rdkit_base INTERFACE "-DBOOST_DISABLE_THREADS")
   if(RDK_TEST_MULTITHREADED)
-    message("RDK_TEST_MULTITHREADED does not make sense without RD_BUILD_THREADSAFE_SSS, disabling it.")
+    message("RDK_TEST_MULTITHREADED does not make sense without RDK_BUILD_THREADSAFE_SSS, disabling it.")
     set(RDK_TEST_MULTITHREADED OFF)
   endif()
 endif()
 
 if(RDK_USE_BOOST_SERIALIZATION)
     set(T_LIBS ${Boost_LIBRARIES})
-    find_package(Boost ${RDK_BOOST_VERSION} COMPONENTS serialization)
+    find_package(Boost ${RDK_BOOST_VERSION} COMPONENTS system serialization iostreams)
     if (Boost_SERIALIZATION_LIBRARY)
       set(Boost_LIBRARIES ${T_LIBS} ${Boost_LIBRARIES})
     else()
@@ -443,7 +460,7 @@ else(RDK_TEST_COVERAGE)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
   endif()
  endif()
- if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
    # We don't on C_FLAGS warnings to keep Avalon compiling quiet
    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds -fPIC -Wno-parentheses -Wno-logical-op-parentheses -Wno-format")
    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-deprecated -Wno-unused-function -fno-strict-aliasing -Wno-format -Wno-logical-op-parentheses -fPIC")

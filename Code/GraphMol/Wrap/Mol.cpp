@@ -33,6 +33,10 @@ namespace python = boost::python;
 
 namespace RDKit {
 
+void MolClearComputedPropsHelper(const ROMol &mol, bool includeRings) {
+  mol.clearComputedProps(includeRings);
+}
+
 python::object MolToBinary(const ROMol &self) {
   std::string res;
   {
@@ -228,6 +232,28 @@ class ReadWriteMol : public RWMol {
     auto *res = new ROMol(*this);
     return res;
   }
+
+  ReadWriteMol *enter() {
+    beginBatchEdit();
+    return this;
+  }
+  bool exit(python::object exc_type, python::object exc_val,
+            python::object traceback) {
+    RDUNUSED_PARAM(exc_val);
+    RDUNUSED_PARAM(traceback);
+    if (exc_type != python::object()) {
+      // exception thrown, abort the edits
+      rollbackBatchEdit();
+    } else {
+      commitBatchEdit();
+    }
+    // we haven't handled any possible exceptions (and shouldn't do so),
+    // so just return false;
+    return false;
+  }
+
+ private:
+  boost::shared_ptr<RWMol> dp_mol;
 };
 
 std::string molClassDoc =
@@ -688,7 +714,8 @@ struct mol_wrapper {
              "  ARGUMENTS:\n"
              "    - key: the name of the property to clear (a string).\n")
 
-        .def("ClearComputedProps", MolClearComputedProps<ROMol>,
+        .def("ClearComputedProps", MolClearComputedPropsHelper,
+             (python::arg("self"), python::arg("includeRings") = true),
              "Removes all computed properties from the molecule.\n\n")
 
         .def("UpdatePropertyCache", &ROMol::updatePropertyCache,
@@ -781,6 +808,7 @@ struct mol_wrapper {
         .def("GetRingInfo", &ROMol::getRingInfo,
              python::return_value_policy<python::reference_existing_object>(),
              "Returns the number of molecule's RingInfo object.\n\n");
+    python::register_ptr_to_python<std::shared_ptr<ROMol>>();
 
     // ---------------------------------------------------------------------------------------------
     python::def("_HasSubstructMatchStr", HasSubstructMatchStr,
@@ -809,6 +837,10 @@ struct mol_wrapper {
         .def(python::init<const ROMol &, bool, int>())
         .def("__copy__", &generic__copy__<ReadWriteMol>)
         .def("__deepcopy__", &generic__deepcopy__<ReadWriteMol>)
+        .def("__enter__", &ReadWriteMol::enter,
+             python::return_internal_reference<>())
+        .def("__exit__", &ReadWriteMol::exit)
+
         .def("RemoveAtom", &ReadWriteMol::RemoveAtom,
              "Remove the specified atom from the molecule")
         .def("RemoveBond", &ReadWriteMol::RemoveBond,
@@ -841,6 +873,15 @@ struct mol_wrapper {
 
         .def("SetStereoGroups", &ReadWriteMol::SetStereoGroups,
              (python::arg("stereo_groups")), "Set the stereo groups")
+
+        .def("InsertMol", &ReadWriteMol::insertMol,
+        	   (python::arg("mol")), "Insert (add) the given molecule into this one")
+
+        .def("BeginBatchEdit", &RWMol::beginBatchEdit, "starts batch editing")
+        .def("RollbackBatchEdit", &RWMol::rollbackBatchEdit,
+             "cancels batch editing")
+        .def("CommitBatchEdit", &RWMol::commitBatchEdit,
+             "finishes batch editing and makes the actual changes")
 
         // enable pickle support
         .def_pickle(mol_pickle_suite());

@@ -112,8 +112,15 @@ class RDKIT_GRAPHMOL_EXPORT SubstanceGroup : public RDProps {
     return *dp_mol;
   }
 
+  //! returns whether or not this group is valid; invalid groups must be
+  //! ignored.
+  bool getIsValid() const { return d_isValid; }
+
+  //! set whether or not this group is valid; invalid groups must be ignored.
+  void setIsValid(bool isValid) { d_isValid = isValid; }
+
   //! get the index of this sgroup in dp_mol's sgroups vector
-  //! (do not mistake this by the ID!)00
+  //! (do not mistake this by the ID!)
   unsigned int getIndexInMol() const;
 
   /* Atom and Bond methods */
@@ -137,6 +144,10 @@ class RDKIT_GRAPHMOL_EXPORT SubstanceGroup : public RDProps {
   const std::vector<Bracket> &getBrackets() const { return d_brackets; }
   const std::vector<CState> &getCStates() const { return d_cstates; }
   const std::vector<AttachPoint> &getAttachPoints() const { return d_saps; }
+
+  std::vector<Bracket> &getBrackets() { return d_brackets; }
+  std::vector<CState> &getCStates() { return d_cstates; }
+  std::vector<AttachPoint> &getAttachPoints() { return d_saps; }
 
   void clearBrackets() { d_brackets.clear(); };
   void clearCStates() { d_cstates.clear(); };
@@ -181,6 +192,8 @@ class RDKIT_GRAPHMOL_EXPORT SubstanceGroup : public RDProps {
 
  private:
   ROMol *dp_mol = nullptr;  // owning molecule
+
+  bool d_isValid = true;
 
   std::vector<unsigned int> d_atoms;
   std::vector<unsigned int> d_patoms;

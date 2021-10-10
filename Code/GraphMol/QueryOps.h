@@ -1,5 +1,5 @@
 //
-//  Copyright (C) 2003-2017 Greg Landrum and Rational Discovery LLC
+//  Copyright (C) 2003-2021 Greg Landrum and other RDKit contributors
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -249,6 +249,14 @@ static inline int queryBondIsSingleOrAromatic(Bond const *bond) {
   return static_cast<int>(bond->getBondType() == Bond::SINGLE ||
                           bond->getBondType() == Bond::AROMATIC);
 };
+static inline int queryBondIsDoubleOrAromatic(Bond const *bond) {
+  return static_cast<int>(bond->getBondType() == Bond::DOUBLE ||
+                          bond->getBondType() == Bond::AROMATIC);
+};
+static inline int queryBondIsSingleOrDouble(Bond const *bond) {
+  return static_cast<int>(bond->getBondType() == Bond::SINGLE ||
+                          bond->getBondType() == Bond::DOUBLE);
+};
 static inline int queryBondIsSingleOrDoubleOrAromatic(Bond const *bond) {
   return static_cast<int>(bond->getBondType() == Bond::SINGLE ||
                           bond->getBondType() == Bond::DOUBLE ||
@@ -285,6 +293,8 @@ static inline int queryAtomHasRingBond(Atom const *at) {
   }
   return 0;
 };
+RDKIT_GRAPHMOL_EXPORT int queryIsAtomBridgehead(Atom const *at);
+
 static inline int queryIsBondInRing(Bond const *bond) {
   return bond->getOwningMol().getRingInfo()->numBondRings(bond->getIdx()) != 0;
 };
@@ -537,8 +547,8 @@ template <class T>
 T *makeAtomInRingQuery(const std::string &descr) {
   return makeAtomSimpleQuery<T>(true, queryIsAtomInRing, descr);
 }
-RDKIT_GRAPHMOL_EXPORT ATOM_EQUALS_QUERY *makeAtomInRingQuery();
 //! \overload
+RDKIT_GRAPHMOL_EXPORT ATOM_EQUALS_QUERY *makeAtomInRingQuery();
 
 //! returns a Query for matching atoms in a particular number of rings
 template <class T>
@@ -637,14 +647,27 @@ T *makeAtomNonHydrogenDegreeQuery(int what, const std::string &descr) {
 RDKIT_GRAPHMOL_EXPORT ATOM_EQUALS_QUERY *makeAtomNonHydrogenDegreeQuery(
     int what);
 
+//! returns a Query for matching bridgehead atoms
+template <class T>
+T *makeAtomIsBridgeheadQuery(const std::string &descr) {
+  return makeAtomSimpleQuery<T>(true, queryIsAtomBridgehead, descr);
+}
+//! \overload
+RDKIT_GRAPHMOL_EXPORT ATOM_EQUALS_QUERY *makeAtomIsBridgeheadQuery();
+
 //! returns a Query for matching bond orders
 RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *makeBondOrderEqualsQuery(
     Bond::BondType what);
 //! returns a Query for unspecified SMARTS bonds
 RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *makeSingleOrAromaticBondQuery();
+//! returns a Query for double|aromatic bonds
+RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *makeDoubleOrAromaticBondQuery();
+//! returns a Query for single|double bonds
+RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *makeSingleOrDoubleBondQuery();
 //! returns a Query for tautomeric bonds
 RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *
 makeSingleOrDoubleOrAromaticBondQuery();
+
 //! returns a Query for matching bond directions
 RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *makeBondDirEqualsQuery(
     Bond::BondDir what);
@@ -1049,11 +1072,32 @@ Queries::EqualityQuery<int, const Target *, true> *makePropQuery(
 RDKIT_GRAPHMOL_EXPORT bool isComplexQuery(const Bond *b);
 RDKIT_GRAPHMOL_EXPORT bool isComplexQuery(const Atom *a);
 RDKIT_GRAPHMOL_EXPORT bool isAtomAromatic(const Atom *a);
+RDKIT_GRAPHMOL_EXPORT bool isAtomListQuery(const Atom *a);
+RDKIT_GRAPHMOL_EXPORT void getAtomListQueryVals(const Atom::QUERYATOM_QUERY *q,
+                                                std::vector<int> &vals);
 
 namespace QueryOps {
 RDKIT_GRAPHMOL_EXPORT void completeMolQueries(
     RWMol *mol, unsigned int magicVal = 0xDEADBEEF);
 RDKIT_GRAPHMOL_EXPORT Atom *replaceAtomWithQueryAtom(RWMol *mol, Atom *atom);
+
+RDKIT_GRAPHMOL_EXPORT bool hasBondTypeQuery(
+    const Queries::Query<int, Bond const *, true> &qry);
+inline bool hasBondTypeQuery(const Bond &bond) {
+  if (!bond.hasQuery()) {
+    return false;
+  }
+  return hasBondTypeQuery(*bond.getQuery());
+}
+RDKIT_GRAPHMOL_EXPORT bool hasComplexBondTypeQuery(
+    const Queries::Query<int, Bond const *, true> &qry);
+inline bool hasComplexBondTypeQuery(const Bond &bond) {
+  if (!bond.hasQuery()) {
+    return false;
+  }
+  return hasComplexBondTypeQuery(*bond.getQuery());
+}
+
 }  // namespace QueryOps
 }  // namespace RDKit
 #endif
