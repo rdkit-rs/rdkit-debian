@@ -8,6 +8,13 @@ rdkit (202103.5-1) UNRELEASED; urgency=medium
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Fri, 14 May 2021 23:49:09 +0200
 
+rdkit (202009.5-2) unstable; urgency=medium
+
+  * Team upload.
+  * Adding missing build dependency on tex-gyre (Closes: #995241)
+
+ -- Andrius Merkys <merkys@debian.org>  Tue, 28 Sep 2021 08:56:39 -0400
+
 rdkit (202009.5-1) unstable; urgency=medium
 
   * New upstream point release.
