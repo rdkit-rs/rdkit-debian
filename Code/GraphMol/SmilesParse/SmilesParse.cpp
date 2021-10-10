@@ -26,7 +26,6 @@
 #include "SmilesParse.h"
 #include <RDGeneral/BoostStartInclude.h>
 #include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <RDGeneral/BoostEndInclude.h>
 #include <GraphMol/RDKitBase.h>
@@ -176,6 +175,11 @@ std::string labelRecursivePatterns(const std::string &sma) {
     } else if (sma[pos] == '(') {
       state.push_back(BRANCH);
     } else if (sma[pos] == ')') {
+      if (state.empty() || state.back() == BASE) {
+        // seriously bogus input. Just return the input
+        // and let the SMARTS parser itself report the error
+        return sma;
+      }
       SmaState currState = state.back();
       state.pop_back();
       if (currState == RECURSE) {
@@ -239,7 +243,7 @@ RWMol *toMol(const std::string &inp,
                           << " for input: '" << origInp << "'" << std::endl;
     res = nullptr;
   }
-  BOOST_FOREACH (RDKit::RWMol *molPtr, molVect) {
+  for (auto *molPtr : molVect) {
     if (molPtr) {
       // Clean-up the bond bookmarks when not calling CloseMolRings
       SmilesParseOps::CleanupAfterParseError(molPtr);

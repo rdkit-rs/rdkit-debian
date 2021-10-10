@@ -25,7 +25,8 @@ namespace RDKit {
 const int MOLFILE_MAXLINE = 256;
 RDKIT_FILEPARSERS_EXPORT std::string strip(const std::string &orig);
 
-class MolFileUnhandledFeatureException : public std::exception {
+class RDKIT_FILEPARSERS_EXPORT MolFileUnhandledFeatureException
+    : public std::exception {
  public:
   //! construct with an error message
   explicit MolFileUnhandledFeatureException(const char *msg) : _msg(msg){};
@@ -53,8 +54,8 @@ typedef std::vector<RWMOL_SPTR> RWMOL_SPTR_VECT;
  *   \param removeHs - toggles removal of Hs from the molecule. H removal
  *                     is only done if the molecule is sanitized
  *   \param line     - current line number (used for error reporting)
- *   \param strictParsing - if not set, the parser is more lax about correctness
- *                          of the contents.
+ *   \param strictParsing - if set to false, the parser is more lax about
+ * correctness of the contents.
  *
  */
 RDKIT_FILEPARSERS_EXPORT RWMol *MolDataStreamToMol(std::istream *inStream,
@@ -75,8 +76,8 @@ RDKIT_FILEPARSERS_EXPORT RWMol *MolDataStreamToMol(std::istream &inStream,
  *                     perception of the molecule
  *   \param removeHs - toggles removal of Hs from the molecule. H removal
  *                     is only done if the molecule is sanitized
- *   \param strictParsing - if set, the parser is more lax about correctness
- *                          of the contents.
+ *   \param strictParsing - if set to false, the parser is more lax about
+ * correctness of the contents.
  */
 RDKIT_FILEPARSERS_EXPORT RWMol *MolBlockToMol(const std::string &molBlock,
                                               bool sanitize = true,
@@ -90,8 +91,8 @@ RDKIT_FILEPARSERS_EXPORT RWMol *MolBlockToMol(const std::string &molBlock,
  *                     perception of the molecule
  *   \param removeHs - toggles removal of Hs from the molecule. H removal
  *                     is only done if the molecule is sanitized
- *   \param strictParsing - if set, the parser is more lax about correctness
- *                          of the contents.
+ *   \param strictParsing - if set to false, the parser is more lax about
+ * correctness of the contents.
  */
 RDKIT_FILEPARSERS_EXPORT RWMol *MolFileToMol(const std::string &fName,
                                              bool sanitize = true,

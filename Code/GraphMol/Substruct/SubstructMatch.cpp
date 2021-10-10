@@ -415,10 +415,12 @@ void ResSubstructMatchHelper_(const ResSubstructMatchHelperArgs_ &args,
 std::vector<MatchVectType> SubstructMatch(
     const ROMol &mol, const ROMol &query,
     const SubstructMatchParameters &params) {
+  std::vector<MatchVectType> matches;
+  if (!mol.getNumAtoms() || !query.getNumAtoms()) {
+    return matches;
+  }
   std::vector<RecursiveStructureQuery *> locked;
-#ifdef RDK_THREADSAFE_SSS
   locked.reserve(query.getNumAtoms());
-#endif
   if (params.recursionPossible) {
     detail::SUBQUERY_MAP subqueryMap;
     ROMol::ConstAtomIterator atIt;
@@ -444,7 +446,6 @@ std::vector<MatchVectType> SubstructMatch(
       boost::vf2_all(query.getTopology(), mol.getTopology(), atomLabeler,
                      bondLabeler, matchChecker, pms, params.maxMatches);
 #endif
-  std::vector<MatchVectType> matches;
   if (found) {
     unsigned int nQueryAtoms = query.getNumAtoms();
     matches.reserve(pms.size());
@@ -463,7 +464,7 @@ std::vector<MatchVectType> SubstructMatch(
   }
 
   if (params.recursionPossible) {
-    BOOST_FOREACH (RecursiveStructureQuery *v, locked) {
+    for (auto v : locked) {
       v->clear();
 #ifdef RDK_THREADSAFE_SSS
       v->d_mutex.unlock();
@@ -625,8 +626,8 @@ void MatchSubqueries(const ROMol &mol, QueryAtom::QUERYATOM_QUERY *query,
     auto *rsq = (RecursiveStructureQuery *)query;
 #ifdef RDK_THREADSAFE_SSS
     rsq->d_mutex.lock();
-    locked.push_back(rsq);
 #endif
+    locked.push_back(rsq);
     rsq->clear();
     bool matchDone = false;
     if (rsq->getSerialNumber() &&
