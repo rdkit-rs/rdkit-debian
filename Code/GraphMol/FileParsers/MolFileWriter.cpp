@@ -753,7 +753,7 @@ bool checkNeighbors(const Bond *bond, const Atom *atom) {
         return false;
       } else {
         const auto otherAtom = nbrBond->getOtherAtom(atom);
-        unsigned int rank;
+        int rank;
         if (otherAtom->getPropIfPresent(common_properties::_CIPRank, rank)) {
           if (std::find(nbrRanks.begin(), nbrRanks.end(), rank) !=
               nbrRanks.end()) {
@@ -1333,7 +1333,6 @@ std::string outputMolToMolBlock(const RWMol &tmol, int confId,
 
 std::string MolToMolBlock(const ROMol &mol, bool includeStereo, int confId,
                           bool kekulize, bool forceV3000) {
-  RDUNUSED_PARAM(includeStereo);
   RDKit::Utils::LocaleSwitcher switcher;
   RWMol trwmol(mol);
   // NOTE: kekulize the molecule before writing it out

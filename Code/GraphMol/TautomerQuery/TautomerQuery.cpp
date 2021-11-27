@@ -9,8 +9,9 @@
 //  of the RDKit source tree.
 
 #include "TautomerQuery.h"
-#include <boost/smart_ptr.hpp>
 #include <functional>
+#include <set>
+#include <utility>
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/MolStandardize/Tautomer.h>
 #include <GraphMol/Bond.h>
@@ -19,7 +20,6 @@
 #include <GraphMol/QueryBond.h>
 #include <GraphMol/Substruct/SubstructUtils.h>
 #include <GraphMol/Fingerprints/Fingerprints.h>
-
 // #define VERBOSE
 
 #ifdef VERBOSE
@@ -46,25 +46,25 @@ void removeTautomerDuplicates(std::vector<MatchVectType> &matches,
   //  Also, OELib returns the same results
   //
 
-  std::vector<boost::dynamic_bitset<>> seen;
+  std::set<boost::dynamic_bitset<>> seen;
   std::vector<MatchVectType> res;
-  for (size_t i = 0; i < matches.size(); i++) {
-    auto match = matches[i];
+  res.reserve(matches.size());
+  for (auto &&match : matches) {
     boost::dynamic_bitset<> val(nAtoms);
     for (const auto &ci : match) {
       val.set(ci.second);
     }
-    if (std::find(seen.begin(), seen.end(), val) == seen.end()) {
-      // it's something new
-      res.push_back(match);
-      seen.push_back(val);
+    auto pos = seen.lower_bound(val);
+    if (pos == seen.end() || *pos != val) {
+      res.push_back(std::move(match));
+      seen.insert(pos, std::move(val));
     } else if (matchingTautomers) {
-      int position = res.size();
+      auto position = res.size();
       matchingTautomers->erase(matchingTautomers->begin() + position);
     }
   }
-
-  matches = res;
+  res.shrink_to_fit();
+  matches = std::move(res);
 }
 
 }  // namespace
@@ -111,14 +111,14 @@ class TautomerQueryMatcher {
   }
 };
 
-TautomerQuery::TautomerQuery(const std::vector<ROMOL_SPTR> &tautomers,
+TautomerQuery::TautomerQuery(std::vector<ROMOL_SPTR> tautomers,
                              const ROMol *const templateMolecule,
-                             const std::vector<size_t> &modifiedAtoms,
-                             const std::vector<size_t> &modifiedBonds)
-    : d_tautomers(tautomers),
+                             std::vector<size_t> modifiedAtoms,
+                             std::vector<size_t> modifiedBonds)
+    : d_tautomers(std::move(tautomers)),
       d_templateMolecule(templateMolecule),
-      d_modifiedAtoms(modifiedAtoms),
-      d_modifiedBonds(modifiedBonds) {}
+      d_modifiedAtoms(std::move(modifiedAtoms)),
+      d_modifiedBonds(std::move(modifiedBonds)) {}
 
 TautomerQuery *TautomerQuery::fromMol(
     const ROMol &query, const std::string &tautomerTransformFile) {
@@ -127,7 +127,7 @@ TautomerQuery *TautomerQuery::fromMol(
                           : std::string(getenv("RDBASE")) +
                                 "/Data/MolStandardize/tautomerTransforms.in";
   auto tautomerParams = std::unique_ptr<MolStandardize::TautomerCatalogParams>(
-      new MolStandardize::TautomerCatalogParams(tautomerFile));
+      new MolStandardize::TautomerCatalogParams(tautomerTransformFile));
   MolStandardize::TautomerEnumerator tautomerEnumerator(
       new MolStandardize::TautomerCatalog(tautomerParams.get()));
   const auto res = tautomerEnumerator.enumerate(query);
@@ -230,8 +230,7 @@ std::vector<MatchVectType> TautomerQuery::substructOf(
   // need to check all mappings of template to target
   templateParams.uniquify = false;
 
-  TautomerQueryMatcher tautomerQueryMatcher(*this, params,
-                                                  matchingTautomers);
+  TautomerQueryMatcher tautomerQueryMatcher(*this, params, matchingTautomers);
   // use this functor as a final check to see if any tautomer matches the target
   auto checker = [&tautomerQueryMatcher](
                      const ROMol &mol,

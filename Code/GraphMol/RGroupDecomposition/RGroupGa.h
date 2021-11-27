@@ -22,6 +22,7 @@
 #include "../../../External/GA/ga/LinkedPopLinearSel.h"
 #include "../../../External/GA/ga/IntegerStringChromosomePolicy.h"
 #include "RGroupFingerprintScore.h"
+#include "RGroupScore.h"
 
 namespace RDKit {
 
@@ -65,13 +66,13 @@ class RGroupDecompositionChromosome : public IntegerStringChromosome {
 
   void copyGene(const StringChromosomeBase& other) override;
 
-  FingerprintVarianceScoreData & getFingerprintVarianceScoreData() {
+  FingerprintVarianceScoreData& getFingerprintVarianceScoreData() {
     return fingerprintVarianceScoreData;
   }
 
   const vector<size_t>& getPermutation() const { return permutation; }
 
-  const RGroupGa& getRGroupGA() const { return rGroupGa; };
+  const RGroupGa& getRGroupGA() const { return rGroupGa; }
 
  private:
   RGroupDecompositionChromosome(const RGroupDecompositionChromosome& other) =
@@ -87,15 +88,13 @@ class RGroupDecompositionChromosome : public IntegerStringChromosome {
 };
 
 struct GaResult {
-  double score;
-  vector<vector<size_t>> permutations;
+  RGroupScorer rGroupScorer;
 
   GaResult(const double score, const vector<vector<size_t>>& permutations)
-      : score(score), permutations(permutations){};
-  GaResult(const GaResult& other)
-      : score(other.score), permutations(other.permutations){};
+      : rGroupScorer(RGroupScorer(permutations, score)) {}
+  GaResult(const GaResult& other) : rGroupScorer(other.rGroupScorer) {}
 
-  GaResult(){};
+  GaResult() {}
 
   // Copy constructor required by MSVC for future<GaResult>
   GaResult& operator=(const GaResult& other);
@@ -120,7 +119,7 @@ class RDKIT_RGROUPDECOMPOSITION_EXPORT RGroupGa : public GaBase {
 
   shared_ptr<RGroupDecompositionChromosome> createChromosome();
 
-  const RGroupDecompData& getRGroupData() const { return rGroupData; };
+  const RGroupDecompData& getRGroupData() const { return rGroupData; }
 
   const vector<shared_ptr<GaOperation<RGroupDecompositionChromosome>>>
   getOperations() const;
@@ -131,6 +130,7 @@ class RDKIT_RGROUPDECOMPOSITION_EXPORT RGroupGa : public GaBase {
   RGroupGa(const RGroupGa& other) = delete;
   RGroupGa& operator=(const RGroupGa& other) = delete;
   const RGroupDecompData& rGroupData;
+
   IntegerStringChromosomePolicy chromosomePolicy;
   int numberOperations;
   int numberOperationsWithoutImprovement;

@@ -13,14 +13,13 @@
 #include <GraphMol/ROMol.h>
 #include <GraphMol/MolDraw2D/MolDraw2D.h>
 
-#include <boost/python/suite/indexing/map_indexing_suite.hpp>
 #include <GraphMol/MolDraw2D/Qt/MolDraw2DQt.h>
 #include <QPainter>
 
 namespace python = boost::python;
 
 namespace RDKit {
-MolDraw2DQt *moldrawFromQPainter(int width, int height, unsigned long ptr,
+MolDraw2DQt *moldrawFromQPainter(int width, int height, size_t ptr,
                                  int panelWidth, int panelHeight) {
   if (!ptr) {
     throw_value_error("QPainter pointer is null");

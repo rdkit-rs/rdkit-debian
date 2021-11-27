@@ -1339,6 +1339,217 @@ M  END
   }
 }
 
+TEST_CASE("CML writer", "[CML][writer]") {
+  SECTION("basics") {
+    std::unique_ptr<RWMol> mol{new RWMol{}};
+    mol->setProp(common_properties::_Name, "S-lactic acid");
+
+    for (auto z : {6u, 1u, 1u, 1u, 6u, 1u, 8u, 1u, 6u, 8u, 8u}) {
+      auto *a = new Atom{z};
+      mol->addAtom(a, false, true);
+    }
+    mol->getAtomWithIdx(7u)->setIsotope(2u);
+    mol->getAtomWithIdx(10u)->setFormalCharge(-1);
+
+    mol->addBond(0u, 1u, Bond::SINGLE);
+    mol->addBond(0u, 2u, Bond::SINGLE);
+    mol->addBond(0u, 3u, Bond::SINGLE);
+    mol->addBond(0u, 4u, Bond::SINGLE);
+    mol->addBond(4u, 5u, Bond::SINGLE);
+    mol->addBond(4u, 6u, Bond::SINGLE);
+    mol->addBond(4u, 8u, Bond::SINGLE);
+    mol->addBond(6u, 7u, Bond::SINGLE);
+    mol->addBond(8u, 9u, Bond::DOUBLE);
+    mol->addBond(8u, 10u, Bond::SINGLE);
+
+    auto *conf = new Conformer{11u};
+    conf->setId(0u);
+
+    conf->setAtomPos(0u, RDGeom::Point3D{-0.95330, 0.60416, 1.01609});
+    conf->setAtomPos(1u, RDGeom::Point3D{-1.00832, 1.68746, 0.83520});
+    conf->setAtomPos(2u, RDGeom::Point3D{-1.96274, 0.16103, 0.94471});
+    conf->setAtomPos(3u, RDGeom::Point3D{-0.57701, 0.44737, 2.04167});
+    conf->setAtomPos(4u, RDGeom::Point3D{0.00000, 0.00000, 0.00000});
+    conf->setAtomPos(5u, RDGeom::Point3D{-0.43038, 0.18596, -1.01377});
+    conf->setAtomPos(6u, RDGeom::Point3D{0.22538, -1.36531, 0.19373});
+    conf->setAtomPos(7u, RDGeom::Point3D{1.21993, -1.33937, 0.14580});
+    conf->setAtomPos(8u, RDGeom::Point3D{1.38490, 0.73003, 0.00000});
+    conf->setAtomPos(9u, RDGeom::Point3D{1.38490, 1.96795, 0.00000});
+    conf->setAtomPos(10u, RDGeom::Point3D{2.35253, -0.07700, 0.00000});
+
+    mol->addConformer(conf);
+
+    mol->updatePropertyCache();
+    MolOps::assignChiralTypesFrom3D(*mol);
+
+    const std::string cmlblock = MolToCMLBlock(*mol);
+    const std::string cmlblock_expected =
+        R"CML(<?xml version="1.0" encoding="utf-8"?>
+<cml xmlns="http://www.xml-cml.org/schema" xmlns:convention="http://www.xml-cml.org/convention/" convention="convention:molecular">
+  <molecule id="m-1" formalCharge="-1" spinMultiplicity="1">
+    <name>S-lactic acid</name>
+    <atomArray>
+      <atom id="a0" elementType="C" formalCharge="0" hydrogenCount="3" x3="-0.953300" y3="0.604160" z3="1.016090"/>
+      <atom id="a1" elementType="H" formalCharge="0" hydrogenCount="0" x3="-1.008320" y3="1.687460" z3="0.835200"/>
+      <atom id="a2" elementType="H" formalCharge="0" hydrogenCount="0" x3="-1.962740" y3="0.161030" z3="0.944710"/>
+      <atom id="a3" elementType="H" formalCharge="0" hydrogenCount="0" x3="-0.577010" y3="0.447370" z3="2.041670"/>
+      <atom id="a4" elementType="C" formalCharge="0" hydrogenCount="1" x3="0.000000" y3="0.000000" z3="0.000000">
+        <atomParity atomRefs4="a0 a5 a6 a8">1</atomParity>
+      </atom>
+      <atom id="a5" elementType="H" formalCharge="0" hydrogenCount="0" x3="-0.430380" y3="0.185960" z3="-1.013770"/>
+      <atom id="a6" elementType="O" formalCharge="0" hydrogenCount="1" x3="0.225380" y3="-1.365310" z3="0.193730"/>
+      <atom id="a7" elementType="H" formalCharge="0" hydrogenCount="0" isotopeNumber="2" x3="1.219930" y3="-1.339370" z3="0.145800"/>
+      <atom id="a8" elementType="C" formalCharge="0" hydrogenCount="0" x3="1.384900" y3="0.730030" z3="0.000000"/>
+      <atom id="a9" elementType="O" formalCharge="0" hydrogenCount="0" x3="1.384900" y3="1.967950" z3="0.000000"/>
+      <atom id="a10" elementType="O" formalCharge="-1" hydrogenCount="0" x3="2.352530" y3="-0.077000" z3="0.000000"/>
+    </atomArray>
+    <bondArray>
+      <bond atomRefs2="a0 a1" id="b0" order="S"/>
+      <bond atomRefs2="a0 a2" id="b1" order="S"/>
+      <bond atomRefs2="a0 a3" id="b2" order="S"/>
+      <bond atomRefs2="a0 a4" id="b3" order="S"/>
+      <bond atomRefs2="a4 a5" id="b4" order="S" bondStereo="H"/>
+      <bond atomRefs2="a4 a6" id="b5" order="S"/>
+      <bond atomRefs2="a4 a8" id="b6" order="S"/>
+      <bond atomRefs2="a6 a7" id="b7" order="S"/>
+      <bond atomRefs2="a8 a9" id="b8" order="D"/>
+      <bond atomRefs2="a8 a10" id="b9" order="S"/>
+    </bondArray>
+  </molecule>
+</cml>
+)CML";
+    CHECK(cmlblock == cmlblock_expected);
+  }
+
+  SECTION("chirality1") {
+    auto mol = R"CTAB(
+  Mrv1921 04232106262D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 5 4 0 0 1
+M  V30 BEGIN ATOM
+M  V30 1 I 0.8918 -1.0472 0 0
+M  V30 2 C 0.8918 0.4928 0 0
+M  V30 3 Br 0.8918 2.0328 0 0
+M  V30 4 F 2.4318 0.4928 0 0
+M  V30 5 Cl -0.6482 0.4928 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 2 1
+M  V30 2 1 2 3 CFG=3
+M  V30 3 1 2 4 CFG=1
+M  V30 4 1 2 5
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    const std::string cmlblock = MolToCMLBlock(*mol);
+    const std::string cmlblock_expected =
+        R"CML(<?xml version="1.0" encoding="utf-8"?>
+<cml xmlns="http://www.xml-cml.org/schema" xmlns:convention="http://www.xml-cml.org/convention/" convention="convention:molecular">
+  <molecule id="m-1" formalCharge="0" spinMultiplicity="1">
+    <atomArray>
+      <atom id="a0" elementType="I" formalCharge="0" hydrogenCount="0" x2="0.891800" y2="-1.047200"/>
+      <atom id="a1" elementType="C" formalCharge="0" hydrogenCount="0" x2="0.891800" y2="0.492800">
+        <atomParity atomRefs4="a0 a2 a3 a4">1</atomParity>
+      </atom>
+      <atom id="a2" elementType="Br" formalCharge="0" hydrogenCount="0" x2="0.891800" y2="2.032800"/>
+      <atom id="a3" elementType="F" formalCharge="0" hydrogenCount="0" x2="2.431800" y2="0.492800"/>
+      <atom id="a4" elementType="Cl" formalCharge="0" hydrogenCount="0" x2="-0.648200" y2="0.492800"/>
+    </atomArray>
+    <bondArray>
+      <bond atomRefs2="a0 a1" id="b0" order="S"/>
+      <bond atomRefs2="a1 a2" id="b1" order="S"/>
+      <bond atomRefs2="a1 a3" id="b2" order="S" bondStereo="W"/>
+      <bond atomRefs2="a1 a4" id="b3" order="S"/>
+    </bondArray>
+  </molecule>
+</cml>
+)CML";
+    CHECK(cmlblock == cmlblock_expected);
+  }
+  SECTION("chirality2") {
+    auto mol = R"CTAB(
+  Mrv1921 04232106262D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 5 4 0 0 1
+M  V30 BEGIN ATOM
+M  V30 1 I 0.8918 -1.0472 0 0
+M  V30 2 C 0.8918 0.4928 0 0
+M  V30 3 Br 0.8918 2.0328 0 0
+M  V30 4 F 2.4318 0.4928 0 0
+M  V30 5 Cl -0.6482 0.4928 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 2 1
+M  V30 2 1 2 3 CFG=1
+M  V30 3 1 2 4 CFG=3
+M  V30 4 1 2 5
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    const std::string cmlblock = MolToCMLBlock(*mol);
+    const std::string cmlblock_expected =
+        R"CML(<?xml version="1.0" encoding="utf-8"?>
+<cml xmlns="http://www.xml-cml.org/schema" xmlns:convention="http://www.xml-cml.org/convention/" convention="convention:molecular">
+  <molecule id="m-1" formalCharge="0" spinMultiplicity="1">
+    <atomArray>
+      <atom id="a0" elementType="I" formalCharge="0" hydrogenCount="0" x2="0.891800" y2="-1.047200"/>
+      <atom id="a1" elementType="C" formalCharge="0" hydrogenCount="0" x2="0.891800" y2="0.492800">
+        <atomParity atomRefs4="a0 a2 a3 a4">-1</atomParity>
+      </atom>
+      <atom id="a2" elementType="Br" formalCharge="0" hydrogenCount="0" x2="0.891800" y2="2.032800"/>
+      <atom id="a3" elementType="F" formalCharge="0" hydrogenCount="0" x2="2.431800" y2="0.492800"/>
+      <atom id="a4" elementType="Cl" formalCharge="0" hydrogenCount="0" x2="-0.648200" y2="0.492800"/>
+    </atomArray>
+    <bondArray>
+      <bond atomRefs2="a0 a1" id="b0" order="S"/>
+      <bond atomRefs2="a1 a2" id="b1" order="S"/>
+      <bond atomRefs2="a1 a3" id="b2" order="S" bondStereo="H"/>
+      <bond atomRefs2="a1 a4" id="b3" order="S"/>
+    </bondArray>
+  </molecule>
+</cml>
+)CML";
+    CHECK(cmlblock == cmlblock_expected);
+  }
+
+  SECTION("no conformer") {
+    auto mol = "C[C@](O)(F)Cl"_smiles;
+    REQUIRE(mol);
+    const std::string cmlblock = MolToCMLBlock(*mol);
+    const std::string cmlblock_expected =
+        R"CML(<?xml version="1.0" encoding="utf-8"?>
+<cml xmlns="http://www.xml-cml.org/schema" xmlns:convention="http://www.xml-cml.org/convention/" convention="convention:molecular">
+  <molecule id="m-1" formalCharge="0" spinMultiplicity="1">
+    <atomArray>
+      <atom id="a0" elementType="C" formalCharge="0" hydrogenCount="3"/>
+      <atom id="a1" elementType="C" formalCharge="0" hydrogenCount="0">
+        <atomParity atomRefs4="a0 a2 a3 a4">1</atomParity>
+      </atom>
+      <atom id="a2" elementType="O" formalCharge="0" hydrogenCount="1"/>
+      <atom id="a3" elementType="F" formalCharge="0" hydrogenCount="0"/>
+      <atom id="a4" elementType="Cl" formalCharge="0" hydrogenCount="0"/>
+    </atomArray>
+    <bondArray>
+      <bond atomRefs2="a0 a1" id="b0" order="S"/>
+      <bond atomRefs2="a1 a2" id="b1" order="S"/>
+      <bond atomRefs2="a1 a3" id="b2" order="S"/>
+      <bond atomRefs2="a1 a4" id="b3" order="S"/>
+    </bondArray>
+  </molecule>
+</cml>
+)CML";
+    CHECK(cmlblock == cmlblock_expected);
+  }
+}
+
 TEST_CASE("XYZ", "[XYZ][writer]") {
   SECTION("basics") {
     std::unique_ptr<RWMol> mol{new RWMol{}};
@@ -2033,7 +2244,7 @@ M  END)CTAB"_ctab;
 
 TEST_CASE(
     "Problems parsing SGroup abbreviations with multiple attachment points",
-    "[bug][parser]") {
+    "[bug][reader]") {
   std::string rdbase = getenv("RDBASE");
   SECTION("basics") {
     std::string fName =
@@ -3362,6 +3573,167 @@ M  END)CTAB"_ctab;
   CHECK(m->getBondBetweenAtoms(1, 2)->getBondDir() == Bond::EITHERDOUBLE);
 }
 
+TEST_CASE("Handle MRV_COORDINATE_BOND_TYPE data Substance Groups") {
+  SECTION(
+      "Convert SDF V2000 MRV_COORDINATE_BOND_TYPE data Substance Groups "
+      "into coordinate bonds") {
+    auto m = R"CTAB(
+  Mrv2111 06302118332D          
+
+  9  9  0  0  0  0            999 V2000
+   -2.9465    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.6609    0.3679    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.6609   -0.4572    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.9465   -0.8697    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2320   -0.4572    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2320    0.3679    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.5175    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.9465   -1.6947    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.3754    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
+  6  7  8  0  0  0  0
+  4  8  8  0  0  0  0
+  2  9  8  0  0  0  0
+M  STY  3   1 DAT   2 DAT   3 DAT
+M  SAL   1  2   6   7
+M  SDT   1 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   1     0.0000    0.0000    DR    ALL  0       0  
+M  SED   1 7
+M  SAL   2  2   4   8
+M  SDT   2 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   2     0.0000    0.0000    DR    ALL  0       0  
+M  SED   2 8
+M  SAL   3  2   2   9
+M  SDT   3 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   3     0.0000    0.0000    DR    ALL  0       0  
+M  SED   3 9
+M  END
+)CTAB"_ctab;
+    REQUIRE(m);
+
+    std::vector<std::pair<unsigned, unsigned>> coordinate_bonds{
+        {5, 6}, {3, 7}, {1, 8}};
+
+    for (const auto &bond_atoms : coordinate_bonds) {
+      auto bnd = m->getBondBetweenAtoms(bond_atoms.first, bond_atoms.second);
+      REQUIRE(bnd);
+      CHECK(bnd->getBondType() == Bond::BondType::DATIVE);
+      CHECK(typeid(*bnd) == typeid(Bond));
+    }
+
+    CHECK(getSubstanceGroups(*m).empty());
+  }
+
+  SECTION(
+      "GitHub Issue #4473: MRV_COORDINATE_BOND_TYPE SGroup may reference bond "
+      "index, instead of atom") {
+    // Same input as previous test, just shuffled the bonds and changed
+    // the indexes in the SGroups
+
+    auto m1 = R"CTAB(
+  Mrv2111 06302118332D          
+
+  9  9  0  0  0  0            999 V2000
+   -2.9465    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.6609    0.3679    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.6609   -0.4572    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.9465   -0.8697    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2320   -0.4572    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2320    0.3679    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.5175    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.9465   -1.6947    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.3754    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  6  7  8  0  0  0  0
+  4  8  8  0  0  0  0
+  2  9  8  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
+M  STY  3   1 DAT   2 DAT   3 DAT
+M  SAL   1  2   6   7
+M  SDT   1 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   1     0.0000    0.0000    DR    ALL  0       0  
+M  SED   1 1
+M  SAL   2  2   4   8
+M  SDT   2 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   2     0.0000    0.0000    DR    ALL  0       0  
+M  SED   2 2
+M  SAL   3  2   2   9
+M  SDT   3 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   3     0.0000    0.0000    DR    ALL  0       0  
+M  SED   3 3
+M  END
+)CTAB"_ctab;
+
+    // Same input, but changing the type of 2 of the bonds, and giving
+    // a random value to the other SGroup to check that we fail
+    auto m2 = R"CTAB(
+  Mrv2111 06302118332D          
+
+  9  9  0  0  0  0            999 V2000
+   -2.9465    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.6609    0.3679    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.6609   -0.4572    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.9465   -0.8697    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2320   -0.4572    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2320    0.3679    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.5175    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.9465   -1.6947    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.3754    0.7804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  6  7  1  0  0  0  0
+  4  8  1  0  0  0  0
+  2  9  1  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
+M  STY  3   1 DAT   2 DAT   3 DAT
+M  SAL   1  2   6   7
+M  SDT   1 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   1     0.0000    0.0000    DR    ALL  0       0  
+M  SED   1 1
+M  SAL   2  2   4   8
+M  SDT   2 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   2     0.0000    0.0000    DR    ALL  0       0  
+M  SED   2 2
+M  SAL   3  2   2   9
+M  SDT   3 MRV_COORDINATE_BOND_TYPE                              
+M  SDD   3     0.0000    0.0000    DR    ALL  0       0  
+M  SED   3 100
+M  END
+)CTAB"_ctab;
+
+    std::vector<std::pair<unsigned, unsigned>> coordinate_bonds{
+        {5, 6}, {3, 7}, {1, 8}};
+
+    for (const auto &bond_atoms : coordinate_bonds) {
+      auto bnd = m1->getBondBetweenAtoms(bond_atoms.first, bond_atoms.second);
+      REQUIRE(bnd);
+      CHECK(bnd->getBondType() == Bond::BondType::DATIVE);
+      CHECK(typeid(*bnd) == typeid(Bond));
+    }
+    CHECK(getSubstanceGroups(*m1).empty());
+
+    REQUIRE(m2);
+    for (const auto &bond_atoms : coordinate_bonds) {
+      auto bnd = m2->getBondBetweenAtoms(bond_atoms.first, bond_atoms.second);
+      REQUIRE(bnd);
+      CHECK(bnd->getBondType() != Bond::BondType::DATIVE);
+    }
+    CHECK(getSubstanceGroups(*m2).empty());
+  }
+}
+
 TEST_CASE(
     "Github #4256: multiple ATTCHPT entries for one atom handled "
     "incorrectly") {
@@ -3423,6 +3795,164 @@ M  END
   }
 }
 
+TEST_CASE("Long lines in V3000 mol blocks") {
+  SECTION("basics") {
+    auto m = R"CTAB(query
+  Mrv2108 07152116102D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C 3.5417 -5.875 0 0
+M  V30 2 C 4.8753 -5.105 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 2) -
+M  V30 FIELDDISP="    4.8753   -5.1050    DA    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSL QUERYOP== FIELDDATA=[#6;R]
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    CHECK(getSubstanceGroups(*m).size() == 1);
+    auto mb = MolToV3KMolBlock(*m);
+    std::unique_ptr<RWMol> m2(MolBlockToMol(mb));
+    REQUIRE(m2);
+    CHECK(getSubstanceGroups(*m2).size() == 1);
+  }
+  SECTION("long data elements") {
+    auto m = R"CTAB(query with bogus sgroups
+  Mrv2108 07152116102D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 5 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C 3.5417 -5.875 0 0
+M  V30 2 C 4.8753 -5.105 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 2) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSR QUERYOP== -
+M  V30 FIELDDATA="quite long piece of text that needs to be broken -
+M  V30 across two lines"
+M  V30 2 DAT 0 ATOMS=(1 1) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSR QUERYOP== -
+M  V30 FIELDDATA="quite long piece of text that needs to be broken -
+M  V30 across more than two lines because we really want to be sure -
+M  V30 that we are doing this right"
+M  V30 3 DAT 0 ATOMS=(1 1) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSR QUERYOP== -
+M  V30 FIELDDATA="quite long piece of text that needs to be broken -
+M  V30 across exactly two lines so that we can check the edge case -
+M  V30 11111111111111111111"
+M  V30 4 DAT 0 ATOMS=(1 1) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSR QUERYOP== -
+M  V30 FIELDDATA="quite long piece of text that needs to be broken -
+M  V30 across more than two lines because we really want to be sure -
+M  V30 that we are doing this right" SEQID=1
+M  V30 5 DAT 0 ATOMS=(1 1) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSR QUERYOP== -
+M  V30 FIELDDATA="quite long piece of text that needs to be broken -
+M  V30 across exactly two lines so that we can check the edge case -
+M  V30 11111111111111111111" SEQID=2
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    CHECK(getSubstanceGroups(*m).size() == 5);
+    auto mb = MolToV3KMolBlock(*m);
+    std::unique_ptr<RWMol> m2(MolBlockToMol(mb));
+    REQUIRE(m2);
+    CHECK(getSubstanceGroups(*m2).size() == 5);
+  }
+
+  SECTION(
+      "GitHub Issue #4471: SDF SGroups may be missing the final space in the "
+      "\"M V30 \" prefix") {
+    auto m = R"CTAB(bogus mol with unspaced SGroup field
+  Mrv2114 09022123382D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 1 0 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -0.7917 0 0 0
+M  V30 END ATOM
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 1) FIELDNAME=Data -
+M  V30 FIELDDISP="    0.0000    0.0000    DRU   ALL  0       0" -
+M  V30 MRV_FIELDDISP=0 -
+M  V30 FIELDDATA=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-
+M  V30 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-
+M  V30 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-
+M  V30 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    CHECK(getSubstanceGroups(*m).size() == 1);
+    auto mb = MolToV3KMolBlock(*m);
+    std::unique_ptr<RWMol> m2(MolBlockToMol(mb));
+    REQUIRE(m2);
+    CHECK(getSubstanceGroups(*m2).size() == 1);
+  }
+
+  SECTION(
+      "GitHub Issue #4477: Same SDF SGroup lines may be written multiple "
+      "times") {
+    auto m = R"CTAB(
+  Mrv2014 03112117322D
+
+  6  6  0  0  0  0            999 V2000
+   -1.8270   -1.5114    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2764   -0.8194    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.1002   -0.8626    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.4748   -1.5977    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.0255   -2.2896    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2016   -2.2465    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  1  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  1  0  0  0  0
+  1  6  1  0  0  0  0
+M  STY  1   1 DAT
+M  SAL   1  6   1   2   3   4   5   6
+M  SDT   1
+M  SDD   1    -2.4921   -3.0466    DA  123456789012345  ALL  1       5
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    CHECK(getSubstanceGroups(*m).size() == 1);
+    auto mb = MolToV3KMolBlock(*m);
+
+    auto pos = 0u;
+    auto count = 0u;
+    std::string target{"FIELDDISP"};
+    while (pos < mb.size()) {
+      pos = mb.find(target, pos);
+      if (pos < mb.size()) {
+        pos += target.size();
+        ++count;
+      }
+    }
+
+    CHECK(count == 1);
+  }
+}
+
 TEST_CASE("github #4345: non-stereo bonds written with unspecified parity") {
   SECTION("basics") {
     auto m = "CC=C(F)F"_smiles;
@@ -3473,5 +4003,254 @@ TEST_CASE("github #4345: non-stereo bonds written with unspecified parity") {
     CHECK(mb.find("CFG=2") == std::string::npos);
     mb = MolToMolBlock(*m);
     CHECK(mb.find("  2  3  2  3") == std::string::npos);
+  }
+}
+
+TEST_CASE(
+    "github #4476: Additional SDT properties not decoded if FIELDNAME is "
+    "empty") {
+  SECTION("basics") {
+    auto m = R"CTAB(query
+  Mrv2102 09032106302D          
+
+  2  1  0  0  0  0            999 V2000
+   -0.4464    2.4334    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.2680    2.8459    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+M  STY  1   1 DAT
+M  SAL   1  1   2
+M  SDT   1                                                     PQ=
+M  SDD   1     0.0000    0.0000    DR    ALL  0       0  
+M  SED   1 [#6;R]
+M  END
+)CTAB"_ctab;
+    REQUIRE(m);
+    REQUIRE(getSubstanceGroups(*m).size() == 1);
+    const auto sg = getSubstanceGroups(*m)[0];
+    CHECK(sg.hasProp("QUERYTYPE"));
+    CHECK(sg.getProp<std::string>("QUERYTYPE") == "PQ");
+    CHECK(sg.hasProp("QUERYOP"));
+    CHECK(sg.getProp<std::string>("QUERYOP") == "=");
+  }
+}
+
+TEST_CASE("github #4468: decode SMARTS in SGroups") {
+  SECTION("parsing v3000") {
+    auto m = R"CTAB(query
+  Mrv2108 07152116012D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -0.8333 4.5421 0 0
+M  V30 2 C 0.5003 5.3121 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 2) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSQ QUERYOP== FIELDDATA=[#6;R]
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    REQUIRE(m->getAtomWithIdx(1)->hasQuery());
+    CHECK(SmartsWrite::GetAtomSmarts(
+              static_cast<QueryAtom *>(m->getAtomWithIdx(1))) == "[#6&R]");
+    CHECK(getSubstanceGroups(*m).empty());
+  }
+  SECTION("ensure bad SMARTS don't break things") {
+    auto m = R"CTAB(query
+  Mrv2108 07152116012D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -0.8333 4.5421 0 0
+M  V30 2 C 0.5003 5.3121 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 2) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSQ QUERYOP== FIELDDATA=[#6;R
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    REQUIRE(!m->getAtomWithIdx(1)->hasQuery());
+    CHECK(getSubstanceGroups(*m).empty());
+  }
+  SECTION("empty SMARTS") {
+    auto m = R"CTAB(query
+  Mrv2108 07152116012D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -0.8333 4.5421 0 0
+M  V30 2 C 0.5003 5.3121 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 2) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSQ QUERYOP== FIELDDATA=
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    REQUIRE(!m->getAtomWithIdx(1)->hasQuery());
+    CHECK(getSubstanceGroups(*m).empty());
+  }
+  SECTION("bad operator") {
+    auto m = R"CTAB(query
+  Mrv2108 07152116012D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -0.8333 4.5421 0 0
+M  V30 2 C 0.5003 5.3121 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 2) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSQ QUERYOP=> FIELDDATA=[#6;R]
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    REQUIRE(!m->getAtomWithIdx(1)->hasQuery());
+    CHECK(getSubstanceGroups(*m).empty());
+  }
+  SECTION("SMARTS with multiple atoms become recursive") {
+    auto m = R"CTAB(query
+  Mrv2108 07152116012D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -0.8333 4.5421 0 0
+M  V30 2 C 0.5003 5.3121 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 2) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SMARTSQ QUERYOP== FIELDDATA=[#6;R]-[#8]
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    REQUIRE(m->getAtomWithIdx(1)->hasQuery());
+    CHECK(SmartsWrite::GetAtomSmarts(static_cast<QueryAtom *>(
+              m->getAtomWithIdx(1))) == "[$([#6&R]-[#8])]");
+    CHECK(getSubstanceGroups(*m).empty());
+  }
+  SECTION("parsing v3000, v2000 compatibility version") {
+    auto m = R"CTAB(query
+  Mrv2108 07152116012D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -0.8333 4.5421 0 0
+M  V30 2 C 0.5003 5.3121 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 DAT 0 ATOMS=(1 2) -
+M  V30 FIELDDISP="    0.0000    0.0000    DR    ALL  0       0" -
+M  V30 QUERYTYPE=SQ QUERYOP== FIELDDATA=[#6;R]
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    REQUIRE(m->getAtomWithIdx(1)->hasQuery());
+    CHECK(SmartsWrite::GetAtomSmarts(
+              static_cast<QueryAtom *>(m->getAtomWithIdx(1))) == "[#6&R]");
+    CHECK(getSubstanceGroups(*m).empty());
+  }
+  SECTION("parsing v2000") {
+    auto m = R"CTAB(query
+  Mrv2102 09032106302D          
+
+  2  1  0  0  0  0            999 V2000
+   -0.4464    2.4334    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.2680    2.8459    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+M  STY  1   1 DAT
+M  SAL   1  1   2
+M  SDT   1                                                     SQ=
+M  SDD   1     0.0000    0.0000    DR    ALL  0       0  
+M  SED   1 [#6;R]
+M  END
+)CTAB"_ctab;
+    REQUIRE(m);
+    REQUIRE(m->getAtomWithIdx(1)->hasQuery());
+    CHECK(SmartsWrite::GetAtomSmarts(
+              static_cast<QueryAtom *>(m->getAtomWithIdx(1))) == "[#6&R]");
+    CHECK(getSubstanceGroups(*m).empty());
+  }
+}
+
+TEST_CASE("Github #4561: failure to parse CTAB with LINKNODE and SGROUP") {
+  SECTION("BASICS") {
+    auto mol1 = R"CTAB(
+  Mrv2108 09252106182D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 7 7 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C 12.719 -9.1518 0 0
+M  V30 2 O 14.0458 -9.9326 0 0
+M  V30 3 * 15.3857 -9.1735 0 0
+M  V30 4 * 11.379 -9.9108 0 0
+M  V30 5 C 12.7317 -7.6118 0 0
+M  V30 6 C 12.2558 -6.1472 0 0
+M  V30 7 C 13.7622 -6.4674 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 2 1 2 3
+M  V30 3 1 1 4
+M  V30 4 1 1 5
+M  V30 5 1 7 6
+M  V30 6 1 6 5
+M  V30 7 1 5 7
+M  V30 END BOND
+M  V30 LINKNODE 1 2 2 7 5 7 6
+M  V30 BEGIN SGROUP
+M  V30 1 SRU 0 ATOMS=(5 2 1 5 7 6) XBONDS=(2 2 3) BRKXYZ=(9 12.044 -10.2974 0 -
+M  V30 12.044 -8.7593 0 0 0 0) BRKXYZ=(9 14.7161 -8.7854 0 14.7161 -10.3235 0 -
+M  V30 0 0 0) CONNECT=HT LABEL=n
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol1);
+    CHECK(getSubstanceGroups(*mol1).size() == 1);
+    CHECK(mol1->hasProp(common_properties::molFileLinkNodes));
   }
 }

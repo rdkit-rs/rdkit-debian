@@ -1,5 +1,6 @@
 //
-//  Copyright (C) 2017 Novartis Institutes for BioMedical Research
+//  Copyright (c) 2017-2021, Novartis Institutes for BioMedical Research Inc.
+//  and other RDKit contributors
 //
 //   @@ All Rights Reserved @@
 //  This file is part of the RDKit.
@@ -171,12 +172,12 @@ class RDKIT_RGROUPDECOMPOSITION_EXPORT RGroupDecomposition {
   ~RGroupDecomposition();
 
   //! Returns the index of the added molecule in the RGroupDecomposition
-  //   or a negative error code
-  // :param mol: Molecule to add to the decomposition
-  // :result: index of the molecle or
-  //              -1 if none of the core matches
-  //              -2 if the matched molecule has no sidechains, i.e. is the
-  //                 same as the scaffold
+  ///  or a negative error code
+  /// :param mol: Molecule to add to the decomposition
+  /// :result: index of the molecle or
+  ///             -1 if none of the core matches
+  ///             -2 if the matched molecule has no sidechains, i.e. is the
+  ///                same as the scaffold
   int add(const ROMol &mol);
   RGroupDecompositionProcessResult processAndScore();
   bool process();

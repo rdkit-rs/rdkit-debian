@@ -9,7 +9,6 @@
 //
 #define NO_IMPORT_ARRAY
 #include <RDBoost/python.h>
-#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 #include <string>
 
 #include "rdchem.h"
@@ -171,7 +170,7 @@ namespace {
 class pyobjFunctor {
  public:
   pyobjFunctor(python::object obj) : dp_obj(std::move(obj)) {}
-  ~pyobjFunctor() {}
+  ~pyobjFunctor() = default;
   bool operator()(const ROMol &m, const std::vector<unsigned int> &match) {
     return python::extract<bool>(dp_obj(boost::ref(m), boost::ref(match)));
   }
@@ -208,9 +207,10 @@ class ReadWriteMol : public RWMol {
     PRECONDITION(atom, "bad atom");
     replaceAtom(idx, atom, updateLabel, preserveProps);
   };
-  void ReplaceBond(unsigned int idx, Bond *bond, bool preserveProps) {
+  void ReplaceBond(unsigned int idx, Bond *bond, bool preserveProps,
+                   bool keepSGroups) {
     PRECONDITION(bond, "bad bond");
-    replaceBond(idx, bond, preserveProps);
+    replaceBond(idx, bond, preserveProps, keepSGroups);
   };
   void SetStereoGroups(python::list &stereo_groups) {
     std::vector<StereoGroup> groups;
@@ -294,6 +294,7 @@ struct mol_wrapper {
         .value("ComputedProps", RDKit::PicklerOps::ComputedProps)
         .value("AllProps", RDKit::PicklerOps::AllProps)
         .value("CoordsAsDouble", RDKit::PicklerOps::CoordsAsDouble)
+        .value("NoConformers", RDKit::PicklerOps::NoConformers)
         .export_values();
     ;
 
@@ -350,10 +351,12 @@ struct mol_wrapper {
     python::class_<ROMol, ROMOL_SPTR, boost::noncopyable>(
         "Mol", molClassDoc.c_str(),
         python::init<>("Constructor, takes no arguments"))
-        .def(python::init<const std::string &>())
-        .def(python::init<const ROMol &>())
-        .def(python::init<const ROMol &, bool>())
-        .def(python::init<const ROMol &, bool, int>())
+        .def(python::init<const std::string &>(python::args("pklString")))
+        .def(python::init<const std::string &, unsigned int>(
+            (python::args("pklString", "propertyFlags"))))
+        .def(python::init<const ROMol &, bool, int>(
+            (python::arg("mol"), python::arg("quickCopy") = false,
+             python::arg("confId") = -1)))
         .def("__copy__", &generic__copy__<ROMol>)
         .def("__deepcopy__", &generic__deepcopy__<ROMol>)
         .def(
@@ -832,9 +835,12 @@ struct mol_wrapper {
         "RWMol", rwmolClassDoc.c_str(),
         python::init<const ROMol &>("Construct from a Mol"))
         .def(python::init<>())
-        .def(python::init<const std::string &>())
-        .def(python::init<const ROMol &, bool>())
-        .def(python::init<const ROMol &, bool, int>())
+        .def(python::init<const std::string &>(python::args("pklString")))
+        .def(python::init<const std::string &, unsigned int>(
+            (python::args("pklString", "propertyFlags"))))
+        .def(python::init<const ROMol &, bool, int>(
+            (python::arg("mol"), python::arg("quickCopy") = false,
+             python::arg("confId") = -1)))
         .def("__copy__", &generic__copy__<ReadWriteMol>)
         .def("__deepcopy__", &generic__deepcopy__<ReadWriteMol>)
         .def("__enter__", &ReadWriteMol::enter,
@@ -863,10 +869,12 @@ struct mol_wrapper {
              "explicit set on the new atom")
         .def("ReplaceBond", &ReadWriteMol::ReplaceBond,
              (python::arg("index"), python::arg("newBond"),
-              python::arg("preserveProps") = false),
+              python::arg("preserveProps") = false,
+              python::arg("keepSGroups") = true),
              "replaces the specified bond with the provided one.\n"
              "If preserveProps is True preserve keep the existing props unless "
-             "explicit set on the new bond")
+             "explicit set on the new bond. If keepSGroups is False, all"
+             "Substance Groups referencing the bond will be dropped.")
         .def("GetMol", &ReadWriteMol::GetMol,
              "Returns a Mol (a normal molecule)",
              python::return_value_policy<python::manage_new_object>())
@@ -874,8 +882,8 @@ struct mol_wrapper {
         .def("SetStereoGroups", &ReadWriteMol::SetStereoGroups,
              (python::arg("stereo_groups")), "Set the stereo groups")
 
-        .def("InsertMol", &ReadWriteMol::insertMol,
-        	   (python::arg("mol")), "Insert (add) the given molecule into this one")
+        .def("InsertMol", &ReadWriteMol::insertMol, (python::arg("mol")),
+             "Insert (add) the given molecule into this one")
 
         .def("BeginBatchEdit", &RWMol::beginBatchEdit, "starts batch editing")
         .def("RollbackBatchEdit", &RWMol::rollbackBatchEdit,
