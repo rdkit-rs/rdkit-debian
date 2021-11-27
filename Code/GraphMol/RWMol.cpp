@@ -19,16 +19,10 @@
 #include "SubstanceGroup.h"
 
 namespace RDKit {
-void RWMol::destroy() {
-  ROMol::destroy();
-  d_partialBonds.clear();
-  d_partialBonds.resize(0);
-};
 
 RWMol &RWMol::operator=(const RWMol &other) {
   if (this != &other) {
     this->clear();
-    d_partialBonds.clear();
     numBonds = 0;
     initFromOther(other, false, -1);
   }
@@ -132,9 +126,8 @@ unsigned int RWMol::addAtom(bool updateLabel) {
   return rdcast<unsigned int>(which);
 }
 
-void RWMol::replaceAtom(unsigned int idx, Atom *atom_pin, bool updateLabel,
+void RWMol::replaceAtom(unsigned int idx, Atom *atom_pin, bool,
                         bool preserveProps) {
-  RDUNUSED_PARAM(updateLabel);
   PRECONDITION(atom_pin, "bad atom passed to replaceAtom");
   URANGE_CHECK(idx, getNumAtoms());
   Atom *atom_p = atom_pin->copy();
@@ -145,7 +138,6 @@ void RWMol::replaceAtom(unsigned int idx, Atom *atom_pin, bool updateLabel,
     const bool replaceExistingData = false;
     atom_p->updateProps(*d_graph[vd], replaceExistingData);
   }
-  removeSubstanceGroupsReferencingAtom(*this, idx);
 
   const auto orig_p = d_graph[vd];
   delete orig_p;
@@ -161,7 +153,8 @@ void RWMol::replaceAtom(unsigned int idx, Atom *atom_pin, bool updateLabel,
   }
 };
 
-void RWMol::replaceBond(unsigned int idx, Bond *bond_pin, bool preserveProps) {
+void RWMol::replaceBond(unsigned int idx, Bond *bond_pin, bool preserveProps,
+                        bool keepSGroups) {
   PRECONDITION(bond_pin, "bad bond passed to replaceBond");
   URANGE_CHECK(idx, getNumBonds());
   BOND_ITER_PAIR bIter = getEdges();
@@ -182,7 +175,10 @@ void RWMol::replaceBond(unsigned int idx, Bond *bond_pin, bool preserveProps) {
   const auto orig_p = d_graph[*(bIter.first)];
   delete orig_p;
   d_graph[*(bIter.first)] = bond_p;
-  removeSubstanceGroupsReferencingBond(*this, idx);
+
+  if (!keepSGroups) {
+    removeSubstanceGroupsReferencingBond(*this, idx);
+  }
 
   // handle bookmarks
   for (auto &ab : d_bondBookmarks) {

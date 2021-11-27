@@ -35,6 +35,8 @@ Reading single molecules
   # imported the IPythonConsole code
   from rdkit.Chem.Draw import IPythonConsole
   IPythonConsole.UninstallIPythonRenderer()
+  from rdkit.Chem import rdDepictor
+  rdDepictor.SetPreferCoordGen(False)
 
 The majority of the basic molecular functionality is found in module :py:mod:`rdkit.Chem`:
 
@@ -805,7 +807,7 @@ This can be used to reconstruct molecules using the Chem.Mol constructor:
   >>> Chem.MolToSmiles(m2)
   'c1ccncc1'
   >>> len(binStr)
-  123
+  127
 
 Note that this is smaller than the pickle:
 

@@ -16,6 +16,7 @@
 #include <boost/smart_ptr.hpp>
 #include <RDGeneral/RDProps.h>
 #include <limits>
+#include <utility>
 
 namespace RDKit {
 class ROMol;
@@ -24,12 +25,12 @@ class ROMol;
 class RDKIT_GRAPHMOL_EXPORT ConformerException : public std::exception {
  public:
   //! construct with an error message
-  ConformerException(const char *msg) : _msg(msg){};
+  ConformerException(const char *msg) : _msg(msg) {}
   //! construct with an error message
-  ConformerException(const std::string &msg) : _msg(msg){};
+  ConformerException(std::string msg) : _msg(std::move(msg)) {}
   //! get the error message
-  const char *what() const noexcept override { return _msg.c_str(); };
-  ~ConformerException() noexcept {};
+  const char *what() const noexcept override { return _msg.c_str(); }
+  ~ConformerException() noexcept override = default;
 
  private:
   std::string _msg;
@@ -46,7 +47,7 @@ class RDKIT_GRAPHMOL_EXPORT Conformer : public RDProps {
   friend class ROMol;
 
   //! Constructor
-  Conformer() { d_positions.clear(); };
+  Conformer() { d_positions.clear(); }
 
   //! Constructor with number of atoms specified ID specification
   Conformer(unsigned int numAtoms) {
@@ -56,14 +57,14 @@ class RDKIT_GRAPHMOL_EXPORT Conformer : public RDProps {
       d_positions.resize(0);
       d_positions.clear();
     }
-  };
+  }
 
   //! Copy Constructor: initialize from a second conformation.
   Conformer(const Conformer &other);
   Conformer &operator=(const Conformer &other);
 
   //! Destructor
-  ~Conformer(){};
+  ~Conformer() = default;
 
   //! Resize the conformer so that more atoms location can be added.
   //! Useful, for e.g., when adding hydrogens
@@ -73,7 +74,7 @@ class RDKIT_GRAPHMOL_EXPORT Conformer : public RDProps {
   void reserve(unsigned int size) { d_positions.reserve(size); }
 
   //! returns whether or not this instance belongs to a molecule
-  bool hasOwningMol() const { return dp_mol != nullptr; };
+  bool hasOwningMol() const { return dp_mol != nullptr; }
 
   //! Get the molecule that owns this instance
   ROMol &getOwningMol() const {
