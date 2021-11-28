@@ -9,6 +9,8 @@ rdkit (202109.2-1) UNRELEASED; urgency=medium
     definition, hardcoded to current release for now.
   * debian/rules (DH_AUTO_CONFIGURE_OPTS): Added -DRDK_INSTALL_COMIC_FONTS=OFF
     (Closes: #999767).
+  * debian/control.in,debian/control (Build-Depends): Added libcairo-dev.
+  * debian/rules (DH_AUTO_CONFIGURE_OPTS): Added -DRDK_BUILD_CAIRO_SUPPORT=ON.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 13 Nov 2021 10:56:52 +0100
 
