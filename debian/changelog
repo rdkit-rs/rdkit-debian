@@ -7,6 +7,8 @@ rdkit (202109.2-1) UNRELEASED; urgency=medium
   * debian/patches/postgres_compile_fixes.patch: Refreshed. 
   * debian/patches/postgres_Makefile_fixes.patch: Add RDK_TOOLKIT_VERSION
     definition, hardcoded to current release for now.
+  * debian/rules (DH_AUTO_CONFIGURE_OPTS): Added -DRDK_INSTALL_COMIC_FONTS=OFF
+    (Closes: #999767).
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 13 Nov 2021 10:56:52 +0100
 
