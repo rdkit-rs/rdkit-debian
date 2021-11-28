@@ -2,7 +2,7 @@ Index: rdkit/Code/PgSQL/rdkit/adapter.cpp
 ===================================================================
 --- rdkit.orig/Code/PgSQL/rdkit/adapter.cpp
 +++ rdkit/Code/PgSQL/rdkit/adapter.cpp
-@@ -650,7 +650,7 @@ extern "C" CROMol MolAdjustQueryProperti
+@@ -739,7 +739,7 @@ extern "C" CROMol MolAdjustQueryProperti
      try {
        MolOps::parseAdjustQueryParametersFromJSON(p, pstring);
      } catch (const ValueErrorException &e) {
@@ -15,7 +15,7 @@ Index: rdkit/Code/PgSQL/rdkit/mol_op.c
 ===================================================================
 --- rdkit.orig/Code/PgSQL/rdkit/mol_op.c
 +++ rdkit/Code/PgSQL/rdkit/mol_op.c
-@@ -596,7 +596,7 @@ fmcs_transition(PG_FUNCTION_ARGS) {
+@@ -645,7 +645,7 @@ fmcs_transition(PG_FUNCTION_ARGS) {
  //  int      tsmiles_len = VARSIZE(tsmiles);
    char    *smiles = pgstrdup(VARDATA(tsmiles), VARSIZE(tsmiles));
    char    *params = PG_GETARG_CSTRING(2);
