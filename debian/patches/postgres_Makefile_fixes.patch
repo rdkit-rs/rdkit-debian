@@ -38,7 +38,7 @@
  SHLIB_LINK += ${THREADLIBS}
  
 -PG_CPPFLAGS = -I${BOOSTHOME}/include -I${RDKIT}/Code -DRDKITVER='"007300"' ${AVALONFLAGS} ${INCHIFLAGS} ${POPCOUNTFLAGS}
-+PG_CPPFLAGS = -I${BOOSTHOME}/include -I${RDKIT}/Code -DRDKITVER='"007300"' ${AVALONFLAGS} ${INCHIFLAGS}
++PG_CPPFLAGS = -I${BOOSTHOME}/include -I${RDKIT}/Code -DRDKITVER='"007300"' -DRDK_TOOLKIT_VERSION='"2021.09.02"' ${AVALONFLAGS} ${INCHIFLAGS}
  
  CPLUSPLUSFLAGS = $(filter-out -fexcess-precision=standard -Wmissing-prototypes -Wdeclaration-after-statement, $(CFLAGS))
  CPLUSPLUSFLAGS += -Wno-unused-function

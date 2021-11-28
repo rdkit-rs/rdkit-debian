@@ -4,6 +4,8 @@ rdkit (202109.2-1) UNRELEASED; urgency=medium
 
   [ Michael Banck ]
   * debian/patches/postgres_compile_fixes.patch: Refreshed. 
+  * debian/patches/postgres_Makefile_fixes.patch: Add RDK_TOOLKIT_VERSION
+    definition, hardcoded to current release for now.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 13 Nov 2021 10:56:52 +0100
 
