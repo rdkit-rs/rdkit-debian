@@ -1,3 +1,8 @@
+rdkit (202109.2-2) UNRELEASED; urgency=medium
+
+
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 28 Nov 2021 09:56:19 +0100
+
 rdkit (202109.2-1) unstable; urgency=medium
 
   * New upstream release.
