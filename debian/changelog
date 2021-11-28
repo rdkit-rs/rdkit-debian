@@ -1,6 +1,7 @@
 rdkit (202109.2-1) UNRELEASED; urgency=medium
 
   * New upstream release.
+    + Includes updated PostgreSQL regression outputs (Closes: #1000579).
 
   [ Michael Banck ]
   * debian/patches/postgres_compile_fixes.patch: Refreshed. 
