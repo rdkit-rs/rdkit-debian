@@ -77,7 +77,7 @@ struct RGroupDecompData {
   }
 
   void setRlabel(Atom *atom, int rlabel) {
-    PRECONDITION(rlabel != 0, "RLabels must be >0");
+    PRECONDITION(rlabel > 0, "RLabels must be >0");
     if (params.rgroupLabelling & AtomMap) {
       atom->setAtomMapNum(rlabel);
     }
@@ -89,8 +89,26 @@ struct RGroupDecompData {
     }
 
     if (params.rgroupLabelling & Isotope) {
-      atom->setIsotope(rlabel + 1);
+      atom->setIsotope(rlabel);
     }
+  }
+
+  int getRlabel(Atom *atom) const {
+    if (params.rgroupLabelling & AtomMap) {
+      return atom->getAtomMapNum();
+    }
+    if (params.rgroupLabelling & Isotope) {
+      return atom->getIsotope();
+    }
+
+    if (params.rgroupLabelling & MDLRGroup) {
+      unsigned int label = 0;
+      if (atom->getPropIfPresent(common_properties::_MolFileRLabel, label)) {
+        return label;
+      }
+    }
+
+    CHECK_INVARIANT(0, "no valid r label found");
   }
 
   double scoreFromPrunedData(const std::vector<size_t> &permutation,
@@ -130,7 +148,8 @@ struct RGroupDecompData {
   }
 
   void prune() {  // prune all but the current "best" permutation of matches
-    PRECONDITION(permutation.size() <= matches.size(), "permutation.size() should be <= matches.size()");
+    PRECONDITION(permutation.size() <= matches.size(),
+                 "permutation.size() should be <= matches.size()");
     size_t offset = matches.size() - permutation.size();
     for (size_t mol_idx = 0; mol_idx < permutation.size(); ++mol_idx) {
       std::vector<RGroupMatch> keepVector;
@@ -403,7 +422,7 @@ struct RGroupDecompData {
     addAtoms(mol, atomsToAdd);
 
     if (params.removeHydrogensPostMatch) {
-      RDLog::BlockLogs blocker;
+      RDLog::LogStateSetter blocker;
       bool implicitOnly = false;
       bool updateExplicitCount = false;
       bool sanitize = false;

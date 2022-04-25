@@ -430,44 +430,44 @@ TEST_CASE("MDL five-rings") {
     {
       std::unique_ptr<RWMol> qry{SmilesToMol("*1:c:c:c:c:1", smiles_ps)};
       REQUIRE(qry);
-      QueryAtom *qat = new QueryAtom(0);
+      std::unique_ptr<QueryAtom> qat(new QueryAtom(0));
       qat->setQuery(makeAAtomQuery());
       qat->setIsAromatic(true);
-      qry->replaceAtom(0, qat);
+      qry->replaceAtom(0, qat.get());
       MolOps::adjustQueryProperties(*qry, &ps);
       CHECK(MolToSmarts(*qry) == "[!#1]1-,:[#6]=,:[#6]-,:[#6]=,:[#6]-,:1");
     }
     {  // ring not fully aromatic
       std::unique_ptr<RWMol> qry{SmilesToMol("*1:c:C-c:c:1", smiles_ps)};
       REQUIRE(qry);
-      QueryAtom *qat = new QueryAtom(0);
+      std::unique_ptr<QueryAtom> qat(new QueryAtom(0));
       qat->setQuery(makeAAtomQuery());
       qat->setIsAromatic(true);
-      qry->replaceAtom(0, qat);
+      qry->replaceAtom(0, qat.get());
       MolOps::adjustQueryProperties(*qry, &ps);
       CHECK(MolToSmarts(*qry) == "[!#1]1:[#6]:[#6]-[#6]:[#6]:1");
     }
     {  // ring has additional dummy
       std::unique_ptr<RWMol> qry{SmilesToMol("*1:c:*:c:c:1", smiles_ps)};
       REQUIRE(qry);
-      QueryAtom *qat = new QueryAtom(0);
+      std::unique_ptr<QueryAtom> qat(new QueryAtom(0));
       qat->setQuery(makeAAtomQuery());
       qat->setIsAromatic(true);
-      qry->replaceAtom(0, qat);
+      qry->replaceAtom(0, qat.get());
       MolOps::adjustQueryProperties(*qry, &ps);
       CHECK(MolToSmarts(*qry) == "[!#1]1:[#6]:[#0]:[#6]:[#6]:1");
     }
     {  // query bond in ring
       std::unique_ptr<RWMol> qry{SmilesToMol("*1:c:c:c:c:1", smiles_ps)};
       REQUIRE(qry);
-      QueryAtom *qat = new QueryAtom(0);
+      std::unique_ptr<QueryAtom> qat(new QueryAtom(0));
       qat->setQuery(makeAAtomQuery());
       qat->setIsAromatic(true);
-      qry->replaceAtom(0, qat);
-      QueryBond *qbnd = new QueryBond();
+      qry->replaceAtom(0, qat.get());
+      std::unique_ptr<QueryBond> qbnd(new QueryBond());
       qbnd->setBondType(Bond::BondType::SINGLE);
       qbnd->setQuery(makeBondOrderEqualsQuery(Bond::BondType::SINGLE));
-      qry->replaceBond(0, qbnd);
+      qry->replaceBond(0, qbnd.get());
       MolOps::adjustQueryProperties(*qry, &ps);
       CHECK(MolToSmarts(*qry) == "[!#1]1-[#6]:[#6]:[#6]:[#6]:1");
     }
@@ -783,5 +783,34 @@ TEST_CASE("other edges") {
     CHECK(describeQuery(m->getAtomWithIdx(0)).find("AtomInRing") !=
           std::string::npos);
     CHECK(!m->getAtomWithIdx(1)->hasQuery());
+  }
+}
+
+TEST_CASE(
+    "Github #4789: AdjustQueryProperties() is inconsistent when "
+    "adjustConjugatedFiveRings is set") {
+  SECTION("degree one neighbors") {
+    auto mol = "C1=CC=CC1C"_smiles;
+    REQUIRE(mol);
+    MolOps::AdjustQueryParameters ps =
+        MolOps::AdjustQueryParameters::noAdjustments();
+    ps.adjustConjugatedFiveRings = true;
+    ps.adjustSingleBondsToDegreeOneNeighbors = true;
+    MolOps::adjustQueryProperties(*mol, &ps);
+    CHECK(MolToSmarts(*mol) ==
+          "[#6]1-,=,:[#6]-,=,:[#6]-,=,:[#6]-,=,:[#6]-,=,:1[#6]");
+  }
+  SECTION("between aromatic atoms") {
+    auto mol = "C1=CC=CC1C1=CC=CC1"_smiles;
+    REQUIRE(mol);
+    MolOps::AdjustQueryParameters ps =
+        MolOps::AdjustQueryParameters::noAdjustments();
+    ps.adjustConjugatedFiveRings = true;
+    ps.adjustSingleBondsBetweenAromaticAtoms = true;
+    MolOps::adjustQueryProperties(*mol, &ps);
+    // clang-format off
+    CHECK(MolToSmarts(*mol) ==
+          "[#6]1-,=,:[#6]-,=,:[#6]-,=,:[#6]-,=,:[#6]-,=,:1[#6]1-,=,:[#6]-,=,:[#6]-,=,:[#6]-,=,:[#6]-,=,:1");
+    // clang-format on
   }
 }

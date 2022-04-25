@@ -4254,3 +4254,375 @@ M  END
     CHECK(mol1->hasProp(common_properties::molFileLinkNodes));
   }
 }
+
+TEST_CASE(
+    "Github #4785: MDL query with aromatic bond sets aromatic flag on atoms "
+    "even though they are not in an aromatic ring") {
+  SECTION("benzene") {
+    auto mol = R"CTAB(
+  Mrv2108 12102110572D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 6 6 0 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C 128.125 -103.585 0 0
+M  V30 2 C 126.7913 -104.355 0 0
+M  V30 3 C 126.7913 -105.895 0 0
+M  V30 4 C 128.125 -106.665 0 0
+M  V30 5 C 129.4587 -105.895 0 0
+M  V30 6 C 129.4587 -104.355 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 4 1 2
+M  V30 2 4 2 3
+M  V30 3 4 3 4
+M  V30 4 4 4 5
+M  V30 5 4 5 6
+M  V30 6 4 1 6
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    CHECK(mol->getAtomWithIdx(0)->getIsAromatic());
+    CHECK(mol->getBondWithIdx(0)->getIsAromatic());
+  }
+  SECTION("non-kekulizeable") {
+    auto mol = R"CTAB(
+  Mrv2108 12102110572D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 5 5 0 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C 128.125 -103.585 0 0
+M  V30 2 C 126.7913 -104.355 0 0
+M  V30 3 C 126.7913 -105.895 0 0
+M  V30 4 C 128.125 -106.665 0 0
+M  V30 5 C 129.4587 -105.895 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 4 1 2
+M  V30 2 4 2 3
+M  V30 3 4 3 4
+M  V30 4 4 4 5
+M  V30 5 4 5 1
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(!mol);
+  }
+  SECTION("as reported1") {
+    auto mol = R"CTAB(
+  MJ201100                      
+
+  2  1  0  0  0  0  0  0  0  0999 V2000
+   -0.3538    0.6163    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.0668    0.2012    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  4  0  0  1  0
+M  MRV SMA   1 [#6;a;a]
+M  MRV SMA   2 [#6;a;a]
+M  END)CTAB"_ctab;
+    REQUIRE(mol);
+  }
+  SECTION("as reported2") {
+    auto mol = R"CTAB(
+  MJ201100                      
+
+  2  1  0  0  0  0  0  0  0  0999 V2000
+   -0.3538    0.6163    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.0668    0.2012    0.0000 A   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  4  0  0  1  0
+M  END)CTAB"_ctab;
+    REQUIRE(mol);
+  }
+  SECTION("as reported3") {
+    auto mol = R"CTAB(
+     RDKit          2D
+
+  0  0  0  0  0  0  0  0  0  0999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 2 1 0 0 0
+M  V30 BEGIN ATOM
+M  V30 1 A -0.353800 0.616300 0.000000 0
+M  V30 2 A -1.066800 0.201200 0.000000 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 4 1 2 TOPO=1
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+  }
+}
+TEST_CASE("checking array bounds") {
+  SECTION("XBONDS") {
+    auto mb = R"CTAB(
+  Mrv2108 01202214292D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 4 3 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 * -6.6667 7.5833 0 0
+M  V30 2 C -5.333 8.3533 0 0
+M  V30 3 C -3.9993 7.5833 0 0
+M  V30 4 * -2.6656 8.3533 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 2 1 2 3
+M  V30 3 1 3 4
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 SRU 0 ATOMS=(2 2 3) XBONDS=(20 1 3) BRKXYZ=(9 -3.9121 8.7006 0 -
+M  V30 -2.9881 7.1002 0 0 0 0) BRKXYZ=(9 -5.4201 7.2361 0 -6.3441 8.8365 0 0 -
+M  V30 0 0) CONNECT=HT LABEL=n
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END
+)CTAB";
+    std::unique_ptr<RWMol> mol;
+    REQUIRE_THROWS_AS(mol.reset(MolBlockToMol(mb)), FileParseException);
+  }
+  SECTION("ATOMS") {
+    auto mb = R"CTAB(
+  Mrv2108 01202214292D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 4 3 1 0 0
+M  V30 BEGIN ATOM
+M  V30 1 * -6.6667 7.5833 0 0
+M  V30 2 C -5.333 8.3533 0 0
+M  V30 3 C -3.9993 7.5833 0 0
+M  V30 4 * -2.6656 8.3533 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 1 2
+M  V30 2 1 2 3
+M  V30 3 1 3 4
+M  V30 END BOND
+M  V30 BEGIN SGROUP
+M  V30 1 SRU 0 ATOMS=(12 2 3) XBONDS=(2 1 3) BRKXYZ=(9 -3.9121 8.7006 0 -
+M  V30 -2.9881 7.1002 0 0 0 0) BRKXYZ=(9 -5.4201 7.2361 0 -6.3441 8.8365 0 0 -
+M  V30 0 0) CONNECT=HT LABEL=n
+M  V30 END SGROUP
+M  V30 END CTAB
+M  END
+)CTAB";
+    std::unique_ptr<RWMol> mol;
+    REQUIRE_THROWS_AS(mol.reset(MolBlockToMol(mb)), FileParseException);
+  }
+}
+
+TEST_CASE("Github #5108: Wiggly bonds don't override wedged bonds") {
+  SECTION("as reported") {
+    auto m = R"CTAB(
+  Mrv2102 03212207042D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 5 4 0 0 1
+M  V30 BEGIN ATOM
+M  V30 1 C 1.54 -1.54 0 0
+M  V30 2 C 1.54 0 0 0
+M  V30 3 O 1.54 1.54 0 0
+M  V30 4 F 3.08 -0 0 0
+M  V30 5 Cl 0 0 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 2 1
+M  V30 2 1 2 3 CFG=2
+M  V30 3 1 2 4 CFG=1
+M  V30 4 1 2 5
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(m);
+    CHECK(m->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_UNSPECIFIED);
+  }
+  SECTION("as reported, bond ordering changed") {
+    auto m = R"CTAB(
+  Mrv2102 03212207042D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 5 4 0 0 1
+M  V30 BEGIN ATOM
+M  V30 1 C 1.54 -1.54 0 0
+M  V30 2 C 1.54 0 0 0
+M  V30 3 O 1.54 1.54 0 0
+M  V30 4 F 3.08 -0 0 0
+M  V30 5 Cl 0 0 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 2 1
+M  V30 2 1 2 4 CFG=1
+M  V30 3 1 2 3 CFG=2
+M  V30 4 1 2 5
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(m);
+    CHECK(m->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_UNSPECIFIED);
+  }
+  SECTION("assignChiralTypesFromBondDirs details") {
+    auto m = R"CTAB(
+  Mrv2102 03212207042D          
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 5 4 0 0 1
+M  V30 BEGIN ATOM
+M  V30 1 C 1.54 -1.54 0 0
+M  V30 2 C 1.54 0 0 0
+M  V30 3 O 1.54 1.54 0 0
+M  V30 4 F 3.08 -0 0 0
+M  V30 5 Cl 0 0 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 2 1
+M  V30 2 1 2 4 CFG=1
+M  V30 3 1 2 3
+M  V30 4 1 2 5
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(m);
+    CHECK(m->getAtomWithIdx(1)->getChiralTag() !=
+          Atom::ChiralType::CHI_UNSPECIFIED);
+    m->getBondBetweenAtoms(1, 2)->setBondDir(Bond::BondDir::UNKNOWN);
+    bool replaceExistingTags = false;
+    MolOps::assignChiralTypesFromBondDirs(*m, -1, replaceExistingTags);
+    CHECK(m->getAtomWithIdx(1)->getChiralTag() !=
+          Atom::ChiralType::CHI_UNSPECIFIED);
+    replaceExistingTags = true;
+    MolOps::assignChiralTypesFromBondDirs(*m, -1, replaceExistingTags);
+    CHECK(m->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_UNSPECIFIED);
+  }
+}
+
+TEST_CASE(
+    "Github #5152: presence of exocyclic query bonds in CTAB prevents "
+    "aromaticity perception") {
+  SECTION("as reported") {
+    auto m = R"CTAB(
+     RDKit          2D
+
+  0  0  0  0  0  0  0  0  0  0999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 8 8 0 0 1
+M  V30 BEGIN ATOM
+M  V30 1 C -2.229300 0.915100 0.000000 0
+M  V30 2 C -3.562800 0.145100 0.000000 0
+M  V30 3 C -3.562800 -1.395100 0.000000 0
+M  V30 4 C -2.229300 -2.165100 0.000000 0
+M  V30 5 C -0.895500 -1.395100 0.000000 0
+M  V30 6 C -0.895500 0.145100 0.000000 0
+M  V30 7 A 0.438100 0.915100 0.000000 0
+M  V30 8 A 0.438100 -2.165100 0.000000 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 2 1 2
+M  V30 2 1 2 3
+M  V30 3 2 3 4
+M  V30 4 1 4 5
+M  V30 5 2 5 6
+M  V30 6 1 6 1
+M  V30 7 6 6 7
+M  V30 8 6 5 8
+M  V30 END BOND
+M  V30 END CTAB
+M  END)CTAB"_ctab;
+    REQUIRE(m);
+    CHECK(m->getAtomWithIdx(0)->getIsAromatic());
+    CHECK(m->getBondWithIdx(0)->getIsAromatic());
+  }
+  SECTION("more detailed") {
+    std::string molb = R"CTAB(
+     RDKit          2D
+
+  0  0  0  0  0  0  0  0  0  0999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 8 8 0 0 1
+M  V30 BEGIN ATOM
+M  V30 1 C -2.229300 0.915100 0.000000 0
+M  V30 2 C -3.562800 0.145100 0.000000 0
+M  V30 3 C -3.562800 -1.395100 0.000000 0
+M  V30 4 C -2.229300 -2.165100 0.000000 0
+M  V30 5 C -0.895500 -1.395100 0.000000 0
+M  V30 6 C -0.895500 0.145100 0.000000 0
+M  V30 7 A 0.438100 0.915100 0.000000 0
+M  V30 8 A 0.438100 -2.165100 0.000000 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 2 1 2
+M  V30 2 1 2 3
+M  V30 3 2 3 4
+M  V30 4 1 4 5
+M  V30 5 2 5 6
+M  V30 6 1 6 1
+M  V30 7 6 6 7
+M  V30 8 6 5 8
+M  V30 END BOND
+M  V30 END CTAB
+M  END)CTAB";
+    std::string ptrn = "7 6 6 7";
+    std::vector<std::string> alternatives = {
+        "7 5 6 7",  // S/D
+        "7 7 6 7",  // D/A
+        "7 8 6 7",  // any
+    };
+    auto pos = molb.find(ptrn);
+    REQUIRE(pos != std::string::npos);
+    for (auto alternative : alternatives) {
+      auto mb2 = molb.replace(pos, ptrn.size(), alternative);
+      std::unique_ptr<RWMol> m(MolBlockToMol(mb2));
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(0)->getIsAromatic());
+      CHECK(m->getBondWithIdx(0)->getIsAromatic());
+    }
+  }
+}
+
+TEST_CASE(
+    "Github #5165: issue with V3000 SD files containing enhanced "
+    "stereochemistry information") {
+    
+    SECTION("as reported") {
+        std::string rdbase = getenv("RDBASE");
+        std::string fName =
+          rdbase + "/Code/GraphMol/FileParsers/test_data/mol_with_enhanced_stereo_2_And_groups.sdf";
+        SDMolSupplier suppl(fName);
+        ROMol *mol = suppl.next();
+        REQUIRE(mol);
+        auto groups = mol->getStereoGroups();
+        REQUIRE(groups.size()==2);
+        CHECK(groups[0].getGroupType() == RDKit::StereoGroupType::STEREO_AND);
+        CHECK(groups[1].getGroupType() == RDKit::StereoGroupType::STEREO_AND);
+    }
+    
+    SECTION("as reported, less whitespace") {
+        std::string rdbase = getenv("RDBASE");
+        std::string fName =
+          rdbase + "/Code/GraphMol/FileParsers/test_data/m_with_enh_stereo.sdf";
+        SDMolSupplier suppl(fName);
+        ROMol *mol = suppl.next();
+        REQUIRE(mol);
+        auto groups = mol->getStereoGroups();
+        REQUIRE(groups.size()==2);
+        CHECK(groups[0].getGroupType() == RDKit::StereoGroupType::STEREO_AND);
+        CHECK(groups[1].getGroupType() == RDKit::StereoGroupType::STEREO_AND);
+    }
+    
+}

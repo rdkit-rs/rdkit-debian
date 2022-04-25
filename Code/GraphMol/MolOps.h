@@ -137,25 +137,6 @@ getMolFragsWithQuery(const ROMol &mol, T (*query)(const ROMol &, const Atom *),
     RDKIT_GRAPHMOL_EXPORT void findSpanningTree(const ROMol &mol,std::vector<int> &mst);
 #endif
 
-//! DEPRECATED calculates Balaban's J index for the molecule
-/*!
-  \param mol      the molecule of interest
-  \param useBO    toggles inclusion of the bond order in the calculation
-                  (when false, we're not really calculating the J value)
-  \param force    forces the calculation (instead of using cached results)
-  \param bondPath when included, only paths using bonds whose indices occur
-                  in this vector will be included in the calculation
-  \param cacheIt  If this is true, the calculated value will be cached
-                  as a property on the molecule
-  \return the J index
-
-*/
-RDKIT_GRAPHMOL_EXPORT double computeBalabanJ(
-    const ROMol &mol, bool useBO = true, bool force = false,
-    const std::vector<int> *bondPath = nullptr, bool cacheIt = true);
-//!  DEPRECATED \overload
-RDKIT_GRAPHMOL_EXPORT double computeBalabanJ(double *distMat, int nb, int nAts);
-
 //! \name Dealing with hydrogens
 //{@
 
@@ -381,12 +362,12 @@ struct RDKIT_GRAPHMOL_EXPORT AdjustQueryParameters {
                 software as documented in the Chemical Representation Guide */
 
   bool adjustSingleBondsToDegreeOneNeighbors =
-      false; /**<  sets single bonds between aromatic atoms and degree one
-                neighbors to SINGLE|AROMATIC */
+      false; /**<  sets single bonds between aromatic or conjugated atoms and
+                degree one neighbors to SINGLE|AROMATIC */
 
   bool adjustSingleBondsBetweenAromaticAtoms =
-      false; /**<  sets non-ring single bonds between two aromatic atoms to
-                SINGLE|AROMATIC */
+      false; /**<  sets non-ring single bonds between two aromatic or conjugated
+                atoms to SINGLE|AROMATIC */
   //! \brief returns an AdjustQueryParameters object with all adjustments
   //! disabled
   static AdjustQueryParameters noAdjustments() {

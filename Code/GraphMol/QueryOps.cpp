@@ -589,6 +589,7 @@ BOND_EQUALS_QUERY *makeBondOrderEqualsQuery(Bond::BondType what) {
   res->setVal(what);
   res->setDataFunc(queryBondOrder);
   res->setDescription("BondOrder");
+  res->setTypeLabel("BondOrder");
   return res;
 }
 
@@ -597,6 +598,7 @@ RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *makeSingleOrAromaticBondQuery() {
   res->setVal(true);
   res->setDataFunc(queryBondIsSingleOrAromatic);
   res->setDescription("SingleOrAromaticBond");
+  res->setTypeLabel("BondOrder");
   return res;
 };
 
@@ -605,6 +607,7 @@ RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *makeDoubleOrAromaticBondQuery() {
   res->setVal(true);
   res->setDataFunc(queryBondIsDoubleOrAromatic);
   res->setDescription("DoubleOrAromaticBond");
+  res->setTypeLabel("BondOrder");
   return res;
 };
 
@@ -613,6 +616,7 @@ RDKIT_GRAPHMOL_EXPORT BOND_EQUALS_QUERY *makeSingleOrDoubleBondQuery() {
   res->setVal(true);
   res->setDataFunc(queryBondIsSingleOrDouble);
   res->setDescription("SingleOrDoubleBond");
+  res->setTypeLabel("BondOrder");
   return res;
 };
 
@@ -622,10 +626,13 @@ makeSingleOrDoubleOrAromaticBondQuery() {
   res->setVal(true);
   res->setDataFunc(queryBondIsSingleOrDoubleOrAromatic);
   res->setDescription("SingleOrDoubleOrAromaticBond");
+  res->setTypeLabel("BondOrder");
   return res;
 };
 
 namespace QueryOps {
+// we don't use these anymore but we need to keep them around for backwards
+// compatibility with pickled queries. There's no reason to update this list.
 const std::vector<std::string> bondOrderQueryFunctions{
     std::string("BondOrder"), std::string("SingleOrAromaticBond"),
     std::string("DoubleOrAromaticBond"), std::string("SingleOrDoubleBond"),
@@ -633,9 +640,12 @@ const std::vector<std::string> bondOrderQueryFunctions{
 RDKIT_GRAPHMOL_EXPORT bool hasBondTypeQuery(
     const Queries::Query<int, Bond const *, true> &qry) {
   const auto df = qry.getDescription();
+  const auto dt = qry.getTypeLabel();
   // is this a bond order query?
-  if (std::find(bondOrderQueryFunctions.begin(), bondOrderQueryFunctions.end(),
-                df) != bondOrderQueryFunctions.end()) {
+  if (dt == "BondOrder" ||
+      (dt.empty() &&
+       std::find(bondOrderQueryFunctions.begin(), bondOrderQueryFunctions.end(),
+                 df) != bondOrderQueryFunctions.end())) {
     return true;
   }
   for (const auto &child :
@@ -812,8 +822,9 @@ bool _atomListQueryHelper(const T query) {
         return false;
       }
     }
+    return true;
   }
-  return true;
+  return false;
 }
 }  // namespace
 bool isAtomListQuery(const Atom *a) {
@@ -889,11 +900,7 @@ bool isComplexQuery(const Atom *a) {
     if (_complexQueryHelper(a->getQuery(), hasAtNum)) {
       return true;
     }
-    if (hasAtNum) {
-      return false;
-    } else {
-      return true;
-    }
+    return !hasAtNum;
   }
 
   return true;
@@ -902,7 +909,7 @@ bool isAtomAromatic(const Atom *a) {
   PRECONDITION(a, "bad atom");
   bool res = false;
   if (!a->hasQuery()) {
-    res = a->getIsAromatic();
+    res = isAromaticAtom(*a);
   } else {
     std::string descr = a->getQuery()->getDescription();
     if (descr == "AtomAtomicNum") {
@@ -941,18 +948,20 @@ bool isAtomAromatic(const Atom *a) {
 
 namespace QueryOps {
 namespace {
-void completeQueryAndChildren(ATOM_EQUALS_QUERY *query, Atom *tgt,
+void completeQueryAndChildren(Atom::QUERYATOM_QUERY *query, Atom *tgt,
                               unsigned int magicVal) {
   PRECONDITION(query, "no query");
   PRECONDITION(tgt, "no atom");
-  if (static_cast<unsigned int>(query->getVal()) == magicVal) {
-    int tgtVal = query->getDataFunc()(tgt);
-    query->setVal(tgtVal);
+  auto eqQuery = dynamic_cast<ATOM_EQUALS_QUERY *>(query);
+  if (eqQuery) {
+    if (static_cast<unsigned int>(eqQuery->getVal()) == magicVal) {
+      int tgtVal = eqQuery->getDataFunc()(tgt);
+      eqQuery->setVal(tgtVal);
+    }
   }
   for (auto childIt = query->beginChildren(); childIt != query->endChildren();
        ++childIt) {
-    completeQueryAndChildren((ATOM_EQUALS_QUERY *)(childIt->get()), tgt,
-                             magicVal);
+    completeQueryAndChildren(childIt->get(), tgt, magicVal);
   }
 }
 }  // namespace
@@ -960,8 +969,7 @@ void completeMolQueries(RWMol *mol, unsigned int magicVal) {
   PRECONDITION(mol, "bad molecule");
   for (auto atom : mol->atoms()) {
     if (atom->hasQuery()) {
-      auto *query = static_cast<ATOM_EQUALS_QUERY *>(atom->getQuery());
-      completeQueryAndChildren(query, atom, magicVal);
+      completeQueryAndChildren(atom->getQuery(), atom, magicVal);
     }
   }
 }

@@ -114,8 +114,8 @@ void MaximumCommonSubgraph::init() {
   unsigned currentLabelValue = 1;
   std::vector<LabelDefinition> labels;
   nq = QueryMolecule->getNumAtoms();
-  QueryAtomLabels.resize(nq);
-  for (size_t ai = 0; ai < nq; ai++) {
+  QueryAtomLabels.resize(nq, NotSet);
+  for (size_t ai = 0; ai < nq; ++ai) {
     if (MCSAtomCompareAny ==
         Parameters.AtomTyper) {  // predefined functor without atom compare
                                  // parameters
@@ -157,8 +157,8 @@ void MaximumCommonSubgraph::init() {
   labels.clear();
   currentLabelValue = 1;
   nq = QueryMolecule->getNumBonds();
-  QueryBondLabels.resize(nq);
-  for (size_t aj = 0; aj < nq; aj++) {
+  QueryBondLabels.resize(nq, NotSet);
+  for (size_t aj = 0; aj < nq; ++aj) {
     const Bond* bond = QueryMolecule->getBondWithIdx(aj);
     unsigned ring = 0;
     if (!userData && (Parameters.BondCompareParameters.CompleteRingsOnly ||
@@ -201,7 +201,7 @@ void MaximumCommonSubgraph::init() {
           break;
         }
       }
-      if (NotSet == QueryAtomLabels[aj]) {  // not found -> create new label
+      if (NotSet == QueryBondLabels[aj]) {  // not found -> create new label
         QueryBondLabels[aj] = ++currentLabelValue;
         labels.emplace_back(aj, currentLabelValue);
       }
@@ -470,21 +470,18 @@ void MaximumCommonSubgraph::makeInitialSeeds() {
             if (!QueryMoleculeSingleMatchedAtom) {
               QueryMoleculeSingleMatchedAtom = queryMolAtom;
             } else {
-              QueryMoleculeSingleMatchedAtom =
-                  (std::max)(queryMolAtom, QueryMoleculeSingleMatchedAtom,
-                             [](const Atom* a, const Atom* b) {
-                               if (a->getDegree() != b->getDegree()) {
-                                 return (a->getDegree() < b->getDegree());
-                               } else if (a->getFormalCharge() !=
-                                          b->getFormalCharge()) {
-                                 return (a->getFormalCharge() <
-                                         b->getFormalCharge());
-                               } else if (a->getAtomicNum() !=
-                                          b->getAtomicNum()) {
-                                 return (a->getAtomicNum() < b->getAtomicNum());
-                               }
-                               return (a->getIdx() < b->getIdx());
-                             });
+              QueryMoleculeSingleMatchedAtom = (std::max)(
+                  queryMolAtom, QueryMoleculeSingleMatchedAtom,
+                  [](const Atom* a, const Atom* b) {
+                    if (a->getDegree() != b->getDegree()) {
+                      return (a->getDegree() < b->getDegree());
+                    } else if (a->getFormalCharge() != b->getFormalCharge()) {
+                      return (a->getFormalCharge() < b->getFormalCharge());
+                    } else if (a->getAtomicNum() != b->getAtomicNum()) {
+                      return (a->getAtomicNum() < b->getAtomicNum());
+                    }
+                    return (a->getIdx() < b->getIdx());
+                  });
             }
           }
           break;
@@ -1004,7 +1001,7 @@ MCSResult MaximumCommonSubgraph::find(const std::vector<ROMOL_SPTR>& src_mols) {
     }
 
     areSeedsEmpty = Seeds.empty();
-    res.Canceled = areSeedsEmpty || growSeeds() ? false : true;
+    res.Canceled = !(areSeedsEmpty || growSeeds());
     // verify what MCS is equal to one of initial seed for chirality match
     if ((FinalMatchCheckFunction == Parameters.FinalMatchChecker &&
          1 == getMaxNumberBonds()) ||
