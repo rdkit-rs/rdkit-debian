@@ -1035,6 +1035,52 @@ M  END
     self.assertFalse(rxn.RunReactantInPlace(reactant))
     self.assertEqual(Chem.MolToSmiles(reactant), 'CCOC(C)=O')
 
+  def testGithub4651(self):
+    mol_sulfonylchloride = Chem.MolFromSmiles("Nc1c(CCCSNCC)cc(cc1)S(=O)(=O)Cl")
+    mol_amine = Chem.MolFromSmiles("Nc2cc(C)on2")
+    mol_sulfonamide = Chem.MolFromSmiles("CCNSCCCc1cc(S(=O)(=O)Nc2cc(C)on2)ccc1N")
+
+    smirks_fwd = (
+      "[S;$(S(=O)(=O)[C,c,N]):1](=O)(=O)(-[Cl])"
+      "."
+      "[N;$([N&H2&D1,N&H1&D2])"
+      # N aliphatic and not aromatic bond to carbon
+      "&$(N(-&!@[#6]))"
+      "&!$(N-C=[O,N,S]):2]"
+      ">>"
+      "[S:1](=O)(=O)-[N+0:2]")
+
+    smirks_reverse = ">>".join(smirks_fwd.split(">>")[::-1])
+
+    reaction_fwd = rdChemReactions.ReactionFromSmarts(smirks_fwd)
+    reaction_reverse = rdChemReactions.ReactionFromSmarts(smirks_reverse)
+
+    product = reaction_fwd.RunReactants((mol_sulfonylchloride, mol_amine))[0][0]
+
+    reagent_sulfonylchloride, reagent_amine = reaction_reverse.RunReactants((mol_sulfonamide, ))[0]
+
+    # trigger bug
+    with self.assertRaises(RuntimeError):
+      reaction_fwd.RunReactants((reagent_sulfonylchloride, reagent_amine))
+
+    # The second call used to deadlock
+    with self.assertRaises(RuntimeError):
+      reaction_fwd.RunReactants((reagent_sulfonylchloride, reagent_amine))
+
+  def testV3000Reactions(self):
+    reaction = rdChemReactions.ReactionFromSmarts(
+      '[cH:1]1[cH:2][cH:3][cH:4][cH:5][c:6]1-[Br].[#6:7]B(O)O>>[cH:1]1[cH:2][cH:3][cH:4][cH:5][c:6]1-[#6:7]'
+    )
+    self.assertIsNotNone(reaction)
+
+    mb1 = rdChemReactions.ReactionToRxnBlock(reaction, forceV3000=True)
+    mb2 = rdChemReactions.ReactionToV3KRxnBlock(reaction)
+    self.assertEqual(mb1, mb2)
+    reaction2 = rdChemReactions.ReactionFromRxnBlock(mb1)
+    self.assertIsNotNone(reaction2)
+
+    self.assertEqual(reaction.GetNumReactantTemplates(), reaction2.GetNumReactantTemplates())
+
 
 if __name__ == '__main__':
   unittest.main(verbosity=True)

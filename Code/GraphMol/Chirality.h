@@ -24,6 +24,10 @@ class Bond;
 class ROMol;
 
 namespace Chirality {
+
+//! double bond stereo will be ignored/removed for rings smaller than this:
+constexpr unsigned int minRingSizeForDoubleBondStereo = 8;
+
 /// @cond
 /*!
   \param mol the molecule to be altered
@@ -110,6 +114,9 @@ RDKIT_GRAPHMOL_EXPORT std::vector<StereoInfo> findPotentialStereo(
 RDKIT_GRAPHMOL_EXPORT std::vector<StereoInfo> findPotentialStereo(
     const ROMol &mol);
 
+//! removes atoms without specified chirality from stereo groups
+RDKIT_GRAPHMOL_EXPORT void cleanupStereoGroups(ROMol &mol);
+
 /// @cond
 namespace detail {
 RDKIT_GRAPHMOL_EXPORT bool isAtomPotentialTetrahedralCenter(const Atom *atom);
@@ -117,7 +124,9 @@ RDKIT_GRAPHMOL_EXPORT bool isAtomPotentialStereoAtom(const Atom *atom);
 RDKIT_GRAPHMOL_EXPORT bool isBondPotentialStereoBond(const Bond *bond);
 RDKIT_GRAPHMOL_EXPORT StereoInfo getStereoInfo(const Bond *bond);
 RDKIT_GRAPHMOL_EXPORT StereoInfo getStereoInfo(const Atom *atom);
-
+RDKIT_GRAPHMOL_EXPORT bool bondAffectsAtomChirality(const Bond *bond,
+                                                    const Atom *atom);
+RDKIT_GRAPHMOL_EXPORT unsigned int getAtomNonzeroDegree(const Atom *atom);
 }  // namespace detail
 /// @endcond
 

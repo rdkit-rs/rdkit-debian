@@ -253,6 +253,9 @@ std::string molFragmentToSmarts(const ROMol &mol, python::object atomsToUse,
                                 bool doIsomericSmarts = true) {
   auto atomIndices =
       pythonObjectToVect(atomsToUse, static_cast<int>(mol.getNumAtoms()));
+  if (!atomIndices) {
+    throw_value_error("atomsToUse argument must be non-empty");
+  }
   auto bondIndices =
       pythonObjectToVect(bondsToUse, static_cast<int>(mol.getNumBonds()));
   return RDKit::MolFragmentToSmarts(mol, *atomIndices, bondIndices.get(),
@@ -264,6 +267,9 @@ std::string molFragmentToCXSmarts(const ROMol &mol, python::object atomsToUse,
                                   bool doIsomericSmarts = true) {
   auto atomIndices =
       pythonObjectToVect(atomsToUse, static_cast<int>(mol.getNumAtoms()));
+  if (!atomIndices) {
+    throw_value_error("atomsToUse argument must be non-empty");
+  }
   auto bondIndices =
       pythonObjectToVect(bondsToUse, static_cast<int>(mol.getNumBonds()));
   return RDKit::MolFragmentToCXSmarts(mol, *atomIndices, bondIndices.get(),
@@ -1318,13 +1324,13 @@ BOOST_PYTHON_MODULE(rdmolfiles) {
       .value("CX_POLYMER", RDKit::SmilesWrite::CXSmilesFields::CX_POLYMER)
       .value("CX_ALL", RDKit::SmilesWrite::CXSmilesFields::CX_ALL);
 
-  python::def("MolToCXSmiles",
-              (std::string(*)(const ROMol &, const SmilesWriteParams &,
-                              std::uint32_t))RDKit::MolToCXSmiles,
-              (python::arg("mol"), python::arg("params"),
-               python::arg("flags") =
-                   RDKit::SmilesWrite::CXSmilesFields::CX_ALL),
-              "Returns the CXSMILES string for a molecule");
+  python::def(
+      "MolToCXSmiles",
+      (std::string(*)(const ROMol &, const SmilesWriteParams &,
+                      std::uint32_t))RDKit::MolToCXSmiles,
+      (python::arg("mol"), python::arg("params"),
+       python::arg("flags") = RDKit::SmilesWrite::CXSmilesFields::CX_ALL),
+      "Returns the CXSMILES string for a molecule");
 
   docString =
       "Returns the CXSMILES string for a molecule\n\

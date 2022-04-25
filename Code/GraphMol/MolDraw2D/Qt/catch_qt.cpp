@@ -48,6 +48,64 @@ TEST_CASE("basic generate PNGs", "[drawing][Qt]") {
   }
 }
 
+TEST_CASE("Github #4764") {
+  SECTION("basics") {
+    auto mol = "c1ccccc1-C1CCCCC1"_smiles;
+    REQUIRE(mol);
+    std::vector<int> highlights{6, 7, 8, 9, 10, 11};
+    {
+      QImage qimg(200, 150, QImage::Format_RGB32);
+      QPainter qpt(&qimg);
+      MolDraw2DQt drawer(qimg.width(), qimg.height(), &qpt);
+      drawer.drawMolecule(*mol, "highlight", &highlights);
+      qimg.save("testGithub4764.qt.sz1.png");
+    }
+    {
+      QImage qimg(400, 350, QImage::Format_RGB32);
+      QPainter qpt(&qimg);
+      MolDraw2DQt drawer(qimg.width(), qimg.height(), &qpt);
+      drawer.drawMolecule(*mol, "highlight", &highlights);
+      qimg.save("testGithub4764.qt.sz2.png");
+    }
+    {
+      QImage qimg(800, 700, QImage::Format_RGB32);
+      QPainter qpt(&qimg);
+      MolDraw2DQt drawer(qimg.width(), qimg.height(), &qpt);
+      drawer.drawMolecule(*mol, "highlight", &highlights);
+      qimg.save("testGithub4764.qt.sz3.png");
+    }
+  }
+}
+
+TEST_CASE("Github #5122: bad highlighting when bondLineWidth is increased") {
+  SECTION("basics") {
+    auto mol = "CC1=CC=C(C=C1)C1=CC=CC=C1"_smiles;
+    REQUIRE(mol);
+    std::vector<int> highlightAtoms{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    std::vector<int> highlightBonds{1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13};
+
+    {
+      QImage qimg(400, 400, QImage::Format_ARGB32);
+      QPainter qpt(&qimg);
+      MolDraw2DQt drawer(qimg.width(), qimg.height(), &qpt);
+      drawer.drawOptions().bondLineWidth = 3;
+      drawer.drawOptions().scaleHighlightBondWidth = true;
+      drawer.drawMolecule(*mol, "highlight both", &highlightAtoms,
+                          &highlightBonds);
+      qimg.save("testGithub5122.qt.1.png");
+    }
+    {
+      QImage qimg(400, 400, QImage::Format_ARGB32);
+      QPainter qpt(&qimg);
+      MolDraw2DQt drawer(qimg.width(), qimg.height(), &qpt);
+      drawer.drawOptions().bondLineWidth = 3;
+      drawer.drawOptions().scaleHighlightBondWidth = true;
+      drawer.drawMolecule(*mol, "highlight bonds", nullptr, &highlightBonds);
+      qimg.save("testGithub5122.qt.2.png");
+    }
+  }
+}
+
 int main(int argc, char* argv[]) {
   QGuiApplication app(argc, argv);
 

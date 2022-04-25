@@ -89,7 +89,9 @@ endif()
 if(RDK_USE_BOOST_IOSTREAMS)
   SET(CMAKE_SWIG_FLAGS "-DRDK_USE_BOOST_IOSTREAMS" ${CMAKE_SWIG_FLAGS} )
 endif()
-
+if (RDK_BUILD_CAIRO_SUPPORT)
+	SET(CMAKE_SWIG_FLAGS "-DRDK_BUILD_CAIRO_SUPPORT" ${CMAKE_SWIG_FLAGS} )
+endif()
 
 
 # enable this line to build the ErrorGenerator class for testing handling of C++ errors in the JNI layer
@@ -173,6 +175,14 @@ if(NOT RDK_BUILD_INCHI_SUPPORT)
 LIST(REMOVE_ITEM JAVA_TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src-test/org/RDKit/InchiTests.java")
 endif()
 
+if(NOT RDK_USE_BOOST_IOSTREAMS)
+LIST(REMOVE_ITEM JAVA_TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src-test/org/RDKit/GzStreamTests.java")
+endif()
+
+if (NOT RDK_BUILD_CAIRO_SUPPORT)
+LIST(REMOVE_ITEM JAVA_TEST_FILES "${CMAKE_CURRENT_SOURCE_DIR}/src-test/org/RDKit/MolDraw2DCairoTests.java")
+endif()
+
 ADD_CUSTOM_COMMAND(
   OUTPUT ${CMAKE_JAVA_TEST_OUTDIR}/org/RDKit/WrapperTests.class
   COMMAND ${JAVA_COMPILE} ${DOCLINT_FLAGS} -d ${CMAKE_JAVA_TEST_OUTDIR} -cp "\"${CMAKE_CURRENT_SOURCE_DIR}/org.RDKit.jar${PATH_SEP}${JUNIT_JAR}\"" ${JAVA_TEST_FILES}
@@ -182,10 +192,6 @@ ADD_CUSTOM_COMMAND(
 ADD_CUSTOM_TARGET(BuildJavaWrapperTests ALL
   DEPENDS ${CMAKE_JAVA_TEST_OUTDIR}/org/RDKit/WrapperTests.class GraphMolWrap
   COMMENT "building test classes"
-)
-ADD_CUSTOM_TARGET(RunJavaWrapperTests
-  DEPENDS BuildJavaWrapperTests
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/runUnitTests.sh
 )
 
 # need to add boost libs for testing
@@ -286,6 +292,12 @@ ADD_TEST(JavaSuppliersTests
     java -Djava.library.path=${CMAKE_CURRENT_SOURCE_DIR}
 	-cp "${JUNIT_JAR}${PATH_SEP}${CMAKE_JAVA_TEST_OUTDIR}${PATH_SEP}${CMAKE_CURRENT_SOURCE_DIR}/org.RDKit.jar"
 	org.RDKit.SuppliersTests)
+if(RDK_USE_BOOST_IOSTREAMS)
+ADD_TEST(JavaGzStreamTests
+    java -Djava.library.path=${CMAKE_CURRENT_SOURCE_DIR}
+	-cp "${JUNIT_JAR}${PATH_SEP}${CMAKE_JAVA_TEST_OUTDIR}${PATH_SEP}${CMAKE_CURRENT_SOURCE_DIR}/org.RDKit.jar"
+	org.RDKit.GzStreamTests)
+endif(RDK_USE_BOOST_IOSTREAMS)
 ADD_TEST(JavaTrajectoryTests
     java -Djava.library.path=${CMAKE_CURRENT_SOURCE_DIR}
 	-cp "${JUNIT_JAR}${PATH_SEP}${CMAKE_JAVA_TEST_OUTDIR}${PATH_SEP}${CMAKE_CURRENT_SOURCE_DIR}/org.RDKit.jar"
@@ -391,7 +403,7 @@ ADD_TEST(JavaBitOpsTests
 		-cp "${JUNIT_JAR}${PATH_SEP}${CMAKE_JAVA_TEST_OUTDIR}${PATH_SEP}${CMAKE_CURRENT_SOURCE_DIR}/org.RDKit.jar"
 		org.RDKit.BitOpsTests)
 
-    ADD_TEST(MolStandardizeTest
+ADD_TEST(MolStandardizeTest
     java -Djava.library.path=${CMAKE_CURRENT_SOURCE_DIR}
     -cp "${JUNIT_JAR}${PATH_SEP}${CMAKE_JAVA_TEST_OUTDIR}${PATH_SEP}${CMAKE_CURRENT_SOURCE_DIR}/org.RDKit.jar"
     org.RDKit.MolStandardizeTest)
@@ -401,7 +413,12 @@ ADD_TEST(JavaSubstanceGroupTests
 	-cp "${JUNIT_JAR}${PATH_SEP}${CMAKE_JAVA_TEST_OUTDIR}${PATH_SEP}${CMAKE_CURRENT_SOURCE_DIR}/org.RDKit.jar"
 	org.RDKit.SubstanceGroupTests)
 
-
+if (RDK_BUILD_CAIRO_SUPPORT)
+	ADD_TEST(JavaMolDraw2DCairoTests
+			java -Djava.library.path=${CMAKE_CURRENT_SOURCE_DIR}
+			-cp "${JUNIT_JAR}${PATH_SEP}${CMAKE_JAVA_TEST_OUTDIR}${PATH_SEP}${CMAKE_CURRENT_SOURCE_DIR}/org.RDKit.jar"
+			org.RDKit.MolDraw2DCairoTests)
+endif (RDK_BUILD_CAIRO_SUPPORT)
 
 INSTALL(TARGETS GraphMolWrap
               DESTINATION ${CMAKE_CURRENT_SOURCE_DIR} )

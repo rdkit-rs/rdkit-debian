@@ -233,6 +233,12 @@ Specifying atoms by atomic number
 The ``[#6]`` construct from SMARTS is supported in SMILES.
 
 
+Quadruple bonds
+---------------
+
+The token ``$`` can be used to represent quadruple bonds in SMILES and SMARTS.
+
+
 CXSMILES/CXSMARTS extensions
 ----------------------------
 
@@ -1173,6 +1179,72 @@ Demonstrated here:
   >>> Chem.MolFromSmiles('O[CH2]O').HasSubstructMatch(Chem.MolFromSmiles('[CH2]'))
   False
 
+Generic ("Markush") queries in substructure matching
+****************************************************
+
+*Note* This section describes functionality added in the `2022.03.1` release of the RDKit.
+
+The RDKit supports a set of generic queries used as part of the Beilstein and
+Reaxys systems. Here's an example:
+
+.. _ary_group_figure :
+
+.. figure:: images/ary_group.png
+  :scale: 50 %
+
+
+Information about generic queries can be read in from CXSMILES or V3000 Mol
+blocks (as `SUP` SGroups) and then calling the function
+`Chem.SetGenericQueriesFromProperties()` with the molecule to be modified as an
+argument. These features are not used by default when doing substructure
+queries, but can be enabled by setting the option
+`SubstructMatchParameters.useGenericMatchers` to `True`
+
+
+Here's an example of using the features:
+
+.. doctest::
+
+  >>> q = Chem.MolFromSmarts('OC* |$;;ARY$|')
+  >>> Chem.SetGenericQueriesFromProperties(q)
+  >>> Chem.MolFromSmiles('C1CCCCC1CO').HasSubstructMatch(q)
+  True
+  >>> Chem.MolFromSmiles('c1ccccc1CO').HasSubstructMatch(q)
+  True
+  >>> ps = Chem.SubstructMatchParameters()
+  >>> ps.useGenericMatchers = True
+  >>> Chem.MolFromSmiles('C1CCCCC1CO').HasSubstructMatch(q,ps)
+  False
+  >>> Chem.MolFromSmiles('c1ccccc1CO').HasSubstructMatch(q,ps)
+  True
+
+
+
+
+Here are the supported groups and a brief description of what they mean:
+
+ ========================   =========
+  Alkyl (ALK)               alkyl side chains
+  Alkenyl (AEL)             alkenyl side chains                
+  Alkynyl (AYL)             alkynyl side chains               
+  Alkoxy (AOX)              alkoxy side chains                
+  Carbocyclic (CBC)         carbocyclic side chains                
+  Carbocycloalkyl (CAL)     cycloalkyl side chains
+  Carbocycloalkenyl (CEL)   cycloalkenyl side chains
+  Carboaryl (ARY)           all-carbon aryl side chains
+  Cyclic (CYC)              cyclic side chains
+  Acyclic(ACY)              acyclic side chains
+  Carboacyclic (ABC)        all-carbon acyclic side chains
+  Heteroacyclic (AHC)       acyclic side chains with at least one heteroatom
+  Heterocyclic (CHC)        cyclic side chains with at least one heteroatom
+  Heteroaryl (HAR)          aryl side chains with at least one heteroatom
+  NoCarbonRing (CXX)        ring containing no carbon atoms
+ ========================   =========
+ 
+For more detailed descriptions, look at the documentation for the C++ file GenericGroups.h
+
+
+
 
 Molecular Sanitization
 **********************
@@ -1341,16 +1413,11 @@ What has been tested
   - The chemical reactions code
   - The Open3DAlign code
   - The MolDraw2D drawing code
+  - The InChI code, with InChI IUPAC v1.06
 
 Known Problems
 --------------
 
-  - InChI generation and (probably) parsing. This seems to be a
-    limitation of the IUPAC InChI code. In order to allow the code to
-    be used in a multi-threaded environment, a mutex is used to ensure
-    that only one thread is using the IUPAC code at a time. This is
-    only enabled if the RDKit is built with the ``RDK_TEST_MULTITHREADED``
-    option enabled.
   - The MolSuppliers (e.g. SDMolSupplier, SmilesMolSupplier?) change
     their internal state when a molecule is read. It is not safe to
     use one supplier on more than one thread.
@@ -1640,13 +1707,13 @@ Enhanced Stereochemistry may optionally be honored in substructure searches. The
 +=================+=================+=================+=================+=================+=================+=================+=================+
 | |EnhancedSSS_A| |       Y         |       Y         |       Y         |       Y         |       Y         |       Y         |       Y         |
 +-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
-| |EnhancedSSS_B| |       N         |       Y         |       N         |       N         |       Y         |       Y         |       Y         |
+| |EnhancedSSS_B| |       N         |       Y         |       N         |       N         |       N         |       Y         |       Y         |
 +-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
 | |EnhancedSSS_C| |       N         |       N         |       Y         |       N         |       N         |       Y         |       Y         |
 +-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
 | |EnhancedSSS_D| |       N         |       N         |       N         |       Y         |       N         |       N         |       N         |
 +-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
-| |EnhancedSSS_E| |       N         |       Y         |       N         |       N         |       N         |       Y         |       Y         |
+| |EnhancedSSS_E| |       N         |       Y         |       N         |       N         |       Y         |       Y         |       Y         |
 +-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+-----------------+
 | |EnhancedSSS_F| |       N         |       N         |       N         |       N         |       N         |       Y         |       Y         |
 |       OR        |                 |                 |                 |                 |                 |                 |                 |
@@ -1922,7 +1989,7 @@ type definitions.
 .. [#smirks] http://www.daylight.com/dayhtml/doc/theory/theory.smirks.html
 .. [#smiles] http://www.daylight.com/dayhtml/doc/theory/theory.smiles.html
 .. [#smarts] http://www.daylight.com/dayhtml/doc/theory/theory.smarts.html
-.. [#cxsmiles] https://docs.chemaxon.com/display/docs/ChemAxon+Extended+SMILES+and+SMARTS+-+CXSMILES+and+CXSMARTS
+.. [#cxsmiles] https://docs.chemaxon.com/display/docs/chemaxon-extended-smiles-and-smarts-cxsmiles-and-cxsmarts.md
 .. [#intramolRxn] Thanks to James Davidson for this example.
 .. [#chiralRxn] Thanks to JP Ebejer and Paul Finn for this example.
 .. [#daylightFP] http://www.daylight.com/dayhtml/doc/theory/theory.finger.html

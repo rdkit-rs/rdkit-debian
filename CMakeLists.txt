@@ -66,9 +66,9 @@ set(RDK_BOOST_VERSION "1.58.0")
 
 if(NOT MSVC)
   if(RDK_OPTIMIZE_POPCNT)
-    if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "aarch64")
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
       message("RDK_OPTIMIZE_POPCNT is not available on aarch64")
-    elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ppc64|powerpc64)")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcntd")
     else()
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mpopcnt")
@@ -126,8 +126,8 @@ set(RDK_PYTHON_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/rdkit")
 
 #-------
 # Config variables:
-set(RDKit_Year "2021")
-set(RDKit_Month "09")
+set(RDKit_Year "2022")
+set(RDKit_Month "03")
 set(RDKit_Revision "2")
 set(RDKit_RevisionModifier "")
 set(RDKit_ABI "1")
@@ -348,7 +348,7 @@ if(RDK_BUILD_PYTHON_WRAPPERS)
     # We strip off the first word though (which will be the compiler name).
     execute_process(
         COMMAND
-        ${PYTHON_EXECUTABLE} -c "from distutils import sysconfig; print(sysconfig.get_config_var('LDSHARED').split(' ', 1)[1])"
+        ${PYTHON_EXECUTABLE} -c "from distutils import sysconfig; print(sysconfig.get_config_var('LDSHARED').lstrip().split(' ', 1)[1])"
         OUTPUT_VARIABLE PYTHON_LDSHARED
         OUTPUT_STRIP_TRAILING_WHITESPACE
      )
@@ -604,6 +604,10 @@ set(CPACK_COMPONENT_DOCS_GROUP "Runtime")
 set(CPACK_COMPONENT_DEV_GROUP "Development")
 set(CPACK_COMPONENT_PYTHON_GROUP "Python")
 set(CPACK_COMPONENT_EXTRAS_GROUP "Extras")
+if(RDK_BUILD_PGSQL)
+  SET(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} pgsql)
+  set(CPACK_COMPONENT_PGSQL_GROUP "PgSQL")
+endif()
 
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "RDKit")
 SET(CPACK_PACKAGE_VENDOR "rdkit.org")

@@ -35,7 +35,7 @@ namespace RDKit {
 
 const int32_t MolPickler::versionMajor = 13;
 const int32_t MolPickler::versionMinor = 0;
-const int32_t MolPickler::versionPatch = 0;
+const int32_t MolPickler::versionPatch = 1;
 const int32_t MolPickler::endianId = 0xDEADBEEF;
 
 void streamWrite(std::ostream &ss, MolPickler::Tags tag) {
@@ -214,8 +214,7 @@ QueryDetails getQueryDetails(const Query<int, T const *, true> *query) {
             ->getLower(),
         static_cast<const RangeQuery<int, T const *, true> *>(query)
             ->getUpper(),
-        static_cast<const EqualityQuery<int, T const *, true> *>(query)
-            ->getTol(),
+        static_cast<const RangeQuery<int, T const *, true> *>(query)->getTol(),
         ends));
   } else if (typeid(*query) == typeid(SetQuery<int, T const *, true>)) {
     std::set<int32_t> tset(
@@ -488,7 +487,9 @@ Query<int, Atom const *, true> *unpickleQuery(std::istream &ss,
 
   res->setNegation(isNegated);
   res->setDescription(descr);
-  if (!typeLabel.empty()) res->setTypeLabel(typeLabel);
+  if (!typeLabel.empty()) {
+    res->setTypeLabel(typeLabel);
+  }
 
   QueryOps::finalizeQueryFromDescription(res, owner);
 
@@ -511,11 +512,16 @@ Query<int, Bond const *, true> *unpickleQuery(std::istream &ss,
                                               Bond const *owner, int version) {
   PRECONDITION(owner, "no query");
   std::string descr;
+  std::string typeLabel = "";
   bool isNegated = false;
   Query<int, Bond const *, true> *res;
   streamRead(ss, descr, version);
   MolPickler::Tags tag;
   streamRead(ss, tag, version);
+  if (tag == MolPickler::QUERY_TYPELABEL) {
+    streamRead(ss, typeLabel, version);
+    streamRead(ss, tag, version);
+  }
   if (tag == MolPickler::QUERY_ISNEGATED) {
     isNegated = true;
     streamRead(ss, tag, version);

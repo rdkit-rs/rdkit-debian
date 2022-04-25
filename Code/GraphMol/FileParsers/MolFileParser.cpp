@@ -161,7 +161,7 @@ std::string parseEnhancedStereo(std::istream *inStream, unsigned int &line,
   // M  V30 MDLV30/STEREL1 ATOMS=(1 12)
   // M  V30 MDLV30/STERAC1 ATOMS=(1 12)
   const regex stereo_label(
-      R"regex(MDLV30/STE(...)[0-9]* +ATOMS=\(([0-9]+) +(.*)\))regex");
+      R"regex(MDLV30/STE(...)[0-9]* +ATOMS=\(([0-9]+) +(.*)\) *)regex");
 
   smatch match;
   std::vector<StereoGroup> groups;
@@ -1418,7 +1418,7 @@ Atom *ParseMolFileAtomLine(const std::string text, RDGeom::Point3D &pos,
       res->setAtomicNum(0);
     }
     if (massDiff == 0 && symb[0] == 'R') {
-      if (symb.length() > 1) {
+      if (symb.length() > 1 && symb >= "R0" && symb <= "R99") {
         std::string rlabel = "";
         rlabel = symb.substr(1, symb.length() - 1);
         int rnumber;
@@ -1792,8 +1792,6 @@ void ParseMolBlockBonds(std::istream *inStream, unsigned int &line,
     // atoms
     if (bond->getBondType() == Bond::AROMATIC) {
       bond->setIsAromatic(true);
-      mol->getAtomWithIdx(bond->getBeginAtomIdx())->setIsAromatic(true);
-      mol->getAtomWithIdx(bond->getEndAtomIdx())->setIsAromatic(true);
     }
     // if the bond might have chirality info associated with it, set a flag:
     if (bond->getBondDir() != Bond::NONE &&
@@ -2634,10 +2632,6 @@ void ParseV3000BondBlock(std::istream *inStream, unsigned int &line,
     bond->setBeginAtomIdx(mol->getAtomWithBookmark(a1Idx)->getIdx());
     bond->setEndAtomIdx(mol->getAtomWithBookmark(a2Idx)->getIdx());
     mol->addBond(bond, true);
-    if (bond->getIsAromatic()) {
-      mol->getAtomWithIdx(bond->getBeginAtomIdx())->setIsAromatic(true);
-      mol->getAtomWithIdx(bond->getEndAtomIdx())->setIsAromatic(true);
-    }
     mol->setBondBookmark(bond, bondIdx);
 
     // set the stereoCare property on the bond if it's not set already and both
@@ -3392,12 +3386,8 @@ RWMol *MolDataStreamToMol(std::istream *inStream, unsigned int &line,
       tempStr = getLine(inStream);
       ++line;
     }
-    if (!inStream->eof() || tempStr.substr(0, 6) == "M  END" ||
-        tempStr.substr(0, 4) == "$$$$") {
-      fileComplete = true;
-    } else {
-      fileComplete = false;
-    }
+    fileComplete = !inStream->eof() || tempStr.substr(0, 6) == "M  END" ||
+                   tempStr.substr(0, 4) == "$$$$";
   } catch (FileParseException &e) {
     // catch our exceptions and throw them back after cleanup
     delete res;

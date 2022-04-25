@@ -48,9 +48,7 @@ namespace boost {
 namespace serialization {
 
 template <class Archive>
-void serialize(Archive &, RDKit::MolHolderBase &,
-               const unsigned int) {
-}
+void serialize(Archive &, RDKit::MolHolderBase &, const unsigned int) {}
 
 template <class Archive>
 void save(Archive &ar, const RDKit::MolHolder &molholder,
@@ -132,7 +130,9 @@ void load(Archive &ar, RDKit::FPHolderBase &fpholder,
   std::vector<ExplicitBitVect *> &fps = fpholder.getFingerprints();
 
   ar &pickles;
-  for (size_t i = 0; i < fps.size(); ++i) delete fps[i];
+  for (size_t i = 0; i < fps.size(); ++i) {
+    delete fps[i];
+  }
   fps.clear();
 
   for (auto &pkl : pickles) {
@@ -166,9 +166,7 @@ void serialize(Archive &ar, RDKit::TautomerPatternHolder &pattern_holder,
 }
 
 template <class Archive>
-void serialize(Archive &, RDKit::KeyHolderBase &,
-               const unsigned int) {
-}
+void serialize(Archive &, RDKit::KeyHolderBase &, const unsigned int) {}
 
 template <class Archive>
 void serialize(Archive &ar, RDKit::KeyFromPropHolder &key_holder,
