@@ -5,3 +5,4 @@ catch2_header.patch
 postgres_alternative_test_outputs.patch
 postgres_compile_fixes.patch
 sphinx_compile_fixes.patch
+extra_float_digits

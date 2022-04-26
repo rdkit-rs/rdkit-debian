@@ -1,0 +1,30 @@
+--- a/Code/PgSQL/rdkit/expected/bfpgin.out
++++ b/Code/PgSQL/rdkit/expected/bfpgin.out
+@@ -2,6 +2,7 @@ CREATE INDEX fpidx ON pgbfp USING gin (f
+ CREATE INDEX maccsfpidx ON pgbfp USING gin (maccsf);
+ SET rdkit.tanimoto_threshold = 0.5;
+ SET rdkit.dice_threshold = 0.6;
++SET extra_float_digits=0;
+ SET enable_indexscan=off;
+ SET enable_bitmapscan=off;
+ SET enable_seqscan=on;
+--- a/Code/PgSQL/rdkit/expected/bfpgin_1.out
++++ b/Code/PgSQL/rdkit/expected/bfpgin_1.out
+@@ -2,6 +2,7 @@ CREATE INDEX fpidx ON pgbfp USING gin (f
+ CREATE INDEX maccsfpidx ON pgbfp USING gin (maccsf);
+ SET rdkit.tanimoto_threshold = 0.5;
+ SET rdkit.dice_threshold = 0.6;
++SET extra_float_digits=0;
+ SET enable_indexscan=off;
+ SET enable_bitmapscan=off;
+ SET enable_seqscan=on;
+--- a/Code/PgSQL/rdkit/sql/bfpgin.sql
++++ b/Code/PgSQL/rdkit/sql/bfpgin.sql
+@@ -5,6 +5,7 @@ SET rdkit.tanimoto_threshold = 0.5;
+ SET rdkit.dice_threshold = 0.6;
+ 
+ 
++SET extra_float_digits=0;
+ SET enable_indexscan=off;
+ SET enable_bitmapscan=off;
+ SET enable_seqscan=on;
