@@ -1,3 +1,7 @@
 include:
 - https://salsa.debian.org/salsa-ci-team/pipeline/raw/master/salsa-ci.yml
 - https://salsa.debian.org/salsa-ci-team/pipeline/raw/master/pipeline-jobs.yml
+
+variables:
+  # work around 250 MB limit for maximum artifacts size (we are currently at 258 MB)
+  DEB_BUILD_OPTIONS: noautodbgsym
