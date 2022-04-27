@@ -1,4 +1,6 @@
-rdkit (202203.2-2) UNRELEASED; urgency=medium
+rdkit (202203.2-1) unstable; urgency=medium
+
+  * Team upload.
 
   [ Debichem Team ]
   * New upstream release.
@@ -17,7 +19,7 @@ rdkit (202203.2-2) UNRELEASED; urgency=medium
   * debian/clean: Remove some generated Code/RDGeneral/*.h files.
   * debian/clean: Remove .gitattributes.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 28 Nov 2021 09:56:19 +0100
+ -- Christoph Berg <myon@debian.org>  Wed, 27 Apr 2022 10:49:49 +0200
 
 rdkit (202109.2-1) unstable; urgency=medium
 
