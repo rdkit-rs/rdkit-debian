@@ -2,3 +2,6 @@
 Code/RDGeneral/RDConfig.h
 Code/RDGeneral/export.h
 Code/RDGeneral/test.h
+
+# .gitattributes breaks importing tarballs (https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=973755)
+.gitattributes
