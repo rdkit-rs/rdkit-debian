@@ -13,7 +13,7 @@ RUN wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz &&
     tar xzf rdkit-sys-1.0.tar.gz
 RUN cp -r rdkit-Release_2022_03_2 rdkit-sys-1.0
 RUN rm -r rdkit-Release_2022_03_2
-WORKDIR /rdkit-sys-1.0
+WORKDIR rdkit-sys-1.0
 RUN debmake -b',rdkit-sys1,rdkit-sys-dev' -e datascience@scientist.com -f 'Scientist'
 
 COPY /debian/source /rdkit-sys-1.0/debian/source
