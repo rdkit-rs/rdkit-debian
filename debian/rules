@@ -13,6 +13,7 @@ override_dh_auto_configure:
                 -DCMAKE_SKIP_RPATH:BOOL=ON \
                 -DRDK_INSTALL_INTREE=OFF \
                 -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
+                -DPYTHON_NUMPY_INCLUDE_PATH="$(python -c 'import numpy ; print(numpy.get_include())')" \
                 -DRDK_OPTIMIZE_POPCNT=OFF \
                 -DRDK_INSTALL_COMIC_FONTS=OFF \
                 -DRDK_BUILD_FREETYPE_SUPPORT=OFF \
