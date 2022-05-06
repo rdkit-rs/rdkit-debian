@@ -14,7 +14,10 @@ RUN wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz &&
 RUN cp -r rdkit-Release_2022_03_2 rdkit-sys-1.0
 RUN rm -r rdkit-Release_2022_03_2
 WORKDIR rdkit-sys-1.0
-RUN debmake -b',rdkit-sys1,rdkit-sys-dev' -e datascience@scientist.com -f 'Scientist'
+RUN debmake -b',libsharedlib1,libsharedlib-dev' -e datascience@scientist.com -f 'Scientist'
+RUN rm libsharedlib1.install
+RUN rm libsharedlib1.symbols
+RUN rm libsharedlib-dev.install
 
 COPY /debian/source /rdkit-sys-1.0/debian/source
 COPY /debian/compat /rdkit-sys-1.0/debian/compat
