@@ -6,7 +6,10 @@ export LD_LIBRARY_PATH  := /usr/lib
 export DEB_BUILD_OPTIONS="parallel=10"
 
 %:
-	dh $@ --buildsystem=cmake --parallel
+	dh $@ --buildsystem=cmake --without=javahelper --parallel
+
+override_dh_clean:
+    dh_clean --without=javahelper
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
@@ -26,6 +29,4 @@ override_dh_auto_configure:
                 -DCMAKE_INSTALL_PREFIX=/usr \
                 -DCMAKE_LIBRARY_ARCHITECTURE="$(DEB_TARGET_MULTIARCH)"
 
-override_dh_clean:
-    dh_clean --without=javahelper
 
