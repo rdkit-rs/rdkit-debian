@@ -1,0 +1,28 @@
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+export RDBASE       := $(CURDIR)
+export LD_LIBRARY_PATH  := /usr/lib
+
+export DEB_BUILD_OPTIONS="parallel=10"
+
+%:
+	dh $@ --buildsystem=cmake --parallel
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+                -DCMAKE_SKIP_RPATH:BOOL=ON \
+                -DRDK_INSTALL_INTREE=OFF \
+                -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
+                -DRDK_OPTIMIZE_POPCNT=OFF \
+                -DRDK_INSTALL_COMIC_FONTS=OFF \
+                -DRDK_BUILD_FREETYPE_SUPPORT=OFF \
+                -DRDK_INSTALL_STATIC_LIBS=ON \
+                -DRDK_BUILD_SWIG_JAVA_WRAPPER=OFF \
+                -DRDK_BUILD_CPP_TESTS=OFF  \
+                -DBOOST_ROOT=/usr/include/boost \
+                -DRDK_BUILD_CAIRO_SUPPORT=OFF \
+                -DRDK_BUILD_INCHI_SUPPORT=OFF \
+                -DRDK_BUILD_AVALON_SUPPORT=OFF \
+                -DCMAKE_INSTALL_PREFIX=/usr \
+                -DCMAKE_LIBRARY_ARCHITECTURE="$(DEB_TARGET_MULTIARCH)"
+
