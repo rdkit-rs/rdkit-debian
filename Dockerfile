@@ -26,7 +26,6 @@ COPY /debian/rdkit-sys1.install /rdkit-sys-1.0/debian/rdkit-sys1.install
 COPY /debian/rdkit-sys1.symbols /rdkit-sys-1.0/debian/rdkit-sys1.symbols
 COPY /debian/rdkit-sys-dev.install /rdkit-sys-1.0/debian/rdkit-sys-dev.install
 
-WORKDIR /rdkit-sys-1.0
 RUN debuild
 
     # move headers and libraries to a new folder \
