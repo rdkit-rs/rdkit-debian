@@ -3,4 +3,4 @@
 .idea
 new
 debian/debian
-rdkit-sys*
+rdkit-sys*tar*
