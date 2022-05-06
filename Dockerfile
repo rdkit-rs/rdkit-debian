@@ -6,7 +6,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 
 RUN apt-get update && \
-    apt-get install -y dh-make gem2deb npm2deb wget git curl vim debmake tzdata build-essential libboost-all-dev cmake make debhelper javahelper
+    apt-get install -y dh-make gem2deb npm2deb wget git curl vim debmake tzdata build-essential libboost-all-dev cmake make debhelper javahelper libfreetype6-dev
 RUN wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz && \
     cp Release_2022_03_2.tar.gz rdkit-sys-1.0.tar.gz && \
     rm Release_2022_03_2.tar.gz && \
