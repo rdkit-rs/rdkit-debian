@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 ARG RDKIT_VERSION=2022_03_2
 ENV RDKIT_VERSION=$RDKIT_VERSION
@@ -26,7 +26,7 @@ COPY /debian/control /rdkit-sys-1.0/debian/control
 COPY /debian/rdkit-sys1.install /rdkit-sys-1.0/debian/rdkit-sys1.install
 COPY /debian/rdkit-sys1.symbols /rdkit-sys-1.0/debian/rdkit-sys1.symbols
 COPY /debian/rdkit-sys-dev.install /rdkit-sys-1.0/debian/rdkit-sys-dev.install
-
+ENV DEB_BUILD_OPTIONS="parallel=10"
 RUN debuild
 
     # move headers and libraries to a new folder \
