@@ -7,7 +7,7 @@ ENV TZ=Etc/UTC
 ENV DEB_BUILD_OPTIONS="parallel=10"
 
 RUN apt-get update && \
-    apt-get install -y dh-make gem2deb npm2deb wget git curl vim debmake tzdata build-essential libboost-all-dev cmake make debhelper javahelper libfreetype6-dev python3-pip g++
+    apt-get install -y dh-make gem2deb npm2deb wget git curl vim debmake tzdata build-essential libboost-all-dev cmake make debhelper javahelper libfreetype6-dev python3-pip g++-11
 RUN pip3 install numpy
 RUN wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz && \
     cp Release_2022_03_2.tar.gz rdkit-sys-1.0.tar.gz && \
