@@ -2,7 +2,8 @@
 export DH_VERBOSE = 1
 export RDBASE       := $(CURDIR)
 export LD_LIBRARY_PATH  := /usr/lib
-
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_LDFLAGS_MAINT_APPEND = -lpthread
 export DEB_BUILD_OPTIONS="parallel=10"
 
 %:
