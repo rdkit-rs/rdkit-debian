@@ -4,6 +4,7 @@ ARG RDKIT_VERSION=2022_03_2
 ENV RDKIT_VERSION=$RDKIT_VERSION
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
+ENV DEB_BUILD_OPTIONS="parallel=10"
 
 RUN apt-get update && \
     apt-get install -y dh-make gem2deb npm2deb wget git curl vim debmake tzdata build-essential libboost-all-dev cmake make debhelper javahelper libfreetype6-dev python3-pip g++
