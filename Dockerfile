@@ -7,7 +7,7 @@ ENV TZ=Etc/UTC
 ENV DEB_BUILD_OPTIONS="parallel=10"
 
 RUN apt-get update && \
-    apt-get install -y dh-make gem2deb npm2deb wget git curl vim debmake tzdata build-essential libboost-all-dev cmake make debhelper javahelper libfreetype6-dev python3-pip g++-11 gcc-11
+    apt-get install -y dh-make gem2deb npm2deb wget git curl vim debmake tzdata build-essential libboost-all-dev cmake make debhelper javahelper libfreetype6-dev python3-pip g++-14
 RUN cpp --version
 RUN g++ --version
 RUN cpp --version

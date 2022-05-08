@@ -4,6 +4,7 @@ export RDBASE       := $(CURDIR)
 export LD_LIBRARY_PATH  := /usr/lib
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 export DEB_LDFLAGS_MAINT_APPEND = -pthread
+export DEB_LDFLAGS_MAINT_APPEND = -std=c++14
 export DEB_BUILD_OPTIONS="parallel=10"
 
 %:
