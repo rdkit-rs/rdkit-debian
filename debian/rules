@@ -4,9 +4,9 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 export CPPFLAGS     :=$(shell dpkg-buildflags --get CPPFLAGS)
 export CFLAGS       :=$(shell dpkg-buildflags --get CFLAGS) $(CPPFLAGS)
 export CXXFLAGS     := $(shell dpkg-buildflags --get CXXFLAGS) $(CPPFLAGS)
-export DEB_CFLAGS_MAINT_APPEND   = -std=c++14
-export DEB_CPPFLAGS_MAINT_APPEND = -std=c++14
-export DEB_CXXFLAGS_MAINT_APPEND = -std=c++14
+export DEB_CFLAGS_MAINT_APPEND   = -std=c++14, -pthread
+export DEB_CPPFLAGS_MAINT_APPEND = -std=c++14, -pthread
+export DEB_CXXFLAGS_MAINT_APPEND = -std=c++14, -pthread
 export LDFLAGS      :=$(shell dpkg-buildflags --get LDFLAGS)
 export RDBASE       := $(CURDIR)
 export DEB_BUILD_OPTIONS="parallel=10"
