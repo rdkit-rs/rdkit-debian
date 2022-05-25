@@ -1,5 +1,4 @@
 .gitignore
-.github
 .idea
 new
 debian/debian
