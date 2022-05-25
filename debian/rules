@@ -4,12 +4,12 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 export CPPFLAGS     :=$(shell dpkg-buildflags --get CPPFLAGS)
 export CFLAGS       :=$(shell dpkg-buildflags --get CFLAGS) $(CPPFLAGS)
 export CXXFLAGS     := $(shell dpkg-buildflags --get CXXFLAGS) $(CPPFLAGS)
-export DEB_CFLAGS_MAINT_APPEND   = -std=c++14, -pthread
-export DEB_CPPFLAGS_MAINT_APPEND = -std=c++14, -pthread
-export DEB_CXXFLAGS_MAINT_APPEND = -std=c++14, -pthread
+export DEB_CFLAGS_MAINT_APPEND   = -pthread
+export DEB_CPPFLAGS_MAINT_APPEND = -pthread
+export DEB_CXXFLAGS_MAINT_APPEND = -pthread
 export LDFLAGS      :=$(shell dpkg-buildflags --get LDFLAGS)
 export RDBASE       := $(CURDIR)
-export DEB_BUILD_OPTIONS="parallel=10"
+export CMAKE_BUILD_PARALLEL_LEVEL=10
 
 %:
 	dh $@ --buildsystem=cmake --parallel
@@ -17,9 +17,13 @@ export DEB_BUILD_OPTIONS="parallel=10"
 override_dh_auto_configure:
 	dh_auto_configure -- \
                 -DCMAKE_SKIP_RPATH:BOOL=ON \
+                -DCMAKE_CXX_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0' \
+                -DRDK_BUILD_COORDGEN_SUPPORT=ON \
+                -DRDK_BUILD_MAEPARSER_SUPPORT=ON \
+                -DCMAKE_C_COMPILER=/usr/bin/clang \
+                -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
                 -DRDK_INSTALL_INTREE=OFF \
                 -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
-                -DPYTHON_NUMPY_INCLUDE_PATH="$(python -c 'import numpy ; print(numpy.get_include())')" \
                 -DRDK_OPTIMIZE_POPCNT=OFF \
                 -DRDK_BUILD_THREADSAFE_SSS=ON \
                 -DRDK_INSTALL_COMIC_FONTS=OFF \
@@ -32,6 +36,9 @@ override_dh_auto_configure:
                 -DRDK_BUILD_INCHI_SUPPORT=OFF \
                 -DRDK_BUILD_AVALON_SUPPORT=OFF \
                 -DCMAKE_INSTALL_PREFIX=/usr \
+                -DCMAKE_CXX_FLAGS='-std=c++14' \
+                -DCMAKE_CXX_STANDARD=14 \
                 -DCMAKE_LIBRARY_ARCHITECTURE="$(DEB_TARGET_MULTIARCH)"
 
-
+override_dh_shlibdeps:
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info

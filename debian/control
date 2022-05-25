@@ -2,7 +2,7 @@ Source: rdkit-sys
 Section: devel
 Priority: optional
 Maintainer: Scientist <datascience@scientist.com>
-Build-Depends: cmake, build-essential, make, git, wget, libboost-all-dev, libfreetype6-dev
+Build-Depends: cmake, clang, llvm, libclang-dev,  make, git, wget, libboost-all-dev, libfreetype6-dev, libc6-dev-arm64-cross
 Standards-Version: 1.0
 Homepage: <insert the upstream URL, if relevant>
 
