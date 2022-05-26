@@ -18,10 +18,23 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
+      - name: Load RDKIT
+        run: |
+          sudo apt-get update  -y && sudo apt-get install gnupg2 wget git
+          wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz
+          cp Release_$RDKIT_VERSION.tar.gz rdkit-debian.tar.gz
+          rm Release_$RDKIT_VERSION.tar.gz
+          tar xzf rdkit-debian.tar.gz
+          echo 'debian tar is here'
+          ls
+          cp -r rdkit-Release_$RDKIT_VERSION rdkit-debian
+          rm -r rdkit-Release_$RDKIT_VERSION
+          ls
+
       - name: Install required packages
         run: |
             echo $PWD "what is pwd"
-            sudo apt-get update  -y && sudo apt-get install gnupg2 wget git vim curl -y ca-certificates -y
+            sudo apt-get update  -y && sudo apt-get install wget git vim curl -y ca-certificates -y
             DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends tzdata
             sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y cmake clang llvm libclang-dev  make  git wget libboost-all-dev libfreetype6-dev libc6-dev-arm64-cross ca-certificates python3-pip javahelper dh-make debmake gem2deb npm2deb debhelper
             pip3 install numpy
@@ -39,14 +52,13 @@ jobs:
           git clone https://github.com/schrodinger/coordgenlibs.git
           cd coordgenlibs && mkdir build && cd build && cmake .. && sudo make -j install && cd ../../..
 
-      - name: Load RDKIT
+      - name: Cd to debian
         run: |
-          wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz && cp Release_$RDKIT_VERSION.tar.gz rdkit-debian.tar.gz && \
-          rm Release_$RDKIT_VERSION.tar.gz && tar xzf rdkit-debian.tar.gz
-          cp -r rdkit-Release_$RDKIT_VERSION rdkit-debian
+          echo 'cd to debian pwd' $PWD
+          ls
           cd rdkit-debian
           ls
-          export RDBASE=$PWD
+          export RDBASE=$PWD          
 
       - name: Build rdkit-debian package
         run: |
