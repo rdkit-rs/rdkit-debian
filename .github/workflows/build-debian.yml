@@ -17,6 +17,12 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
+      - uses: actions/upload-artifact@v3
+        with:
+          name: test artifacts
+          path: |
+            Makefile
+
       - uses: actions/checkout@v3
       - name: Load RDKIT
         run: |
@@ -80,10 +86,17 @@ jobs:
           debuild -j10
           ls
 
+      - name: CD to deb files
+        run: |
+          ls
+          echo 'pwd after debuild' $PWD
+          cd ..
+          ls
+
       - uses: actions/upload-artifact@v3
         with:
           name: deb-packages
           path: |
-            ../rdkit-debian-dev_1.0-1_amd64.deb
-            ../rdkit-debian1_1.0-1_amd64.deb
-            ../rdkit-debian_1.0-1_amd64.deb
+            rdkit-debian-dev_1.0-1_amd64.deb
+            rdkit-debian1_1.0-1_amd64.deb
+            rdkit-debian_1.0-1_amd64.deb
