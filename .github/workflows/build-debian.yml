@@ -20,8 +20,11 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: test artifacts
+          run: | 
+            echo 'PWD start' $PWD
+            ls
           path: |
-            Makefile
+            rdkit-debian/Makefile
 
       - uses: actions/checkout@v3
       - name: Load RDKIT
