@@ -63,6 +63,7 @@ jobs:
       - name: Build rdkit-debian package
         run: |
           echo 'PWD for build' $PWD
+          ls
           debmake -y -b',libsharedlib1,libsharedlib-dev' -e datascience@scientist.com -f 'Scientist'
           rm debian/libsharedlib1.install
           rm debian/libsharedlib1.symbols
