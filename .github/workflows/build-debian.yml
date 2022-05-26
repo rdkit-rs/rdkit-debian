@@ -1,0 +1,77 @@
+on:
+  push:
+    branches: [ test-build ]
+  pull_request:
+    branches: [ test-build ]
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  CMAKE_BUILD_PARALLEL_LEVEL: 10
+  CC: /usr/bin/clang
+  CXX: /usr/bin/clang++
+  RDKIT_VERSION: 2022_03_2
+  LD_LIBRARY_PATH: /usr/local/lib
+  DEB_BUILD_OPTIONS: nocheck
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install required packages
+        run: |
+            echo $PWD "what is pwd"
+            apt-get update  -y && apt-get install sudo gnupg2 wget git vim curl -y ca-certificates -y
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
+            sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y cmake clang llvm libclang-dev  make  git wget libboost-all-dev libfreetype6-dev libc6-dev-arm64-cross ca-certificates python3-pip javahelper dh-make debmake gem2deb npm2deb debhelper docker.io
+            pip3 install numpy
+            sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-14 1000
+            sudo update-alternatives --install /usr/bin/cc  cc  /usr/bin/clang-14 1000
+
+      - name: Build RingDecomposer
+        run: |
+          git clone https://github.com/rareylab/RingDecomposerLib.git
+          cd RingDecomposerLib && mkdir build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make && sudo make -j10 install && cd ../..
+
+      - name: Build Coordgen
+        run: |
+          mkdir coordgen && cd coordgen
+          git clone https://github.com/schrodinger/coordgenlibs.git
+          cd coordgenlibs && mkdir build && cd build && cmake .. && sudo make -j install && cd ../../..
+
+      - name: Load RDKIT
+        run: |
+          wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz && cp Release_$RDKIT_VERSION.tar.gz rdkit-sys-1.0.tar.gz && \
+          rm Release_$RDKIT_VERSION.tar.gz && tar xzf rdkit-sys-1.0.tar.gz
+          cp -r rdkit-Release_$RDKIT_VERSION rdkit-sys-1.0
+          rm -r rdkit-Release_$RDKIT_VERSION
+          cd rdkit-sys-1.0
+          export RDBASE=$PWD
+
+      - name: Build rdkit-sys package
+        run: |
+          echo 'PWD' $PWD
+          debmake -y -b',libsharedlib1,libsharedlib-dev' -e datascience@scientist.com -f 'Scientist'
+          rm debian/libsharedlib1.install
+          rm debian/libsharedlib1.symbols
+          rm debian/libsharedlib-dev.install
+          ls
+          export DATA=$(find .. -type f -name "rdkit-sys1.install")
+          echo $DATA
+          cp ../debian/control debian/control
+          cp ../debian/compat debian/compat
+          cp ../debian/rules debian/rules
+          cp ../debian/rdkit-sys1.install debian/rdkit-sys1.install
+          cp ../debian/rdkit-sys1.symbols debian/rdkit-sys1.symbols
+          cp ../debian/rdkit-sys-dev.install debian/rdkit-sys-dev.install
+          debuild -j10
+          ls
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: deb-packages
+          path: |
+            ../rdkit-sys-dev_1.0-1_amd64.deb
+            ../rdkit-sys1_1.0-1_amd64.deb
+            ../rdkit-sys_1.0-1_amd64.deb
