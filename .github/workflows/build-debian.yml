@@ -43,7 +43,9 @@ jobs:
         run: |
           wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz && cp Release_$RDKIT_VERSION.tar.gz rdkit-debian.tar.gz && \
           rm Release_$RDKIT_VERSION.tar.gz && tar xzf rdkit-debian.tar.gz
+          cp -r rdkit-Release_$RDKIT_VERSION rdkit-debian
           cd rdkit-debian
+          ls
           export RDBASE=$PWD
 
       - name: Build rdkit-debian package
