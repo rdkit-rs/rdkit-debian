@@ -52,17 +52,17 @@ jobs:
           git clone https://github.com/schrodinger/coordgenlibs.git
           cd coordgenlibs && mkdir build && cd build && cmake .. && sudo make -j install && cd ../../..
 
-      - name: Cd to debian
+      - name: Build rdkit-debian package
         run: |
           echo 'cd to debian pwd' $PWD
           ls
           cd rdkit-debian
           ls
-          export RDBASE=$PWD          
-
-      - name: Build rdkit-debian package
-        run: |
+          export RDBASE=$PWD  
           echo 'PWD for build' $PWD
+          echo 'ls ..'
+          ls ..
+          echo 'ls here' 
           ls
           debmake -y -b',libsharedlib1,libsharedlib-dev' -e datascience@scientist.com -f 'Scientist'
           rm debian/libsharedlib1.install
