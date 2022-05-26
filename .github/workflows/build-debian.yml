@@ -41,29 +41,27 @@ jobs:
 
       - name: Load RDKIT
         run: |
-          wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz && cp Release_$RDKIT_VERSION.tar.gz rdkit-sys-1.0.tar.gz && \
-          rm Release_$RDKIT_VERSION.tar.gz && tar xzf rdkit-sys-1.0.tar.gz
-          cp -r rdkit-Release_$RDKIT_VERSION rdkit-sys-1.0
-          rm -r rdkit-Release_$RDKIT_VERSION
-          cd rdkit-sys-1.0
+          wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz && cp Release_$RDKIT_VERSION.tar.gz rdkit-debian.tar.gz && \
+          rm Release_$RDKIT_VERSION.tar.gz && tar xzf rdkit-debian.tar.gz
+          cd rdkit-debian
           export RDBASE=$PWD
 
-      - name: Build rdkit-sys package
+      - name: Build rdkit-debian package
         run: |
-          echo 'PWD' $PWD
+          echo 'PWD for build' $PWD
           debmake -y -b',libsharedlib1,libsharedlib-dev' -e datascience@scientist.com -f 'Scientist'
           rm debian/libsharedlib1.install
           rm debian/libsharedlib1.symbols
           rm debian/libsharedlib-dev.install
           ls
-          export DATA=$(find .. -type f -name "rdkit-sys1.install")
+          export DATA=$(find .. -type f -name "rdkit-debian1.install")
           echo $DATA
           cp ../debian/control debian/control
           cp ../debian/compat debian/compat
           cp ../debian/rules debian/rules
-          cp ../debian/rdkit-sys1.install debian/rdkit-sys1.install
-          cp ../debian/rdkit-sys1.symbols debian/rdkit-sys1.symbols
-          cp ../debian/rdkit-sys-dev.install debian/rdkit-sys-dev.install
+          cp ../debian/rdkit-debian1.install debian/rdkit-debian1.install
+          cp ../debian/rdkit-debian1.symbols debian/rdkit-debian1.symbols
+          cp ../debian/rdkit-debian-dev.install debian/rdkit-debian-dev.install
           debuild -j10
           ls
 
@@ -71,6 +69,6 @@ jobs:
         with:
           name: deb-packages
           path: |
-            ../rdkit-sys-dev_1.0-1_amd64.deb
-            ../rdkit-sys1_1.0-1_amd64.deb
-            ../rdkit-sys_1.0-1_amd64.deb
+            ../rdkit-debian-dev_1.0-1_amd64.deb
+            ../rdkit-debian1_1.0-1_amd64.deb
+            ../rdkit-debian_1.0-1_amd64.deb
