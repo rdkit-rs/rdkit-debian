@@ -18,16 +18,6 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
-      - name: create file
-        run: |
-          touch file.txt
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name:  artifact file
-          path: file.txt
-            
-      - uses: actions/checkout@v3
       - name: Load RDKIT
         run: |
           sudo apt-get update  -y && sudo apt-get install gnupg2 wget git
