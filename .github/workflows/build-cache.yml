@@ -43,7 +43,7 @@ jobs:
         whereis boost
         ls ~/boost
         ls ~/boost/usr/
-        ls ~/boost/share/
+        ls ~/boost/usr/share
 
     - name: Cache coordgen
       uses: actions/cache@v3
