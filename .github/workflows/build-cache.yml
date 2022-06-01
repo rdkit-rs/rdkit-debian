@@ -40,6 +40,10 @@ jobs:
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         source $HOME/.cargo/env
 
+    - name: test
+      run: whereis cargo
+
+
 
 #    - name: Cache clang llvm module
 #      id: cache-clang-llvm
