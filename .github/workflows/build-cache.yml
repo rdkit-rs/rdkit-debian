@@ -49,7 +49,7 @@ jobs:
         CACHE_HIT: ${{steps.cache-coordgen.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
-          ls  ~/coordgen/usr/
+          ls  ~/coordgen/usr/include
           sudo cp --force --recursive ~/coordgen/* /
         else
           sudo apt-get update && sudo apt-get install --yes libcoordgen-dev
@@ -61,6 +61,8 @@ jobs:
       run: |
         whereis coordgen
         ls
+        ls ~/coordgen/usr/include
+        ls | grep coordgen.so
 
 
     - name: Cache cargo
