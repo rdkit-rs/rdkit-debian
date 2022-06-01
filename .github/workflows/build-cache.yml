@@ -38,4 +38,6 @@ jobs:
         fi
 
     - name: test libboost
-      run: whereis boost
+      run: |
+        whereis boost
+        ls
