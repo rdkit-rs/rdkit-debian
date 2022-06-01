@@ -30,7 +30,8 @@ jobs:
         CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
-          sudo cp --force --recursive ~/boost/* && ls  ~/boost/ && ls /usr/include && ls /usr/lib/x86_64-linux-gnu /
+          ls  ~/boost
+          sudo cp --force --recursive ~/boost/* /
         else
           sudo apt-get update && sudo apt-get install --yes libboost1.74-all-dev
           mkdir -p ~/boost
@@ -40,4 +41,4 @@ jobs:
     - name: test libboost
       run: |
         whereis boost
-        ls /usr/inlcude
+        ls ~/boost/
