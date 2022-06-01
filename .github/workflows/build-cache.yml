@@ -1,0 +1,93 @@
+on:
+  push:
+    branches: [ test-build ]
+  pull_request:
+    branches: [ test-build ]
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  CMAKE_BUILD_PARALLEL_LEVEL: 10
+  CC: /usr/bin/clang
+  CXX: /usr/bin/clang++
+  RDKIT_VERSION: 2022_03_2
+  LD_LIBRARY_PATH: /usr/local/lib
+  DEB_BUILD_OPTIONS: nocheck
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: APT update
+      run: |
+        sudo apt-get update  -y && sudo apt-get install gnupg2 wget git curl
+
+    - name: Cache cargo
+      id: cargo-cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install cargo
+      if: steps.cargo-cache.outputs.cache-hit != 'true'
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source $HOME/.cargo/env
+
+
+#    - name: Cache clang llvm module
+#      id: cache-clang-llvm
+#      uses: actions/cache@v3
+#      env:
+#        cache-name: cache-clang-llvm-modules
+#      with:
+#        path: |
+#          /usr/bin/clang
+#          /usr/bin/clang-14
+#          /usr/bin/llvm
+#        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+#
+#    - if: ${{ steps.cache-clang-llvm.outputs.cache-hit == 'false' }}
+#      name: Where is clang
+#      continue-on-error: true
+#      run: whereis clang
+#
+#    - name: Install clang-llvm
+#      run: sudo apt install clang llvm libclang-dev
+#
+#    - name: Cache LLVM and Clang
+#      id: cache-llvm-clang
+#      uses: actions/cache@v3
+#      with:
+#        path: |
+#          ./llvm
+#          ./clang
+#        key: llvm-14
+#
+#    - name: Install LLVM and Clang
+#      if: steps.cache-llvm-clang.outputs.cache-hit != 'true'
+#      uses: actions/checkout@v3
+#      run: |
+#        sudo apt-get update  -y && sudo apt-get install clang llvm libclang-dev
+#      with:
+#        version: "14"
+#        cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+#
+#    - name: Install LLVM and Clang
+#      env:
+#        CACHE_HIT: ${{steps.cache-llvm-clang.outputs.cache-hit}}
+#        CLANG_VERSION: ${{secrets.CLANG_VERSION}}
+#      run: |
+#        if [[ "$CACHE_HIT" == 'true' ]]; then
+#          sudo cp --verbose --force --recursive ~/llvm/* /
+#        else
+#          sudo apt-get install --yes clang llvm libclang-dev
+#          mkdir -p ~/valgrind
+#          sudo dpkg -L valgrind | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/valgrind/
+#        fi
