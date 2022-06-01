@@ -40,8 +40,10 @@ jobs:
 
     - name: test libboost
       run: |
+        whereis boost
         ls ~/boost
         ls ~/boost/usr/
+        ls ~/boost/share/
 
     - name: Cache coordgen
       uses: actions/cache@v3
