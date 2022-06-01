@@ -24,14 +24,7 @@ jobs:
       id: cache-libboost-others
       with:
         path: "~/boost"
-#        path: |
-#          /usr/include/boost
-#          /usr/include/eigen3
-#          /usr/inlcude/freetype2
-#          /usr/inlcude/coordgen
-#          /usr/inlcude/maeparser
-#          /usr/lib/x86_64-linux-gnu
-        key: libboost-all-dev
+        key: libboost1.74-all-dev
     - name: Install libboost
       env:
         CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
@@ -39,12 +32,9 @@ jobs:
         if [[ "$CACHE_HIT" == 'true' ]]; then
           sudo cp --force --recursive ~/boost/* /
         else
-          sudo apt-get update && sudo apt-get install --yes libboost-all-dev
+          sudo apt-get update && sudo apt-get install --yes libboost1.74-all-dev
           mkdir -p ~/boost
-          sudo dpkg -L libboost1-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
-#          for dep in libboost1.74-all-dev; do
-#              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
-#          done
+          sudo dpkg -L libboost1.74-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
         fi
 
     - name: test libboost
