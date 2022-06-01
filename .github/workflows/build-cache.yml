@@ -19,24 +19,30 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-#    - name: Cache libboost
-#      uses: actions/cache@v3
-#      id: cache-libboost-others
-#      with:
-#        path: "~/boost"
-#        key: libboost1.74-all-dev
-#    - name: Install libboost
-#      env:
-#        CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          ls  ~/boost/usr/include
-#          sudo cp --force --recursive ~/boost/* /
-#        else
-#          sudo apt-get update && sudo apt-get install --yes libboost1.74-all-dev
-#          mkdir -p ~/boost
-#          sudo dpkg -L libboost1.74-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
-#        fi
+    - name: Cache libboost
+      uses: actions/cache@v3
+      id: cache-libboost-others
+      with:
+        path: "~/boost1"
+        key: libboost_all
+    - name: Install libboost
+      env:
+        CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/boost1/usr/include
+          ls  ~/boost1/usr/
+          sudo cp --force --recursive ~/boost1/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes libboost-all-dev
+          mkdir -p ~/boost1
+          sudo dpkg -L libboost-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost1/
+        fi
+
+    - name: test libboost
+      run: |
+        ls ~/boost1/usr/include
+        ls ~/boost1/usr/include/boost
 
     - name: Cache coordgen
       uses: actions/cache@v3
@@ -64,6 +70,34 @@ jobs:
         ls
         ls ~/coordgen/usr/include
         ls ~/coordgen/usr/include/coordgen
+        
+
+    - name: Cache maeparser
+      uses: actions/cache@v3
+      id: cache-maeparser
+      with:
+        path: "~/maeparser"
+        key: maeparser
+    - name: Install maeparser
+      env:
+        CACHE_HIT: ${{steps.cache-maeparser.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/maeparser/usr/include
+          ls  ~/maeparser/usr/
+          sudo cp --force --recursive ~/maeparser/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes libmaeparser-dev
+          mkdir -p ~/maeparser
+          sudo dpkg -L libmaeparser-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/maeparser/
+        fi
+
+    - name: test maeparser
+      run: |
+        whereis maeparser
+        ls
+        ls ~/maeparser/usr/include
+        ls ~/maeparser/usr/include/maeparser
 
 
     - name: Cache cargo
