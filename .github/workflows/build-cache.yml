@@ -42,18 +42,19 @@ jobs:
       uses: actions/cache@v3
       id: cache-coordgen
       with:
-        path: "/usr/include/coordgen"
+        path: "~/coordgen"
         key: coordgen
     - name: Install coordgen
       env:
         CACHE_HIT: ${{steps.cache-coordgen.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
-          ls  /usr/include/coordgen/
-          sudo cp --force --recursive /usr/include/coordgen/* /
+          ls  ~/coordgen/usr/
+          sudo cp --force --recursive ~/coordgen/* /
         else
           sudo apt-get update && sudo apt-get install --yes libcoordgen-dev
-          sudo dpkg -L libcoordgen-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory /usr/include/coordgen/
+          mkdir -p ~/coordgen
+          sudo dpkg -L libcoordgen-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/coordgen/
         fi
 
     - name: test coordgen
