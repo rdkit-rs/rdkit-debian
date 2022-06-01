@@ -44,6 +44,8 @@ jobs:
         ls ~/boost
         ls ~/boost/usr/
         ls ~/boost/usr/share
+        ls ~/boost/usr/share/doc
+        find | grep  libboost_thread.a
 
     - name: Cache coordgen
       uses: actions/cache@v3
