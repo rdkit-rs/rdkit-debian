@@ -23,19 +23,21 @@ jobs:
       uses: actions/cache@v3
       id: cache-libboost-others
       with:
-        path: |
-          "/usr/include/boost"
-          "/usr/lib/x86_64-linux-gnu"
-        key: libboost
+        path: "~/boost"
+        key: libboost1.74-all-dev
     - name: Install libboost
       env:
         CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
-          sudo cp --force --recursive /usr/include/boost/* /
+          sudo cp --force --recursive ~/boost/* && ls  ~/boost/ && ls /usr/include && ls /usr/lib/x86_64-linux-gnu /
         else
-          sudo apt-get update && sudo apt-get install --yes libboost-all-dev
+          sudo apt-get update && sudo apt-get install --yes libboost1.74-all-dev
+          mkdir -p ~/boost
+          sudo dpkg -L libboost1.74-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
         fi
 
     - name: test libboost
-      run: whereis boost
+      run: |
+        whereis boost
+        ls /usr/inlcude
