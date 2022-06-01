@@ -19,26 +19,65 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Cache libboost
+#    - name: Cache libboost
+#      uses: actions/cache@v3
+#      id: cache-libboost-others
+#      with:
+#        path: "~/boost"
+#        key: libboost1.74-all-dev
+#    - name: Install libboost
+#      env:
+#        CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
+#      run: |
+#        if [[ "$CACHE_HIT" == 'true' ]]; then
+#          ls  ~/boost
+#          sudo cp --force --recursive ~/boost/* /
+#        else
+#          sudo apt-get update && sudo apt-get install --yes libboost1.74-all-dev
+#          mkdir -p ~/boost
+#          sudo dpkg -L libboost1.74-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
+#        fi
+
+    - name: Cache coordgen
       uses: actions/cache@v3
-      id: cache-libboost-others
+      id: cache-coordgen
       with:
-        path: "~/boost"
-        key: libboost1.74-all-dev
-    - name: Install libboost
+        path: "/usr/include/coordgen"
+        key: coordgen
+    - name: Install coordgen
       env:
-        CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
+        CACHE_HIT: ${{steps.cache-coordgen.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
-          ls  ~/boost
-          sudo cp --force --recursive ~/boost/* /
+          ls  /usr/include/coordgen/
+          sudo cp --force --recursive /usr/include/coordgen/* /
         else
-          sudo apt-get update && sudo apt-get install --yes libboost1.74-all-dev
-          mkdir -p ~/boost
-          sudo dpkg -L libboost1.74-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
+          sudo apt-get update && sudo apt-get install --yes libcoordgen-dev
+          sudo dpkg -L libcoordgen-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory /usr/include/coordgen/
         fi
 
-    - name: test libboost
+    - name: test coordgen
       run: |
-        whereis boost
-        ls ~/boost/
+        whereis coordgen
+
+
+    - name: Cache cargo
+      id: cargo-cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install cargo
+      if: steps.cargo-cache.outputs.cache-hit != 'true'
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source $HOME/.cargo/env
+
+    - name: test cargo
+      run: whereis cargo
