@@ -17,37 +17,39 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v3
-    - name: APT update
-      run: |
-        sudo apt-get update  -y && sudo apt-get install gnupg2 wget git curl
-
-    - name: Cache cargo
-      id: cargo-cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Install cargo
-      if: steps.cargo-cache.outputs.cache-hit != 'true'
-      run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        source $HOME/.cargo/env
-
-    - name: test cargo
-      run: whereis cargo
+#    - uses: actions/checkout@v3
+#    - name: APT update
+#      run: |
+#        sudo apt-get update  -y && sudo apt-get install gnupg2 wget git curl
+#
+#    - name: Cache cargo
+#      id: cargo-cache
+#      uses: actions/cache@v3
+#      with:
+#        path: |
+#          ~/.cargo/bin/
+#          ~/.cargo/registry/index/
+#          ~/.cargo/registry/cache/
+#          ~/.cargo/git/db/
+#          target/
+#        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+#
+#    - name: Install cargo
+#      if: steps.cargo-cache.outputs.cache-hit != 'true'
+#      run: |
+#        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+#        source $HOME/.cargo/env
+#
+#    - name: test cargo
+#      run: whereis cargo
 
     - name: Cache libboost
       uses: actions/cache@v3
       id: cache-libboost
       with:
-        path: /usr/include/boost
+        path: |
+          /usr/include/boost
+          /usr/lib/x86_64-linux-gnu/libboost*
         key: libboost1.74-all-dev
 
     - name: Install libboost
@@ -56,17 +58,19 @@ jobs:
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
           sudo cp --force --recursive /usr/include/boost/* /
+          sudo cp --force --recursive /usr/lib/x86_64-linux-gnu/libboost* /
         else
           sudo apt-get update && sudo apt-get install -yq libboost1.74-all-dev
-          for dep in libboost1.74-all-dev; do
-              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory /usr/include/boost/
-          done
+#          for dep in libboost1.74-all-dev; do
+#              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory /usr/include/boost/
+#          done
         fi
 
     - name: test libboost
       run: |
         whereis boost
         ls /usr/include
+        ls /usr/lib/x86_64-linux-gnu
         echo 'done'
 
     - name: Cache clang llvm
