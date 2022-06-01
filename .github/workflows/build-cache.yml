@@ -24,7 +24,7 @@ jobs:
       id: cache-libboost-others
       with:
         path: "~/boost"
-        key: libboost1.74-all-dev
+        key: libboost-all-dev
     - name: Install libboost
       env:
         CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
