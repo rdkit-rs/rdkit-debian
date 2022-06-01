@@ -23,26 +23,25 @@ jobs:
       uses: actions/cache@v3
       id: cache-libboost-others
       with:
-        path: "~/boost1"
+        path: "~/boost"
         key: libboost_all
     - name: Install libboost
       env:
         CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
-          ls  ~/boost1/usr/include
-          ls  ~/boost1/usr/
-          sudo cp --force --recursive ~/boost1/* /
+          ls  ~/boost/usr/
+          sudo cp --force --recursive ~/boost/* /
         else
           sudo apt-get update && sudo apt-get install --yes libboost-all-dev
-          mkdir -p ~/boost1
-          sudo dpkg -L libboost-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost1/
+          mkdir -p ~/boost
+          sudo dpkg -L libboost-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
         fi
 
     - name: test libboost
       run: |
-        ls ~/boost1/usr/include
-        ls ~/boost1/usr/include/boost
+        ls ~/boost
+        ls ~/boost/usr/
 
     - name: Cache coordgen
       uses: actions/cache@v3
