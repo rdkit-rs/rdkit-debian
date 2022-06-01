@@ -57,29 +57,28 @@ jobs:
         CACHE_HIT: ${{steps.cache-libboost.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
-          sudo cp --force --recursive /usr/include/boost/* /
-          sudo cp --force --recursive /usr/lib/x86_64-linux-gnu/libboost* /
+          sudo cp --force --recursive /usr/include/boost/*  && sudo cp --force --recursive /usr/lib/x86_64-linux-gnu/libboost*  /
         else
           sudo apt-get update && sudo apt-get install -yq libboost1.74-all-dev
 #          for dep in libboost1.74-all-dev; do
 #              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory /usr/include/boost/
 #          done
         fi
-
-    - name: test libboost
-      run: |
-        whereis boost
-        ls /usr/include
-        ls /usr/lib/x86_64-linux-gnu
-        echo 'done'
-
-    - name: Cache clang llvm
-      id: cache-clang-llvm
-      uses: actions/cache@v3
-      with:
-        path: |
-          ./llvm
-          ./clang
+#
+#    - name: test libboost
+#      run: |
+#        whereis boost
+#        ls /usr/include
+#        ls /usr/lib/x86_64-linux-gnu
+#        echo 'done'
+#
+#    - name: Cache clang llvm
+#      id: cache-clang-llvm
+#      uses: actions/cache@v3
+#      with:
+#        path: |
+#          ./llvm
+#          ./clang
 
 
 
