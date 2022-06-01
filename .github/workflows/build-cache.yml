@@ -66,7 +66,9 @@ jobs:
         fi
 
     - name: test libboost
-      run: whereis boost
+      run: |
+        whereis boost
+        echo 'done'
 #
 #    - name: Cache clang llvm
 #      id: cache-clang-llvm
