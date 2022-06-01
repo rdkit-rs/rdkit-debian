@@ -30,7 +30,7 @@ jobs:
 #        CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
 #      run: |
 #        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          ls  ~/boost
+#          ls  ~/boost/usr/include
 #          sudo cp --force --recursive ~/boost/* /
 #        else
 #          sudo apt-get update && sudo apt-get install --yes libboost1.74-all-dev
@@ -50,6 +50,7 @@ jobs:
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
           ls  ~/coordgen/usr/include
+          ls  ~/coordgen/usr/share
           sudo cp --force --recursive ~/coordgen/* /
         else
           sudo apt-get update && sudo apt-get install --yes libcoordgen-dev
@@ -62,7 +63,7 @@ jobs:
         whereis coordgen
         ls
         ls ~/coordgen/usr/include
-        ls | grep coordgen.so
+        ls ~/coordgen/usr/include/coordgen
 
 
     - name: Cache cargo
