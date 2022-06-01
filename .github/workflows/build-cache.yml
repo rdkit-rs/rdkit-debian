@@ -65,10 +65,10 @@ jobs:
           done
         fi
 
-   - name: test libboost
-     run: |
-       whereis boost
-       find | grep libboost
+    - name: test libboost
+      run: |
+        whereis boost
+        find | grep libboost
 
 #
 #    - name: Cache clang llvm
