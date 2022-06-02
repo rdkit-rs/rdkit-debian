@@ -20,7 +20,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Cache libboost-v1
-      id: cargo-libboost-v1
+      id: cache-libboost-v1
       uses: actions/cache@v3
       with:
         path: |
@@ -32,7 +32,7 @@ jobs:
         key: lib_cache
 
     - name: Install libboost-v1
-      if: steps.cargo-libboost-v1.outputs.cache-hit != 'true'
+      if: steps.cache-libboost-v1.outputs.cache-hit != 'true'
       run: |
         sudo apt-get update && sudo apt-get install --yes libboost-all-dev
         ls /usr/include/
@@ -45,37 +45,37 @@ jobs:
         ls /usr/include
         ls /usr/lib/x86_64-linux-gnu/
 
-    - name: Cache libboost
-      uses: actions/cache@v3
-      id: cache-libboost-others
-      with:
-        path: "~/boost"
-        key: libboost_all
-    - name: Install libboost
-      env:
-        CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
-      run: |
-        if [[ "$CACHE_HIT" == 'true' ]]; then
-          ls  ~/boost/usr/
-          sudo cp --force --recursive ~/boost/* /
-        else
-          sudo apt-get update && sudo apt-get install --yes libboost-all-dev
-          export LIST=$(ls /usr/lib/aarch64-linux-gnu/libboost*)
-          for i in $LIST; do  echo $i; done
-          export BOOST=$(ls /usr/include/boost)
-          
-          mkdir -p ~/boost
-          sudo dpkg -L libboost-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
-        fi
-
-    - name: test libboost
-      run: |
-        whereis boost
-        ls ~/boost
-        ls ~/boost/usr/
-        ls ~/boost/usr/share
-        ls ~/boost/usr/share/doc
-        ls ~/boost/usr/share/doc/libboost-all-dev
+#    - name: Cache libboost
+#      uses: actions/cache@v3
+#      id: cache-libboost-others
+#      with:
+#        path: "~/boost"
+#        key: libboost_all
+#    - name: Install libboost
+#      env:
+#        CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
+#      run: |
+#        if [[ "$CACHE_HIT" == 'true' ]]; then
+#          ls  ~/boost/usr/
+#          sudo cp --force --recursive ~/boost/* /
+#        else
+#          sudo apt-get update && sudo apt-get install --yes libboost-all-dev
+#          export LIST=$(ls /usr/lib/aarch64-linux-gnu/libboost*)
+#          for i in $LIST; do  echo $i; done
+#          export BOOST=$(ls /usr/include/boost)
+#
+#          mkdir -p ~/boost
+#          sudo dpkg -L libboost-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
+#        fi
+#
+#    - name: test libboost
+#      run: |
+#        whereis boost
+#        ls ~/boost
+#        ls ~/boost/usr/
+#        ls ~/boost/usr/share
+#        ls ~/boost/usr/share/doc
+#        ls ~/boost/usr/share/doc/libboost-all-dev
 
     - name: Cache coordgen
       uses: actions/cache@v3
