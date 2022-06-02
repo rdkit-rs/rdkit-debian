@@ -43,6 +43,7 @@ jobs:
       run: |
         whereis boost
         ls /usr/include
+        ls /usr/lib/x86_64-linux-gnu/
 
     - name: Cache libboost
       uses: actions/cache@v3
