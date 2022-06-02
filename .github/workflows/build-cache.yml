@@ -19,6 +19,31 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Cache libboost-v1
+      id: cargo-libboost-v1
+      uses: actions/cache@v3
+      with:
+        path: |
+          /usr/include/boost
+          /usr/lib/x86_64-linux-gnu/libboost**.so
+          /usr/lib/x86_64-linux-gnu/libboost**.a
+          /usr/share/doc/libboost-all-dev/copyright
+          /usr/share/doc/libboost-all-dev/changelog.gz
+        key: lib_cache
+
+    - name: Install libboost-v1
+      if: steps.cargo-libboost-v1.outputs.cache-hit != 'true'
+      run: |
+        sudo apt-get update && sudo apt-get install --yes libboost-all-dev
+        ls /usr/include/
+        ls /usr/lib/x86_64-linux-gnu/
+        ls /usr/share/doc/libboost-all-dev/
+
+    - name: test libboost-v1
+      run: |
+        whereis boost
+        ls /usr/include
+
     - name: Cache libboost
       uses: actions/cache@v3
       id: cache-libboost-others
@@ -34,6 +59,10 @@ jobs:
           sudo cp --force --recursive ~/boost/* /
         else
           sudo apt-get update && sudo apt-get install --yes libboost-all-dev
+          export LIST=$(ls /usr/lib/aarch64-linux-gnu/libboost*)
+          for i in $LIST; do  echo $i; done
+          export BOOST=$(ls /usr/include/boost)
+          
           mkdir -p ~/boost
           sudo dpkg -L libboost-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
         fi
