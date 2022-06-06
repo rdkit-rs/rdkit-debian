@@ -164,10 +164,9 @@ jobs:
         CACHE_HIT: ${{steps.cache-libclang-dev.outputs.cache-hit}}
       run: |
         if [[ "$CACHE_HIT" == 'true' ]]; then
-          ls  ~/libclang/usr/
           sudo cp --force --recursive ~/libclang/* /
         else
-          sudo apt-get update && sudo apt-get install --yes libclang-14-dev
+          sudo apt-get update && sudo apt-get install -yq libclang-14-dev
           mkdir -p ~/libclang
           for dep in libclang-14-dev; do
               dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libclang/
