@@ -23,59 +23,28 @@ jobs:
       id: cache-libboost-v1
       uses: actions/cache@v3
       with:
-        path: |
-          /usr/include/boost
-          /usr/lib/x86_64-linux-gnu/libboost**.so
-          /usr/lib/x86_64-linux-gnu/libboost**.a
-          /usr/share/doc/libboost-all-dev/copyright
-          /usr/share/doc/libboost-all-dev/changelog.gz
-        key: lib_cache
+        path: "~/boost"
+        key: libboost_cache
 
     - name: Install libboost-v1
-      if: steps.cache-libboost-v1.outputs.cache-hit != 'true'
+      env:
+        CACHE_HIT: ${{steps.cache-libboost-v1.outputs.cache-hit}}
       run: |
-        sudo apt-get update && sudo apt-get install --yes libboost-all-dev
-        ls /usr/include/
-        ls /usr/lib/x86_64-linux-gnu/
-        ls /usr/share/doc/libboost-all-dev/
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          sudo cp --force --recursive ~/boost/* /
+        else
+          sudo apt-get update && sudo apt-get install -yq libboost-all-dev
+          mkdir -p ~/boost
+          for dep in libboost-all-dev; do
+              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
+          done
+        fi
 
     - name: test libboost-v1
       run: |
         whereis boost
         ls /usr/include
         ls /usr/lib/x86_64-linux-gnu/
-
-#    - name: Cache libboost
-#      uses: actions/cache@v3
-#      id: cache-libboost-others
-#      with:
-#        path: "~/boost"
-#        key: libboost_all
-#    - name: Install libboost
-#      env:
-#        CACHE_HIT: ${{steps.cache-libboost-others.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          ls  ~/boost/usr/
-#          sudo cp --force --recursive ~/boost/* /
-#        else
-#          sudo apt-get update && sudo apt-get install --yes libboost-all-dev
-#          export LIST=$(ls /usr/lib/aarch64-linux-gnu/libboost*)
-#          for i in $LIST; do  echo $i; done
-#          export BOOST=$(ls /usr/include/boost)
-#
-#          mkdir -p ~/boost
-#          sudo dpkg -L libboost-all-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
-#        fi
-#
-#    - name: test libboost
-#      run: |
-#        whereis boost
-#        ls ~/boost
-#        ls ~/boost/usr/
-#        ls ~/boost/usr/share
-#        ls ~/boost/usr/share/doc
-#        ls ~/boost/usr/share/doc/libboost-all-dev
 
     - name: Cache coordgen
       uses: actions/cache@v3
@@ -111,6 +80,7 @@ jobs:
       with:
         path: "~/maeparser"
         key: maeparser
+
     - name: Install maeparser
       env:
         CACHE_HIT: ${{steps.cache-maeparser.outputs.cache-hit}}
@@ -153,3 +123,135 @@ jobs:
 
     - name: test cargo
       run: whereis cargo
+
+    - name: Cache clang-llvm
+      uses: actions/cache@v3
+      id: cache-clang-llvm
+      with:
+        path: "~/clang"
+        key: clang
+
+    - name: Install clang-llvm
+      env:
+        CACHE_HIT: ${{steps.cache-clang-llvm.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/clang/usr/
+          sudo cp --force --recursive ~/clang/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes clang llvm
+          mkdir -p ~/clang
+          sudo dpkg -L clang | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L clang-14 | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L llvm | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L llvm-14 | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+        fi
+
+    - name: test clang
+      run: |
+        whereis clang
+        clang --version
+
+    - name: Cache libclang-dev-14
+      uses: actions/cache@v3
+      id: cache-libclang-dev
+      with:
+        path: "~/libclang"
+        key: libclang-14
+
+    - name: Install libclang-14
+      env:
+        CACHE_HIT: ${{steps.cache-libclang-dev.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/libclang/usr/
+          sudo cp --force --recursive ~/libclang/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes libclang-14-dev
+          mkdir -p ~/libclang
+          for dep in libclang-14-dev; do
+              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libclang/
+          done
+
+    - name: Cache cmake
+      uses: actions/cache@v3
+      id: cache-cmake
+      with:
+        path: "~/cmake"
+        key: cmake
+
+    - name: Install cmake
+      env:
+        CACHE_HIT: ${{steps.cache-cmake.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/cmake
+          sudo cp --force --recursive ~/cmake/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes cmake
+          mkdir -p ~/cmake
+          sudo dpkg -L cmake | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
+        fi
+
+    - name: test cmake
+      run: |
+        whereis cmake
+        cmake --version
+
+    - name: Cache debian packages
+      uses: actions/cache@v3
+      id: cache-debian
+      with:
+        path: "~/debian"
+        key: debian
+
+    - name: Install debian packages
+      env:
+        CACHE_HIT: ${{steps.cache-debian.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/debian/
+          sudo cp --force --recursive ~/debian/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes libc6-dev-arm64-cross ca-certificates dh-make debmake gem2deb npm2deb debhelper javahelper 
+          mkdir -p ~/debian
+          sudo dpkg -L libc6-dev-arm64-cross | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L ca-certificates | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L dh-make | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L gem2deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L npm2deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L debhelper | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+          sudo dpkg -L javahelper | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
+        fi
+
+    - name: test debian_packages
+      run: |
+        whereis gem2deb
+        whereis javahelper
+        gem2deb --version
+
+    - name: Cache libfreetype
+      uses: actions/cache@v3
+      id: cache-libfreetype
+      with:
+        path: "~/libfreetype"
+        key: libfreetype
+
+    - name: Install libfreetype
+      env:
+        CACHE_HIT: ${{steps.cache-libfreetype.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/libfreetype
+          sudo cp --force --recursive ~/libfreetype/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes libfreetype-dev
+          mkdir -p ~/libfreetype
+          sudo dpkg -L libfreetype-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
+        fi
+
+    - name: test libfreetype
+      run: |
+        find | grep libfreetype6-dev
+        
+
