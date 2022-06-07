@@ -306,7 +306,7 @@ jobs:
             echo $PWD "what is pwd"
             sudo apt-get update  -y && sudo apt-get install wget git vim curl -y ca-certificates -y
             DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends tzdata
-            sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y cmake  make libfreetype6-dev libc6-dev-arm64-cross ca-certificates python3-pip javahelper dh-make debmake gem2deb npm2deb debhelper
+            sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y cmake clang llvm libclang-dev libboost-all-dev libcoordgen-dev libeigen3-dev libmaeparser-dev make libfreetype6-dev libc6-dev-arm64-cross ca-certificates python3-pip javahelper dh-make debmake gem2deb npm2deb debhelper
             pip3 install numpy
             sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-14 1000
             sudo update-alternatives --install /usr/bin/cc  cc  /usr/bin/clang-14 1000
