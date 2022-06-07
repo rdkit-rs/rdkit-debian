@@ -288,4 +288,8 @@ jobs:
           cp Release_$RDKIT_VERSION.tar.gz ~/rdkit-archive/Release_$RDKIT_VERSION.tar.gz
         fi
 
+    - name: test rdkit archive
+      run: |
+        ls  ~/rdkit-archive
+
 
