@@ -1,12 +1,9 @@
 #!/usr/bin/make -f
 export DH_VERBOSE = 1
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
-export CPPFLAGS     :=$(shell dpkg-buildflags --get CPPFLAGS)
-export CFLAGS       :=$(shell dpkg-buildflags --get CFLAGS) $(CPPFLAGS)
-export CXXFLAGS     := $(shell dpkg-buildflags --get CXXFLAGS) $(CPPFLAGS)
-export DEB_CFLAGS_MAINT_APPEND   = -pthread
-export DEB_CPPFLAGS_MAINT_APPEND = -pthread
-export DEB_CXXFLAGS_MAINT_APPEND = -pthread
+export CPPFLAGS:=$(filter-out -O2 -flto -ffat-lto-objects,$(shell dpkg-buildflags --get CPPFLAGS))
+export CFLAGS       :=$(filter-out -O2 -flto -ffat-lto-objects,$(shell dpkg-buildflags --get CFLAGS)) $(CPPFLAGS)
+export CXXFLAGS     :=$(filter-out -O2 -flto -ffat-lto-objects,$(shell dpkg-buildflags --get CXXFLAGS)) $(CPPFLAGS)
 export LDFLAGS      :=$(shell dpkg-buildflags --get LDFLAGS)
 export RDBASE       := $(CURDIR)
 export CMAKE_BUILD_PARALLEL_LEVEL=10
