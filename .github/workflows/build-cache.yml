@@ -19,56 +19,39 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Cache liboost
-      id: cache-libboost-v2
+    - name: Cache libboost-v1
+      id: cache-libboost-v1
       uses: actions/cache@v3
       with:
-        path: |
-          /usr/include/boost
-          /usr/include/c++/11/bits/boost_concept_check.h
-          /usr/lib/x86_64-linux-gnu/libboost**
-          /usr/lib/x86_64-linux-gnu/cmake/boost**
-          /usr/lib/x86_64-linux-gnu/libboost**
-          /usr/lib/python3/dist-packages/boost
-          /usr/share/lintian/overrides/libboost**
-          /usr/share/doc/libboost**
-          /usr/share/boost**
-          /var/lib/dpkg/info/libboost**
-        key: libboost_cache-v2
+        path: "~/boost"
+        key: libboost_cache
 
-    - name: Install libboost
-      if: steps.cache-libboost-v2.outputs.cache-hit != 'true'
-      run: sudo apt-get update && sudo apt-get install -yq libboost-all-dev
-
-
-
-#    - name: Cache libboost-v1
-#      id: cache-libboost-v1
-#      uses: actions/cache@v3
-#      with:
-#        path: "~/boost"
-#        key: libboost_cache
-#
-#    - name: Install libboost-v1
-#      env:
-#        CACHE_HIT: ${{steps.cache-libboost-v1.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          sudo cp --force --recursive ~/boost/* /
-#        else
-#          sudo apt-get update && sudo apt-get install -yq libboost1.74-dev
-#          mkdir -p ~/boost
-#          for dep in libboost1.74-dev; do
-#              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
-#          done
-#        fi
+    - name: Install libboost-v1
+      env:
+        CACHE_HIT: ${{steps.cache-libboost-v1.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          sudo cp --force --recursive ~/boost/* /
+        else
+          sudo apt-get update && sudo apt-get install -yq libboost1.74-dev libboost1.74-all-dev
+          mkdir -p ~/boost
+          for dep in libboost1.74-dev; do
+              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
+          done
+          export LIBBOOST=$(apt-cache depends libboost1.74-all-dev | awk '/Depends:/ {print $2}')
+          for lib in $LIBBOOST; do 
+              for deb in $lib; do 
+                  dpkg -L $deb ; 
+              done; 
+          done      
+        fi
 
     - name: test libboost-v1
       run: |
         whereis boost
         ls /usr/include
+        
         ls /usr/lib/x86_64-linux-gnu/
-        find | grep libboost
 
 #    - name: Cache coordgen
 #      uses: actions/cache@v3
