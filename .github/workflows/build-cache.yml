@@ -266,6 +266,6 @@ jobs:
 
     - name: test libfreetype
       run: |
-        find | grep libfreetype6-dev
+        whereis freetype2
 
 
