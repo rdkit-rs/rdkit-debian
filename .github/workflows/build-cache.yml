@@ -173,36 +173,36 @@ jobs:
         whereis llvm-14
         clang --version
 
-    - name: Cache cmake
-      uses: actions/cache@v3
-      id: cache-cmake
-      with:
-        path: "~/cmake"
-        key: cmake
-
-    - name: Install cmake
-      env:
-        CACHE_HIT: ${{steps.cache-cmake.outputs.cache-hit}}
-      run: |
-        if [[ "$CACHE_HIT" == 'true' ]]; then
-          ls  ~/cmake
-          sudo cp --force --recursive ~/cmake/* /
-        else
-          sudo apt-get update && sudo apt-get install -yq cmake
-          mkdir -p ~/cmake
-          export LIBCMAKE=$(apt-cache depends cmake | awk '/Depends:/ {print $2}')
-          dpkg -L cmake | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
-          for lib in $LIBCMAKE; do
-             for deb in $lib; do
-               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
-             done;
-          done
-        fi
-
-    - name: test cmake
-      run: |
-        whereis cmake
-        cmake --version
+#    - name: Cache cmake
+#      uses: actions/cache@v3
+#      id: cache-cmake
+#      with:
+#        path: "~/cmake"
+#        key: cmake
+#
+#    - name: Install cmake
+#      env:
+#        CACHE_HIT: ${{steps.cache-cmake.outputs.cache-hit}}
+#      run: |
+#        if [[ "$CACHE_HIT" == 'true' ]]; then
+#          ls  ~/cmake
+#          sudo cp --force --recursive ~/cmake/* /
+#        else
+#          sudo apt-get update && sudo apt-get install -yq cmake
+#          mkdir -p ~/cmake
+#          export LIBCMAKE=$(apt-cache depends cmake | awk '/Depends:/ {print $2}')
+#          dpkg -L cmake | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
+#          for lib in $LIBCMAKE; do
+#             for deb in $lib; do
+#               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
+#             done;
+#          done
+#        fi
+#
+#    - name: test cmake
+#      run: |
+#        whereis cmake
+#        cmake --version
 #
 #    - name: Cache debian packages
 #      uses: actions/cache@v3
