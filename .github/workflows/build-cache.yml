@@ -268,4 +268,24 @@ jobs:
       run: |
         whereis freetype2
 
+    - name: Cache RDKIT archive
+      uses: actions/cache@v3
+      id: cache-rdkit-archive
+      with:
+        path: "~/rdkit-archive"
+        key: rdkit-archive
+
+    - name: Download RDKIT archive
+      env:
+        CACHE_HIT: ${{steps.cache-rdkit-archive.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/rdkit-archive
+          sudo cp --force --recursive ~/rdkit-archive/* /
+        else
+          mkmkdir -p ~/rdkit-archive
+          wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz
+          cp Release_$RDKIT_VERSION.tar.gz ~/rdkit-archive/Release_$RDKIT_VERSION.tar.gz
+        fi
+
 
