@@ -172,56 +172,37 @@ jobs:
         whereis clang
         whereis llvm-14
         clang --version
-#
-#    - name: Cache libclang-dev-14
-#      uses: actions/cache@v3
-#      id: cache-libclang-dev
-#      with:
-#        path: "~/libclang"
-#        key: libclang-14
-#
-#    - name: Install libclang-14
-#      env:
-#        CACHE_HIT: ${{steps.cache-libclang-dev.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          sudo cp --force --recursive ~/libclang/* /
-#        else
-#          sudo apt-get update && sudo apt-get install -yq libclang-14-dev
-#          mkdir -p ~/libclang
-#          for dep in libclang-14-dev; do
-#              dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libclang/
-#          done
-#
-#    - name: Cache cmake
-#      uses: actions/cache@v3
-#      id: cache-cmake
-#      with:
-#        path: "~/cmake"
-#        key: cmake
-#
-#    - name: Install cmake
-#      env:
-#        CACHE_HIT: ${{steps.cache-cmake.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          ls  ~/cmake
-#          sudo cp --force --recursive ~/cmake/* /
-#        else
-#          sudo apt-get update && sudo apt-get install --yq cmake
-#          mkdir -p ~/cmake
-#          export LIBCMAKE=$(apt-cache depends cmake | awk '/Depends:/ {print $2}')
-#          for lib in $LIBCMAKE; do
-#             for deb in $lib; do
-#               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
-#             done;
-#          done
-#        fi
-#
-#    - name: test cmake
-#      run: |
-#        whereis cmake
-#        cmake --version
+
+    - name: Cache cmake
+      uses: actions/cache@v3
+      id: cache-cmake
+      with:
+        path: "~/cmake"
+        key: cmake
+
+    - name: Install cmake
+      env:
+        CACHE_HIT: ${{steps.cache-cmake.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/cmake
+          sudo cp --force --recursive ~/cmake/* /
+        else
+          sudo apt-get update && sudo apt-get install --yq cmake
+          mkdir -p ~/cmake
+          export LIBCMAKE=$(apt-cache depends cmake | awk '/Depends:/ {print $2}')
+          dpkg -L cmake | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
+          for lib in $LIBCMAKE; do
+             for deb in $lib; do
+               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
+             done;
+          done
+        fi
+
+    - name: test cmake
+      run: |
+        whereis cmake
+        cmake --version
 #
 #    - name: Cache debian packages
 #      uses: actions/cache@v3
@@ -255,33 +236,34 @@ jobs:
 #        whereis javahelper
 #        gem2deb --version
 #
-#    - name: Cache libfreetype
-#      uses: actions/cache@v3
-#      id: cache-libfreetype
-#      with:
-#        path: "~/libfreetype"
-#        key: libfreetype
-#
-#    - name: Install libfreetype
-#      env:
-#        CACHE_HIT: ${{steps.cache-libfreetype.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          ls  ~/libfreetype
-#          sudo cp --force --recursive ~/libfreetype/* /
-#        else
-#          sudo apt-get update && sudo apt-get install --yes libfreetype-dev
-#          mkdir -p ~/libfreetype
-#          export LIBTYPE=$(apt-cache depends libfreetype6 | awk '/Depends:/ {print $2}')
-#          for lib in $LIBTYPE; do
-#             for deb in $lib; do
-#               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
-#             done;
-#          done
-#        fi
-#
-#    - name: test libfreetype
-#      run: |
-#        find | grep libfreetype6-dev
-#
+    - name: Cache libfreetype
+      uses: actions/cache@v3
+      id: cache-libfreetype
+      with:
+        path: "~/libfreetype"
+        key: libfreetype
+
+    - name: Install libfreetype
+      env:
+        CACHE_HIT: ${{steps.cache-libfreetype.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/libfreetype
+          sudo cp --force --recursive ~/libfreetype/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes libfreetype6-dev
+          mkdir -p ~/libfreetype
+          export LIBTYPE=$(apt-cache depends libfreetype-dev | awk '/Depends:/ {print $2}')
+          dpkg -L libfreetype-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
+          for lib in $LIBTYPE; do
+             for deb in $lib; do
+               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
+             done;
+          done
+        fi
+
+    - name: test libfreetype
+      run: |
+        find | grep libfreetype6-dev
+
 
