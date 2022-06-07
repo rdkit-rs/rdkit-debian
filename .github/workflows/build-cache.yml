@@ -188,7 +188,7 @@ jobs:
           ls  ~/cmake
           sudo cp --force --recursive ~/cmake/* /
         else
-          sudo apt-get update && sudo apt-get install --yq cmake
+          sudo apt-get update && sudo apt-get install -yq cmake
           mkdir -p ~/cmake
           export LIBCMAKE=$(apt-cache depends cmake | awk '/Depends:/ {print $2}')
           dpkg -L cmake | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
