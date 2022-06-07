@@ -52,61 +52,61 @@ jobs:
         ls /usr/include
         ls /usr/lib/x86_64-linux-gnu | grep libboost_nowide.so
 
-#    - name: Cache coordgen
-#      uses: actions/cache@v3
-#      id: cache-coordgen
-#      with:
-#        path: "~/coordgen"
-#        key: coordgen
-#    - name: Install coordgen
-#      env:
-#        CACHE_HIT: ${{steps.cache-coordgen.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          ls  ~/coordgen/usr/include
-#          ls  ~/coordgen/usr/share
-#          sudo cp --force --recursive ~/coordgen/* /
-#        else
-#          sudo apt-get update && sudo apt-get install --yes libcoordgen-dev
-#          mkdir -p ~/coordgen
-#          sudo dpkg -L libcoordgen-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/coordgen/
-#        fi
-#
-#    - name: test coordgen
-#      run: |
-#        whereis coordgen
-#        ls
-#        ls ~/coordgen/usr/include
-#        ls ~/coordgen/usr/include/coordgen
-#
-#
-#    - name: Cache maeparser
-#      uses: actions/cache@v3
-#      id: cache-maeparser
-#      with:
-#        path: "~/maeparser"
-#        key: maeparser
-#
-#    - name: Install maeparser
-#      env:
-#        CACHE_HIT: ${{steps.cache-maeparser.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          ls  ~/maeparser/usr/include
-#          ls  ~/maeparser/usr/
-#          sudo cp --force --recursive ~/maeparser/* /
-#        else
-#          sudo apt-get update && sudo apt-get install --yes libmaeparser-dev
-#          mkdir -p ~/maeparser
-#          sudo dpkg -L libmaeparser-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/maeparser/
-#        fi
-#
-#    - name: test maeparser
-#      run: |
-#        whereis maeparser
-#        ls
-#        ls ~/maeparser/usr/include
-#        ls ~/maeparser/usr/include/maeparser
+    - name: Cache coordgen
+      uses: actions/cache@v3
+      id: cache-coordgen
+      with:
+        path: "~/coordgen"
+        key: coordgen
+    - name: Install coordgen
+      env:
+        CACHE_HIT: ${{steps.cache-coordgen.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/coordgen/usr/include
+          ls  ~/coordgen/usr/share
+          sudo cp --force --recursive ~/coordgen/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes libcoordgen-dev
+          mkdir -p ~/coordgen
+          sudo dpkg -L libcoordgen-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/coordgen/
+        fi
+
+    - name: test coordgen
+      run: |
+        whereis coordgen
+        ls
+        ls ~/coordgen/usr/include
+        ls ~/coordgen/usr/include/coordgen
+
+
+    - name: Cache maeparser
+      uses: actions/cache@v3
+      id: cache-maeparser
+      with:
+        path: "~/maeparser"
+        key: maeparser
+
+    - name: Install maeparser
+      env:
+        CACHE_HIT: ${{steps.cache-maeparser.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/maeparser/usr/include
+          ls  ~/maeparser/usr/
+          sudo cp --force --recursive ~/maeparser/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes libmaeparser-dev
+          mkdir -p ~/maeparser
+          sudo dpkg -L libmaeparser-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/maeparser/
+        fi
+
+    - name: test maeparser
+      run: |
+        whereis maeparser
+        ls
+        ls ~/maeparser/usr/include
+        ls ~/maeparser/usr/include/maeparser
 #
 #
 #    - name: Cache cargo
@@ -130,33 +130,48 @@ jobs:
 #    - name: test cargo
 #      run: whereis cargo
 #
-#    - name: Cache clang-llvm
-#      uses: actions/cache@v3
-#      id: cache-clang-llvm
-#      with:
-#        path: "~/clang"
-#        key: clang
-#
-#    - name: Install clang-llvm
-#      env:
-#        CACHE_HIT: ${{steps.cache-clang-llvm.outputs.cache-hit}}
-#      run: |
-#        if [[ "$CACHE_HIT" == 'true' ]]; then
-#          ls  ~/clang/usr/
-#          sudo cp --force --recursive ~/clang/* /
-#        else
-#          sudo apt-get update && sudo apt-get install --yes clang llvm
-#          mkdir -p ~/clang
-#          sudo dpkg -L clang | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-#          sudo dpkg -L clang-14 | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-#          sudo dpkg -L llvm | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-#          sudo dpkg -L llvm-14 | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-#        fi
-#
-#    - name: test clang
-#      run: |
-#        whereis clang
-#        clang --version
+    - name: Cache clang-llvm
+      uses: actions/cache@v3
+      id: cache-clang-llvm
+      with:
+        path: "~/clang"
+        key: clang
+
+    - name: Install clang-llvm
+      env:
+        CACHE_HIT: ${{steps.cache-clang-llvm.outputs.cache-hit}}
+      run: |
+        if [[ "$CACHE_HIT" == 'true' ]]; then
+          ls  ~/clang/usr/
+          sudo cp --force --recursive ~/clang/* /
+        else
+          sudo apt-get update && sudo apt-get install --yes clang llvm libclang-dev
+          mkdir -p ~/clang
+          export LIBCLANG=$(apt-cache depends clang | awk '/Depends:/ {print $2}')
+          export LIBLLVM=$(apt-cache depends llvm | awk '/Depends:/ {print $2}')
+          export LIBCLANG_DEV=$(apt-cache depends libclang-dev | awk '/Depends:/ {print $2}')
+          for lib in LIBCLANG; do 
+              for deb in $lib; do 
+                  dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
+              done; 
+          done
+          for lib in LIBLLVM; do 
+              for deb in $lib; do 
+                  dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
+              done; 
+          done
+          for lib in LIBCLANG_DEV; do 
+              for deb in $lib; do 
+                  dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
+              done; 
+          done 
+        fi
+
+    - name: test clang
+      run: |
+        whereis clang
+        whereis llvm-14
+        clang --version
 #
 #    - name: Cache libclang-dev-14
 #      uses: actions/cache@v3
@@ -193,9 +208,14 @@ jobs:
 #          ls  ~/cmake
 #          sudo cp --force --recursive ~/cmake/* /
 #        else
-#          sudo apt-get update && sudo apt-get install --yes cmake
+#          sudo apt-get update && sudo apt-get install --yq cmake
 #          mkdir -p ~/cmake
-#          sudo dpkg -L cmake | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
+#          export LIBCMAKE=$(apt-cache depends cmake | awk '/Depends:/ {print $2}')
+#          for lib in LIBCMAKE; do
+#             for deb in $lib; do
+#               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
+#             done;
+#          done
 #        fi
 #
 #    - name: test cmake
@@ -252,7 +272,12 @@ jobs:
 #        else
 #          sudo apt-get update && sudo apt-get install --yes libfreetype-dev
 #          mkdir -p ~/libfreetype
-#          sudo dpkg -L libfreetype-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
+#          export LIBTYPE=$(apt-cache depends libfreetype6 | awk '/Depends:/ {print $2}')
+#          for lib in LIBTYPE; do
+#             for deb in $lib; do
+#               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
+#             done;
+#          done
 #        fi
 #
 #    - name: test libfreetype
