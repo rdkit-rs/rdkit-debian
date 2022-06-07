@@ -256,9 +256,11 @@ jobs:
           export LIBTYPE=$(apt-cache depends libfreetype-dev | awk '/Depends:/ {print $2}')
           dpkg -L libfreetype-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
           for lib in $LIBTYPE; do
-             for deb in $lib; do
-               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
-             done;
+             if [[ "$lib" != *"<"* ]]; then
+                for deb in $lib; do
+                  dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
+                done;
+            fi;
           done
         fi
 
