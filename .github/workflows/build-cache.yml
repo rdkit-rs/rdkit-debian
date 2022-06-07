@@ -150,17 +150,17 @@ jobs:
           export LIBCLANG=$(apt-cache depends clang | awk '/Depends:/ {print $2}')
           export LIBLLVM=$(apt-cache depends llvm | awk '/Depends:/ {print $2}')
           export LIBCLANG_DEV=$(apt-cache depends libclang-dev | awk '/Depends:/ {print $2}')
-          for lib in LIBCLANG; do 
+          for lib in $LIBCLANG; do 
               for deb in $lib; do 
                   dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
               done; 
           done
-          for lib in LIBLLVM; do 
+          for lib in $LIBLLVM; do 
               for deb in $lib; do 
                   dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
               done; 
           done
-          for lib in LIBCLANG_DEV; do 
+          for lib in $LIBCLANG_DEV; do 
               for deb in $lib; do 
                   dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
               done; 
@@ -211,7 +211,7 @@ jobs:
 #          sudo apt-get update && sudo apt-get install --yq cmake
 #          mkdir -p ~/cmake
 #          export LIBCMAKE=$(apt-cache depends cmake | awk '/Depends:/ {print $2}')
-#          for lib in LIBCMAKE; do
+#          for lib in $LIBCMAKE; do
 #             for deb in $lib; do
 #               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
 #             done;
@@ -273,7 +273,7 @@ jobs:
 #          sudo apt-get update && sudo apt-get install --yes libfreetype-dev
 #          mkdir -p ~/libfreetype
 #          export LIBTYPE=$(apt-cache depends libfreetype6 | awk '/Depends:/ {print $2}')
-#          for lib in LIBTYPE; do
+#          for lib in $LIBTYPE; do
 #             for deb in $lib; do
 #               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
 #             done;
