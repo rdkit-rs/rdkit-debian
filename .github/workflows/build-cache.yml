@@ -51,6 +51,7 @@ jobs:
         whereis boost
         ls /usr/include
         ls /usr/lib/x86_64-linux-gnu/
+        ls /usr/lib/x86_64-linux-gnu | grep libboost_nowide.so
 
 #    - name: Cache coordgen
 #      uses: actions/cache@v3
