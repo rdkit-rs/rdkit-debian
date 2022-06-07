@@ -236,37 +236,37 @@ jobs:
 #        whereis javahelper
 #        gem2deb --version
 #
-    - name: Cache libfreetype
-      uses: actions/cache@v3
-      id: cache-libfreetype
-      with:
-        path: "~/libfreetype"
-        key: libfreetype
-
-    - name: Install libfreetype
-      env:
-        CACHE_HIT: ${{steps.cache-libfreetype.outputs.cache-hit}}
-      run: |
-        if [[ "$CACHE_HIT" == 'true' ]]; then
-          ls  ~/libfreetype
-          sudo cp --force --recursive ~/libfreetype/* /
-        else
-          sudo apt-get update && sudo apt-get install --yes libfreetype6-dev
-          mkdir -p ~/libfreetype
-          export LIBTYPE=$(apt-cache depends libfreetype-dev | awk '/Depends:/ {print $2}')
-          dpkg -L libfreetype-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
-          for lib in $LIBTYPE; do
-             if [[ "$lib" != *"<"* ]]; then
-                for deb in $lib; do
-                  dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
-                done;
-            fi;
-          done
-        fi
-
-    - name: test libfreetype
-      run: |
-        whereis freetype2
+#    - name: Cache libfreetype
+#      uses: actions/cache@v3
+#      id: cache-libfreetype
+#      with:
+#        path: "~/libfreetype"
+#        key: libfreetype
+#
+#    - name: Install libfreetype
+#      env:
+#        CACHE_HIT: ${{steps.cache-libfreetype.outputs.cache-hit}}
+#      run: |
+#        if [[ "$CACHE_HIT" == 'true' ]]; then
+#          ls  ~/libfreetype
+#          sudo cp --force --recursive ~/libfreetype/* /
+#        else
+#          sudo apt-get update && sudo apt-get install --yes libfreetype6-dev
+#          mkdir -p ~/libfreetype
+#          export LIBTYPE=$(apt-cache depends libfreetype-dev | awk '/Depends:/ {print $2}')
+#          dpkg -L libfreetype-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
+#          for lib in $LIBTYPE; do
+#             if [[ "$lib" != *"<"* ]]; then
+#                for deb in $lib; do
+#                  dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
+#                done;
+#            fi;
+#          done
+#        fi
+#
+#    - name: test libfreetype
+#      run: |
+#        whereis freetype2
 
     - name: Cache RDKIT archive
       uses: actions/cache@v3
