@@ -1,0 +1,5 @@
+.gitignore
+.idea
+new
+debian/debian
+rdkit-sys*tar*
