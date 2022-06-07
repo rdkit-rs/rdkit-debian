@@ -287,8 +287,9 @@ jobs:
             wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz
             cp Release_$RDKIT_VERSION.tar.gz ~/rdkit-archive/Release_$RDKIT_VERSION.tar.gz
           fi
-          cp Release_$RDKIT_VERSION.tar.gz rdkit-2022.03.02.tar.gz
-          rm Release_$RDKIT_VERSION.tar.gz
+          ls
+          cp  ~/rdkit-archive/Release_$RDKIT_VERSION.tar.gz rdkit-2022.03.02.tar.gz
+          ls
           tar xzf rdkit-2022.03.02.tar.gz
           echo 'debian tar is here'
           ls
