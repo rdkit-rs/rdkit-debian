@@ -24,7 +24,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "~/boost"
-        key: libboost_cache
+        key: libboost_cache-v1
 
     - name: Install libboost-v1
       env:
@@ -41,7 +41,7 @@ jobs:
           export LIBBOOST=$(apt-cache depends libboost1.74-all-dev | awk '/Depends:/ {print $2}')
           for lib in $LIBBOOST; do 
               for deb in $lib; do 
-                  dpkg -L $deb ; 
+                  dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/ 
               done; 
           done      
         fi
