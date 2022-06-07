@@ -283,7 +283,7 @@ jobs:
           ls  ~/rdkit-archive
           sudo cp --force --recursive ~/rdkit-archive/* /
         else
-          mkmkdir -p ~/rdkit-archive
+          mkdir -p ~/rdkit-archive
           wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz
           cp Release_$RDKIT_VERSION.tar.gz ~/rdkit-archive/Release_$RDKIT_VERSION.tar.gz
         fi
