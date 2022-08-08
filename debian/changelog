@@ -1,3 +1,11 @@
+rdkit (202203.2-2) unstable; urgency=medium
+
+  * Team upload.
+  * debian/patches/gcc12_compile_fixes.patch: Correct a variable definition
+    required to build with GCC 12.  (Closes: #1013028)
+
+ -- Nicholas Breen <nbreen@debian.org>  Mon, 08 Aug 2022 10:09:27 -0700
+
 rdkit (202203.2-1) unstable; urgency=medium
 
   * Team upload.

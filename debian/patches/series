@@ -1,3 +1,4 @@
+gcc12_compile_fixes.patch
 NoDownloads.patch
 postgres_Makefile_fixes.patch
 sphinx_imgconverter.patch
