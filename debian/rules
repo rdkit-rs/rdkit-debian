@@ -104,7 +104,7 @@ override_dh_install:
 	$(RM) -rf $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/docs/
 	$(RM) -rf $(DEBTMP)/usr/share/RDKit/Projects/__pycache__
 	dh_numpy3
-	dh_install --list-missing
+	dh_install
 	mkdir -p $(DOCDIR)
 	cp $(CURDIR)/Docs/Book/_build/latex/RDKit.pdf $(DOCDIR)
 	cp -a $(CURDIR)/Docs/Book/_build/html $(DOCDIR)

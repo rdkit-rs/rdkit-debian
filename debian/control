@@ -6,7 +6,7 @@ Uploaders: Michael Banck <mbanck@debian.org>
 Build-Depends: bison,
                catch2,
                cmake,
-               debhelper (>> 9),
+               debhelper-compat (= 13),
                dh-python,
                doxygen,
                flex,
@@ -40,7 +40,8 @@ Build-Depends: bison,
                texlive-latex-base,
                texlive-latex-extra,
                texlive-latex-recommended
-Standards-Version: 4.2.1
+Standards-Version: 4.6.1
+Rules-Requires-Root: no
 Vcs-Browser: https://salsa.debian.org/debichem-team/rdkit
 Vcs-Git: https://salsa.debian.org/debichem-team/rdkit.git
 Homepage: http://www.rdkit.org
@@ -165,10 +166,10 @@ Description: Collection of cheminformatics and machine-learning software (develo
  .
  This package contains the header files.
 
-Package: postgresql-14-rdkit
+Package: postgresql-15-rdkit
 Architecture: any
 Section: database
-Depends: ${misc:Depends}, ${shlibs:Depends}, postgresql-14
+Depends: ${misc:Depends}, ${shlibs:Depends}, postgresql-15
 Suggests:
 Description: Cheminformatics and machine-learning software (PostgreSQL Cartridge)
  RDKit is a Python/C++ based cheminformatics and machine-learning software

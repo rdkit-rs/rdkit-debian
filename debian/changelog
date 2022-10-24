@@ -1,3 +1,13 @@
+rdkit (202203.2-3) unstable; urgency=medium
+
+  * Upload for PostgreSQL 15.
+  * R³: no.
+  * DH 13.
+  * debian/tests: Use 'make' instead of postgresql-server-dev-all.
+  * debian/watch: Look at GitHub tags instead of releases.
+
+ -- Christoph Berg <myon@debian.org>  Mon, 24 Oct 2022 17:23:15 +0200
+
 rdkit (202203.2-2) unstable; urgency=medium
 
   * Team upload.
