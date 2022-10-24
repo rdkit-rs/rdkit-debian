@@ -15,7 +15,7 @@ rdkit_library(ChemReactions
               Reaction.cpp MDLParser.cpp DaylightParser.cpp ReactionPickler.cpp
 	            ReactionWriter.cpp ReactionDepict.cpp ReactionFingerprints.cpp ReactionUtils.cpp 
               MoleculeParser.cpp ReactionRunner.cpp PreprocessRxn.cpp SanitizeRxn.cpp
-              PNGParser.cpp
+              PNGParser.cpp CDXMLParser.cpp
                     Enumerate/Enumerate.cpp
                     Enumerate/EnumerationPickler.cpp
                     Enumerate/EvenSamplePairs.cpp
@@ -53,7 +53,7 @@ ChemReactions )
 rdkit_test(testEnumeration Enumerate/testEnumerate.cpp LINK_LIBRARIES
 ChemReactions  )
 
-rdkit_catch_test(rxnTestCatch ../catch_main.cpp catch_tests.cpp LINK_LIBRARIES ChemReactions )
+rdkit_catch_test(rxnTestCatch catch_tests.cpp LINK_LIBRARIES ChemReactions )
 
 if(RDK_BUILD_PYTHON_WRAPPERS)
 add_subdirectory(Wrap)

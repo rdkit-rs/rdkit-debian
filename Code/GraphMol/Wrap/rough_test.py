@@ -165,6 +165,7 @@ class TestCase(unittest.TestCase):
     self.assertTrue(feq(tbl.GetRb0(6), 0.77))
     self.assertTrue(feq(tbl.GetRb0("C"), 0.77))
     self.assertTrue(tbl.GetElementSymbol(6) == 'C')
+    self.assertTrue(tbl.GetElementName(6) == 'Carbon')
 
   def test2Atom(self):
     atom = Chem.Atom(6)
@@ -346,7 +347,8 @@ class TestCase(unittest.TestCase):
     smi = Chem.MolToSmiles(mol)
     Chem.SanitizeMol(mol)
     nr = Chem.GetSymmSSSR(mol)
-
+    self.assertTrue((len(nr) == 3))
+    nr = Chem.GetSSSR(mol)
     self.assertTrue((len(nr) == 3))
 
   def test12Smarts(self):
@@ -452,6 +454,23 @@ class TestCase(unittest.TestCase):
     self.assertEqual(m2.GetNumAtoms(), 2)
     self.assertTrue(m2.GetAtomWithIdx(1).HasQuery())
 
+    # test merging of isotopes, by default deuterium will not be merged
+    m = Chem.MolFromSmiles('CC[2H]', False)
+    self.assertEqual(m.GetNumAtoms(), 3)
+    m2 = Chem.MergeQueryHs(m)
+    self.assertTrue(m2 is not None)
+    self.assertEqual(m2.GetNumAtoms(), 3)
+    self.assertFalse(m2.GetAtomWithIdx(1).HasQuery())
+
+    # here deuterium is merged
+    # should be the same as merging all hydrogens
+    m = Chem.MolFromSmiles('CC[2H]', False)
+    self.assertEqual(m.GetNumAtoms(), 3)
+    m2 = Chem.MergeQueryHs(m, mergeIsotopes=True)
+    self.assertTrue(m2 is not None)
+    self.assertEqual(m2.GetNumAtoms(), 2)
+    self.assertTrue(m2.GetAtomWithIdx(1).HasQuery())
+    
     # test github758
     m = Chem.MolFromSmiles('CCC')
     self.assertEqual(m.GetNumAtoms(), 3)
@@ -6864,6 +6883,50 @@ CAS<~>
       Chem.MolFromSmiles('garbage_4')
       self.assertIn('garbage_4', log_stream.getvalue())
       log_stream.truncate(0)
+
+  def testDisableNontetrahedralStereo(self):
+    fileN = os.path.join(RDConfig.RDBaseDir, 'Code', 'GraphMol', 'test_data',
+                         'nontetrahedral_3d.sdf')
+    origVal = Chem.GetAllowNontetrahedralChirality()
+    Chem.SetAllowNontetrahedralChirality(True)
+    suppl = Chem.SDMolSupplier(fileN, sanitize=False)
+    for mol in suppl:
+      Chem.AssignStereochemistryFrom3D(mol)
+      ct = mol.GetProp("ChiralType")
+      at = mol.GetAtomWithIdx(0)
+      if ct == "SP":
+        self.assertEqual(at.GetChiralTag(), Chem.ChiralType.CHI_SQUAREPLANAR)
+      elif ct == "TB":
+        self.assertEqual(at.GetChiralTag(), Chem.ChiralType.CHI_TRIGONALBIPYRAMIDAL)
+      elif ct == "OH":
+        self.assertEqual(at.GetChiralTag(), Chem.ChiralType.CHI_OCTAHEDRAL)
+      elif ct == "TH":
+        self.assertEqual(at.GetChiralTag(), Chem.ChiralType.CHI_TETRAHEDRAL)
+    Chem.SetAllowNontetrahedralChirality(False)
+    suppl = Chem.SDMolSupplier(fileN, sanitize=False)
+    for mol in suppl:
+      Chem.AssignStereochemistryFrom3D(mol)
+      ct = mol.GetProp("ChiralType")
+      at = mol.GetAtomWithIdx(0)
+      if ct == "TH":
+        self.assertEqual(at.GetChiralTag(), Chem.ChiralType.CHI_TETRAHEDRAL)
+      else:
+        self.assertEqual(at.GetChiralTag(), Chem.ChiralType.CHI_UNSPECIFIED)
+    Chem.SetAllowNontetrahedralChirality(origVal)
+
+  def test_legacyStereochemGlobal(self):
+    origVal = Chem.GetUseLegacyStereoPerception()
+    Chem.SetUseLegacyStereoPerception(True)
+    m = Chem.MolFromSmiles("C[C@H]1CCC2(CC1)CC[C@H](C)C(C)C2")
+    self.assertEqual(m.GetAtomWithIdx(1).GetChiralTag(), Chem.ChiralType.CHI_UNSPECIFIED)
+    self.assertNotEqual(m.GetAtomWithIdx(9).GetChiralTag(), Chem.ChiralType.CHI_UNSPECIFIED)
+
+    Chem.SetUseLegacyStereoPerception(False)
+    m = Chem.MolFromSmiles("C[C@H]1CCC2(CC1)CC[C@H](C)C(C)C2")
+    self.assertEqual(m.GetAtomWithIdx(1).GetChiralTag(), Chem.ChiralType.CHI_UNSPECIFIED)
+    self.assertNotEqual(m.GetAtomWithIdx(9).GetChiralTag(), Chem.ChiralType.CHI_UNSPECIFIED)
+
+    Chem.SetUseLegacyStereoPerception(origVal)
 
 
 if __name__ == '__main__':

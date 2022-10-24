@@ -1,5 +1,6 @@
 
 option(RDK_BUILD_QT_SUPPORT "build support for QT drawing" OFF )
+option(RDK_USE_QT6 "Use Qt6 instead of Qt5" OFF )
 option(RDK_BUILD_QT_DEMO "build the QT drawing demo" OFF )
 option(RDK_BUILD_CAIRO_SUPPORT "build support for Cairo drawing" OFF )
 option(RDK_BUILD_FREETYPE_SUPPORT "build support for FreeType font handling" ON)
@@ -94,7 +95,7 @@ endif(RDK_BUILD_FREETYPE_SUPPORT)
 rdkit_test(moldraw2DTest1 test1.cpp LINK_LIBRARIES
   MolDraw2D )
 
-rdkit_catch_test(moldraw2DTestCatch ../catch_main.cpp catch_tests.cpp LINK_LIBRARIES
+rdkit_catch_test(moldraw2DTestCatch catch_tests.cpp LINK_LIBRARIES
   MolDraw2D CIPLabeler )
 
 rdkit_test(moldraw2DRxnTest1 rxn_test1.cpp LINK_LIBRARIES

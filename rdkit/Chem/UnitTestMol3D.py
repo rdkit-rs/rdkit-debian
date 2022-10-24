@@ -100,6 +100,11 @@ class TestCase(unittest.TestCase):
     tfd = TorsionFingerprints.GetTFDBetweenMolecules(mol, mol2)
     self.assertAlmostEqual(tfd, 0.0691, 4)
 
+    # exactly equivalent to the above since the mols each only have one conformer
+    tfd = TorsionFingerprints.GetBestTFDBetweenMolecules(mol2,mol)
+    self.assertAlmostEqual(tfd,0.0691,4)
+
+
     mol.AddConformer(mol2.GetConformer(), assignId=True)
     mol.AddConformer(mol2.GetConformer(), assignId=True)
     tfd = TorsionFingerprints.GetTFDBetweenConformers(mol, confIds1=[0], confIds2=[1, 2])
@@ -108,6 +113,10 @@ class TestCase(unittest.TestCase):
 
     tfdmat = TorsionFingerprints.GetTFDMatrix(mol)
     self.assertEqual(len(tfdmat), 3)
+
+    tfd = TorsionFingerprints.GetBestTFDBetweenMolecules(mol2,mol)
+    self.assertAlmostEqual(tfd,0,4)
+
 
   def testTorsionFingerprintsAtomReordering(self):
     # we use the xray structure from the paper (JCIM, 52, 1499, 2012): 1DWD
@@ -334,7 +343,7 @@ class TestCase(unittest.TestCase):
     smiles = set(
       Chem.MolToSmiles(i, isomericSmiles=True) for i in AllChem.EnumerateStereoisomers(mol, opts))
     self.assertEqual(
-      smiles, set(['F[C@@H](Cl)[C@@H](F)Cl', 'F[C@@H](Cl)[C@H](F)Cl', 'F[C@H](Cl)[C@H](F)Cl']))
+      smiles, set(['F[C@@H](Cl)[C@@H](F)Cl', 'F[C@H](Cl)[C@@H](F)Cl', 'F[C@H](Cl)[C@H](F)Cl']))
 
     mol = Chem.MolFromSmiles('CC=CC=CC')
     opts = AllChem.StereoEnumerationOptions(unique=False)
@@ -368,11 +377,11 @@ class TestCase(unittest.TestCase):
       smiles,
       set(
         sorted([
-          'F[C@H](Cl)/C=C\\C=C\\[C@H](F)Cl', 'F[C@@H](Cl)/C=C\\C=C/[C@H](F)Cl',
+          'F[C@H](Cl)/C=C/C=C/[C@@H](F)Cl', 'F[C@H](Cl)/C=C/C=C/[C@H](F)Cl',
           'F[C@@H](Cl)/C=C/C=C/[C@@H](F)Cl', 'F[C@@H](Cl)/C=C\\C=C\\[C@@H](F)Cl',
-          'F[C@H](Cl)/C=C\\C=C/[C@H](F)Cl', 'F[C@@H](Cl)/C=C/C=C/[C@H](F)Cl',
-          'F[C@@H](Cl)/C=C\\C=C/[C@@H](F)Cl', 'F[C@@H](Cl)/C=C/C=C\\[C@H](F)Cl',
-          'F[C@H](Cl)/C=C/C=C/[C@H](F)Cl', 'F[C@@H](Cl)/C=C\\C=C\\[C@H](F)Cl'
+          'F[C@H](Cl)/C=C\\C=C/[C@@H](F)Cl', 'F[C@H](Cl)/C=C/C=C\\[C@@H](F)Cl',
+          'F[C@H](Cl)/C=C\\C=C\\[C@H](F)Cl', 'F[C@@H](Cl)/C=C\\C=C/[C@@H](F)Cl',
+          'F[C@H](Cl)/C=C\\C=C/[C@H](F)Cl', 'F[C@H](Cl)/C=C\\C=C\\[C@@H](F)Cl'
         ])))
 
   def testEnumerateStereoisomersOnlyEnhancedStereo(self):
@@ -381,7 +390,7 @@ class TestCase(unittest.TestCase):
     mol = Chem.MolFromMolFile(filename)
     smiles = set(Chem.MolToSmiles(m) for m in AllChem.EnumerateStereoisomers(mol))
     # switches the centers linked by an "OR", but not the absolute group
-    self.assertEqual(smiles, {r'C[C@@H](F)[C@@H](C)[C@@H](C)Br', r'C[C@H](F)[C@H](C)[C@@H](C)Br'})
+    self.assertEqual(smiles, {r'C[C@H]([C@@H](C)F)[C@@H](C)Br', r'C[C@@H]([C@H](C)F)[C@@H](C)Br'})
 
     original_smiles = Chem.MolToSmiles(mol)
     self.assertIn(original_smiles, smiles)

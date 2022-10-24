@@ -199,15 +199,13 @@ void findSSSRforDupCands(const ROMol &mol, VECT_INT_VECT &res,
   }      // end of loop over all set of duplicate candidates
 }
 
-struct compRingSize : public std::binary_function<INT_VECT, INT_VECT, bool> {
-  bool operator()(const INT_VECT &v1, const INT_VECT &v2) const {
-    return v1.size() < v2.size();
-  }
+auto compRingSize = [](const auto &v1, const auto &v2) {
+  return v1.size() < v2.size();
 };
 
 void removeExtraRings(VECT_INT_VECT &res, unsigned int, const ROMol &mol) {
   // sort on size
-  std::sort(res.begin(), res.end(), compRingSize());
+  std::sort(res.begin(), res.end(), compRingSize);
 
 #if 0
         std::cerr<<"\n\nSORTED\n";
@@ -237,6 +235,9 @@ void removeExtraRings(VECT_INT_VECT &res, unsigned int, const ROMol &mol) {
   boost::dynamic_bitset<> keepRings(res.size());
   boost::dynamic_bitset<> munion(mol.getNumBonds());
 
+  // optimization - don't reallocate a new one each loop
+  boost::dynamic_bitset<> workspace(mol.getNumBonds());
+
   for (unsigned int i = 0; i < res.size(); ++i) {
     // skip this ring if we've already seen all of its bonds
     if (bitBrings[i].is_subset_of(munion)) {
@@ -260,20 +261,21 @@ void removeExtraRings(VECT_INT_VECT &res, unsigned int, const ROMol &mol) {
       }
     }
 
-    // std::cerr<<">>> "<<i<<" "<<consider.count()<<std::endl;
-    while (consider.count()) {
+    while (consider.any()) {
       unsigned int bestJ = i + 1;
       int bestOverlap = -1;
       // loop over the available other rings in consideration and pick the one
       // that has the most overlapping bonds with what we've done so far.
       // this is the fix to github #526
       for (unsigned int j = i + 1;
-           j < res.size() && bitBrings[j].count() == bitBrings[i].count();
+           j < res.size() && brings[j].size() == brings[i].size();
            ++j) {
         if (!consider[j] || !availRings[j]) {
           continue;
         }
-        int overlap = rdcast<int>((bitBrings[j] & munion).count());
+        workspace = bitBrings[j];
+        workspace &= munion;
+        int overlap = rdcast<int>(workspace.count());
         if (overlap > bestOverlap) {
           bestOverlap = overlap;
           bestJ = j;
