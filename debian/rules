@@ -113,6 +113,9 @@ override_dh_install:
 	ln -sf /usr/share/javascript/jquery/jquery.js $(DOCDIR)/html/_static/jquery.js
 	ln -sf /usr/share/javascript/underscore/underscore.js $(DOCDIR)/html/_static/underscore.js
 
+override_dh_missing:
+	dh_missing --list-missing
+
 override_dh_installchangelogs:
 	dh_installchangelogs ReleaseNotes.md
 
