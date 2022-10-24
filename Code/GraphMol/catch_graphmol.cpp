@@ -10,9 +10,15 @@
 
 #include "catch.hpp"
 
+#include <algorithm>
+#include <limits>
+
+#include <boost/format.hpp>
+
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/new_canon.h>
 #include <GraphMol/RDKitQueries.h>
+#include <GraphMol/QueryOps.h>
 #include <GraphMol/Chirality.h>
 #include <GraphMol/MonomerInfo.h>
 #include <GraphMol/FileParsers/FileParsers.h>
@@ -20,8 +26,6 @@
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <GraphMol/SmilesParse/SmartsWrite.h>
-#include <boost/format.hpp>
-#include <limits>
 
 using namespace RDKit;
 #if 1
@@ -1364,19 +1368,24 @@ TEST_CASE("hybridization of unknown atom types", "[bug][molops]") {
   SECTION("Basics") {
     auto m = "[U][U][U]"_smiles;
     REQUIRE(m);
-    for (const auto atom : m->atoms()) {
-      CHECK(atom->getHybridization() == Atom::HybridizationType::S);
-    }
+    CHECK(m->getAtomWithIdx(0)->getHybridization() ==
+          Atom::HybridizationType::S);
+    CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+          Atom::HybridizationType::SP);
+    CHECK(m->getAtomWithIdx(2)->getHybridization() ==
+          Atom::HybridizationType::S);
   }
   SECTION("comprehensive") {
-    std::string smiles = "";
+    std::string smiles = "F";
     for (unsigned int i = 89; i <= 118; ++i) {
       smiles += (boost::format("[#%d]") % i).str();
     }
+    smiles += "F";
     std::unique_ptr<ROMol> m(SmilesToMol(smiles));
     REQUIRE(m);
-    for (const auto atom : m->atoms()) {
-      CHECK(atom->getHybridization() == Atom::HybridizationType::S);
+    for (auto i = 1u; i < m->getNumAtoms() - 1; ++i) {
+      CHECK(m->getAtomWithIdx(i)->getHybridization() ==
+            Atom::HybridizationType::SP);
     }
   }
 }
@@ -1996,6 +2005,7 @@ TEST_CASE("github #4071: StereoGroups not preserved by RenumberAtoms()",
         "C[C@@H](O)[C@H](C)[C@@H](C)[C@@H](C)O |&3:3,o1:7,&1:1,&2:5,r|"_smiles;
     REQUIRE(mol);
     REQUIRE(mol->getStereoGroups().size() == 4);
+
     std::vector<unsigned int> aindices(mol->getNumAtoms());
     std::iota(aindices.begin(), aindices.end(), 0);
     std::reverse(aindices.begin(), aindices.end());
@@ -2007,7 +2017,7 @@ TEST_CASE("github #4071: StereoGroups not preserved by RenumberAtoms()",
             mol->getStereoGroups()[i].getGroupType());
     }
     CHECK(MolToCXSmiles(*nmol) ==
-          "C[C@@H](O)[C@H](C)[C@@H](C)[C@@H](C)O |o1:1,&1:3,&2:5,&3:7|");
+          "C[C@H]([C@@H](C)[C@@H](C)O)[C@@H](C)O |o1:7,&1:1,&2:2,&3:4|");
   }
 }
 
@@ -2626,5 +2636,171 @@ TEST_CASE("Github #5055") {
     auto m =
         "CC1(C)NC(=O)CN2C=C(C[C@H](C(=O)NC)NC(=O)CN3CCN(C(=O)[C@H]4Cc5c([nH]c6ccccc56)CN4C(=O)CN4CN(c5ccccc5)C5(CCN(CC5)C1=O)C4=O)[C@@H](Cc1ccccc1)C3=O)[N-][NH2+]2"_smiles;
     REQUIRE(m);
+  }
+}
+TEST_CASE("Iterators") {
+  auto m = "CCCCCCC=N"_smiles;
+  REQUIRE(m);
+  SECTION("Atom Iterator") {
+    auto atoms = m->atoms();
+    auto n_atom = std::find_if(atoms.begin(), atoms.end(), [](const auto &a) {
+      return a->getAtomicNum() == 7;
+    });
+    REQUIRE(n_atom != atoms.end());
+    CHECK((*n_atom)->getIdx() == 7);
+  }
+  SECTION("Atom Neighbor Iterator") {
+    auto nbrs = m->atomNeighbors(m->getAtomWithIdx(6));
+    auto n_atom = std::find_if(nbrs.begin(), nbrs.end(), [](const auto &a) {
+      return a->getAtomicNum() == 7;
+    });
+    REQUIRE(n_atom != nbrs.end());
+    CHECK((*n_atom)->getIdx() == 7);
+  }
+  SECTION("Bond Iterator") {
+    auto bonds = m->bonds();
+    auto dbl_bnd = std::find_if(bonds.begin(), bonds.end(), [](const auto &b) {
+      return b->getBondType() == Bond::DOUBLE;
+    });
+    REQUIRE(dbl_bnd != bonds.end());
+    CHECK((*dbl_bnd)->getIdx() == 6);
+  }
+  SECTION("Atom Bond Iterator") {
+    auto nbr_bonds = m->atomBonds(m->getAtomWithIdx(6));
+    auto dbl_bnd = std::find_if(
+        nbr_bonds.begin(), nbr_bonds.end(),
+        [](const auto &b) { return b->getBondType() == Bond::DOUBLE; });
+    REQUIRE(dbl_bnd != nbr_bonds.end());
+    CHECK((*dbl_bnd)->getIdx() == 6);
+  }
+}
+
+TEST_CASE("general hybridization") {
+  auto m = "CS(=O)(=O)C"_smiles;
+  REQUIRE(m);
+  CHECK(m->getAtomWithIdx(0)->getHybridization() ==
+        Atom::HybridizationType::SP3);
+  CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+        Atom::HybridizationType::SP3);
+  CHECK(m->getAtomWithIdx(4)->getHybridization() ==
+        Atom::HybridizationType::SP3);
+}
+
+TEST_CASE("metal hybridization") {
+  SECTION("square planar") {
+    {
+      auto m = "F[U@SP](F)(F)F"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+            Atom::HybridizationType::SP2D);
+    }
+    {
+      auto m = "F[U@SP](F)F"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+            Atom::HybridizationType::SP2D);
+    }
+    {
+      auto m = "F[U@SP](F)(F)F"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+            Atom::HybridizationType::SP2D);
+    }
+    {
+      auto m = "F[U@TH](F)(F)F"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+            Atom::HybridizationType::SP3);
+    }
+  }
+  SECTION("octahedral") {
+    {
+      auto m = "F[S@OH](F)(F)(F)(F)F"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+            Atom::HybridizationType::SP3D2);
+    }
+    {
+      auto m = "F[P@OH](F)(F)(F)F"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+            Atom::HybridizationType::SP3D2);
+    }
+    {
+      auto m = "F[P](F)(F)(F)F"_smiles;
+      REQUIRE(m);
+      CHECK(m->getAtomWithIdx(1)->getHybridization() ==
+            Atom::HybridizationType::SP3D);
+    }
+  }
+}
+
+TEST_CASE(
+    "github #5462: Invalid number of radical electrons calculated for [Pr+4]") {
+  SECTION("as reported") {
+    auto m = "[Pr+4]"_smiles;
+    REQUIRE(m);
+    CHECK(m->getAtomWithIdx(0)->getNumRadicalElectrons() == 0);
+  }
+  SECTION("also reported") {
+    auto m = "[U+5]"_smiles;
+    REQUIRE(m);
+    CHECK(m->getAtomWithIdx(0)->getNumRadicalElectrons() == 0);
+  }
+  SECTION("extreme") {
+    auto m = "[Fe+30]"_smiles;
+    REQUIRE(m);
+    CHECK(m->getAtomWithIdx(0)->getNumRadicalElectrons() == 0);
+  }
+}
+
+TEST_CASE(
+    "github #5505: Running kekulization on mols with query bonds will either fail or return incorrect results") {
+  SECTION("as reported") {
+    auto m = "[#6]-c1cccc(-[#6])c1"_smarts;
+    REQUIRE(m);
+    REQUIRE(m->getBondWithIdx(2)->hasQuery());
+    REQUIRE(m->getBondWithIdx(2)->getBondType() == Bond::BondType::AROMATIC);
+    MolOps::Kekulize(*m);
+    REQUIRE(m->getBondWithIdx(2)->hasQuery());
+    REQUIRE(m->getBondWithIdx(2)->getBondType() == Bond::BondType::AROMATIC);
+  }
+  SECTION("partial kekulization works") {
+    auto m1 = "c1ccccc1"_smiles;
+    REQUIRE(m1);
+    auto m2 = "c1ccccc1"_smarts;
+    REQUIRE(m2);
+    m1->insertMol(*m2);
+    MolOps::findSSSR(*m1);
+    REQUIRE(!m1->getBondWithIdx(1)->hasQuery());
+    REQUIRE(m1->getBondWithIdx(1)->getBondType() == Bond::BondType::AROMATIC);
+    REQUIRE(m1->getBondWithIdx(6)->hasQuery());
+    REQUIRE(m1->getBondWithIdx(6)->getBondType() == Bond::BondType::AROMATIC);
+    MolOps::Kekulize(*m1);
+    REQUIRE(!m1->getBondWithIdx(1)->hasQuery());
+    REQUIRE(m1->getBondWithIdx(1)->getBondType() != Bond::BondType::AROMATIC);
+    REQUIRE(m1->getBondWithIdx(6)->hasQuery());
+    REQUIRE(m1->getBondWithIdx(6)->getBondType() == Bond::BondType::AROMATIC);
+  }
+  SECTION("kekulization with non-bond-type queries works") {
+    auto m1 = "c1ccccc1"_smiles;
+    REQUIRE(m1);
+    QueryBond qbond;
+    qbond.setBondType(Bond::BondType::AROMATIC);
+    qbond.setIsAromatic(true);
+    qbond.setQuery(makeBondIsInRingQuery());
+    m1->replaceBond(0, &qbond);
+    REQUIRE(m1->getBondWithIdx(0)->hasQuery());
+    REQUIRE(m1->getBondWithIdx(0)->getBondType() == Bond::BondType::AROMATIC);
+    MolOps::Kekulize(*m1);
+    REQUIRE(m1->getBondWithIdx(0)->hasQuery());
+    REQUIRE(m1->getBondWithIdx(0)->getBondType() != Bond::BondType::AROMATIC);
+  }
+  SECTION("make sure single-atom molecules and mols without rings still fail") {
+    std::vector<std::string> expectedFailures = {"p", "c:c"};
+    for (const auto &smi : expectedFailures) {
+      INFO(smi);
+      CHECK_THROWS_AS(SmilesToMol(smi), MolSanitizeException);
+    }
   }
 }

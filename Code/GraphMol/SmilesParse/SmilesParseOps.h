@@ -31,6 +31,8 @@ RDKIT_SMILESPARSE_EXPORT void AddFragToMol(
 RDKIT_SMILESPARSE_EXPORT RDKit::Bond::BondType GetUnspecifiedBondType(
     const RDKit::RWMol *mol, const RDKit::Atom *atom1,
     const RDKit::Atom *atom2);
+RDKIT_SMILESPARSE_EXPORT void CheckChiralitySpecifications(RDKit::RWMol *mol,
+                                                           bool strict);
 RDKIT_SMILESPARSE_EXPORT void CloseMolRings(RDKit::RWMol *mol,
                                             bool toleratePartials);
 RDKIT_SMILESPARSE_EXPORT void SetUnspecifiedBondTypes(RDKit::RWMol *mol);
@@ -48,6 +50,15 @@ inline void parseCXExtensions(RDKit::RWMol &mol, const std::string &extText,
 };
 //! removes formal charge, isotope, etc. Primarily useful for QueryAtoms
 RDKIT_SMILESPARSE_EXPORT void ClearAtomChemicalProps(RDKit::Atom *atom);
-};  // namespace SmilesParseOps
+
+//! returns whether or not the combination of tag and permutation provided are
+//! legal
+RDKIT_SMILESPARSE_EXPORT bool checkChiralPermutation(int chiralTag,
+                                                     int permutation);
+namespace detail {
+constexpr auto _needsDetectBondStereo = "_needsDetectBondStereo";
+constexpr auto _needsDetectAtomStereo = "_needsDetectAtomStereo";
+}  // namespace detail
+}  // namespace SmilesParseOps
 
 #endif

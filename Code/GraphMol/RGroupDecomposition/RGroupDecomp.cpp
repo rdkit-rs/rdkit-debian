@@ -36,11 +36,8 @@
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/Substruct/SubstructMatch.h>
 #include <GraphMol/SmilesParse/SmilesWrite.h>
-#include <GraphMol/SmilesParse/SmartsWrite.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/ChemTransforms/ChemTransforms.h>
-#include <GraphMol/FMCS/FMCS.h>
-#include <boost/scoped_ptr.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <set>
 #include <utility>
@@ -61,6 +58,9 @@ const std::string SIDECHAIN_RLABELS = "sideChainRlabels";
 const std::string done = "RLABEL_PROCESSED";
 const std::string CORE = "Core";
 const std::string RPREFIX = "R";
+const std::string _rgroupInputDummy = "_rgroupInputDummy";
+const std::string UNLABELLED_CORE_ATTACHMENT = "unlabeledCoreAttachment";
+const std::string MISSING_RGROUP = "missingRGroup";
 
 namespace {
 void ADD_MATCH(R_DECOMP &match, int rlabel) {
@@ -82,7 +82,6 @@ RGroupDecomposition::RGroupDecomposition(
 RGroupDecomposition::~RGroupDecomposition() { delete data; }
 
 int RGroupDecomposition::add(const ROMol &inmol) {
-  constexpr const char *inputDummy = "INPUT_DUMMY";
   // get the sidechains if possible
   //  Add hs for better symmetrization
   RWMol mol(inmol);
@@ -93,13 +92,14 @@ int RGroupDecomposition::add(const ROMol &inmol) {
   // mark any wildcards in input molecule:
   for (auto &atom : mol.atoms()) {
     if (atom->getAtomicNum() == 0) {
-      atom->setProp(inputDummy, true);
+      atom->setProp(_rgroupInputDummy, true);
       // clean any existing R group numbers
       atom->setIsotope(0);
       atom->setAtomMapNum(0);
       if (atom->hasProp(common_properties::_MolFileRLabel)) {
         atom->clearProp(common_properties::_MolFileRLabel);
       }
+      atom->setProp(common_properties::dummyLabel, "*");
     }
   }
   int core_idx = 0;
@@ -290,7 +290,7 @@ int RGroupDecomposition::add(const ROMol &inmol) {
             unsigned int index =
                 at->getIsotope();  // this is the index into the core
             // it messes up when there are multiple ?
-            if (!at->hasProp(inputDummy)) {
+            if (!at->hasProp(_rgroupInputDummy)) {
               int rlabel;
               auto coreAtom = rcore->core->getAtomWithIdx(index);
               coreAtomAnyMatched.insert(index);
@@ -305,7 +305,7 @@ int RGroupDecomposition::add(const ROMol &inmol) {
               }
             } else {
               // restore input wildcard
-              at->clearProp(inputDummy);
+              at->clearProp(_rgroupInputDummy);
             }
           }
         }
@@ -455,6 +455,7 @@ RWMOL_SPTR RGroupDecomposition::outputCoreMolecule(
       continue;
     }
     auto label = data->getRlabel(atom);
+    auto missingRGroup = atom->hasProp(MISSING_RGROUP);
     Atom *nbrAtom = nullptr;
     for (const auto &nbri :
          boost::make_iterator_range(coreWithMatches->getAtomNeighbors(atom))) {
@@ -462,9 +463,10 @@ RWMOL_SPTR RGroupDecomposition::outputCoreMolecule(
       break;
     }
     if (nbrAtom) {
-      bool isUserDefinedLabel = usedLabelMap.isUserDefined(label);
+      bool isUserDefinedLabel =
+          usedLabelMap.has(label) && usedLabelMap.isUserDefined(label);
       auto numExplicitHs = nbrAtom->getNumExplicitHs();
-      if (usedLabelMap.getIsUsed(label)) {
+      if (usedLabelMap.has(label) && usedLabelMap.getIsUsed(label)) {
         if (numExplicitHs) {
           nbrAtom->setNumExplicitHs(numExplicitHs - 1);
         }
@@ -474,7 +476,7 @@ RWMOL_SPTR RGroupDecomposition::outputCoreMolecule(
         // if we remove an unused label from an aromatic atom,
         // we need to check whether we need to adjust its explicit
         // H count, or it will fail to kekulize
-        if (isUserDefinedLabel && nbrAtom->getIsAromatic()) {
+        if (isUserDefinedLabel && nbrAtom->getIsAromatic() && !missingRGroup) {
           nbrAtom->updatePropertyCache(false);
           if (!numExplicitHs) {
             nbrAtom->setNumExplicitHs(nbrAtom->getExplicitValence() -

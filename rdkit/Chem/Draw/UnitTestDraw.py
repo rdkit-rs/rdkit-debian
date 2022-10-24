@@ -7,15 +7,17 @@
 #  which is included in the file license.txt, found at the root
 #  of the RDKit source tree.
 #
+import re
 import os
+import pathlib
 import sys
 import tempfile
 import unittest
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from rdkit.Chem import rdDepictor
 from rdkit.Chem import Draw
+from rdkit.Chem import rdDepictor
 from rdkit.Chem import rdMolDescriptors
 
 try:
@@ -43,14 +45,14 @@ except ImportError:
 class TestCase(unittest.TestCase):
   showAllImages = False
 
-  def test_interactive(self):
-    # We avoid checking in the code with development flag set
-    self.assertFalse(self.showAllImages)
-
   def setUp(self):
     if IPythonConsole is not None and Draw.MolsToGridImage == IPythonConsole.ShowMols:
       IPythonConsole.UninstallIPythonRenderer()
     self.mol = Chem.MolFromSmiles('c1c(C[15NH3+])ccnc1[C@](Cl)(Br)[C@](Cl)(Br)F')
+
+  def test_interactive(self):
+    # We avoid checking in the code with development flag set
+    self.assertFalse(self.showAllImages)
 
   def _testMolToFile(self):
     try:
@@ -105,13 +107,23 @@ class TestCase(unittest.TestCase):
 
   @unittest.skipIf(qtCanvas is None, 'Skipping Qt test')
   def testQtImage(self):
-    try:
-      from PySide import QtGui
-    except ImportError:
+    from rdkit.Chem.Draw.rdMolDraw2DQt import rdkitQtVersion
+    if rdkitQtVersion.startswith('6'):
+      try:
+        from PyQt6 import QtGui
+      except ImportError:
+        # PySide version numbers leapt at Qt6
+        from PySide6 import QtGui
+    else:
       try:
         from PyQt5 import QtGui
       except ImportError:
-        from PySide2 import QtGui
+        try:
+          from PySide import QtGui
+        except ImportError:
+          # PySide2 supports Qt >= 5.12
+          from PySide2 import QtGui
+
     _ = QtGui.QGuiApplication(sys.argv)
     img = Draw.MolToQPixmap(self.mol, size=(300, 300))
     self.assertTrue(img)
@@ -264,14 +276,18 @@ class TestCase(unittest.TestCase):
     ats = [1, 2, 3]
     svg1 = Draw._moltoSVG(m, (250, 200), ats, "", False)
     svg2 = Draw._moltoSVG(m, (250, 200), ats, "", False, highlightBonds=[])
-    # there are minor differences between the freetype and non-freetype versions:
-    if '>O<' not in svg1:
-      self.assertIn('stroke:#FF7F7F;stroke-width:20', svg1)
-      self.assertNotIn('stroke:#FF7F7F;stroke-width:20', svg2)
-    else:
-      self.assertIn('stroke:#FF7F7F;stroke-width:19', svg1)
-      self.assertNotIn('stroke:#FF7F7F;stroke-width:19', svg2)
+    with open('testGithub_3762_1.svg', 'w') as f:
+      f.write(svg1)
+    with open('testGithub_3762_2.svg', 'w') as f:
+      f.write(svg2)
 
-
+    re_str = r"path class='bond-\d atom-\d atom-\d' d='M \d+.\d+,\d+.\d+ L \d+.\d+,\d+.\d+ L \d+.\d+,\d+.\d+ L \d+.\d+,\d+.\d+ Z' style='fill:#FF7F7F;"
+    patt = re.compile(re_str)
+    self.assertEqual(len(patt.findall(svg1)), 2)
+    self.assertEqual(len(patt.findall(svg2)), 0)
+    
+    pathlib.Path('testGithub_3762_1.svg').unlink()
+    pathlib.Path('testGithub_3762_2.svg').unlink()
+    
 if __name__ == '__main__':
   unittest.main()
