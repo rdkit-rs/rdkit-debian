@@ -1,5 +1,5 @@
---- ./Code/PgSQL/rdkit/Makefile.orig	2020-07-07 20:06:15.290851295 +0200
-+++ ./Code/PgSQL/rdkit/Makefile	2020-07-07 20:06:32.818912556 +0200
+--- ./Code/PgSQL/rdkit/Makefile.orig	2022-10-30 10:29:17.534624983 +0100
++++ ./Code/PgSQL/rdkit/Makefile	2022-10-30 10:30:28.462133252 +0100
 @@ -10,9 +10,8 @@
  #STATIC_LINK=1
  # -------------------------
@@ -15,7 +15,7 @@
    AVALONREGRESS=avalon
  endif
  
--POPCOUNTFLAGS=-DUSE_BUILTIN_POPCOUNT -mpopcnt
+-POPCOUNTFLAGS=-DRDK_OPTIMIZE_POPCNT -mpopcnt
 -
  ifeq ($(USE_THREADS),1)
    THREADLIBS=-L${BOOSTHOME}/lib -lboost_thread -lboost_system

@@ -3,6 +3,9 @@ rdkit (202209.1-1) UNRELEASED; urgency=medium
   * New upstream release.
   * debian/patches/gcc12_compile_fixes.patch: Removed, applied upstream.
   * debian/patches/postgres_compile_fixes.patch: Likewise.
+  * debian/patches/postgres_Makefile_fixes.patch: Refreshed.
+  * debian/patches/sphinx_compile_fixes.patch: Likewise.
+  * debian/patches/sphinx_imgconverter.patch: Likewise.
 
  -- Michael Banck <mbanck@debian.org>  Mon, 24 Oct 2022 10:02:15 +0200
 

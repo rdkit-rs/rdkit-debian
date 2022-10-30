@@ -2,7 +2,7 @@ Index: rdkit/Docs/Book/Install.md
 ===================================================================
 --- rdkit.orig/Docs/Book/Install.md
 +++ rdkit/Docs/Book/Install.md
-@@ -356,7 +356,7 @@ Add this to the arguments when you call
+@@ -368,7 +368,7 @@ Add this to the arguments when you call
  
  More information here: http://www.mail-archive.com/rdkit-discuss@lists.sourceforge.net/msg01119.html
  
@@ -11,7 +11,7 @@ Index: rdkit/Docs/Book/Install.md
  
  *Problem:* :
  
-@@ -373,7 +373,7 @@ Add `#define BOOST_PYTHON_NO_PY_SIGNATUR
+@@ -385,7 +385,7 @@ Add `#define BOOST_PYTHON_NO_PY_SIGNATUR
  
  More information here: http://www.mail-archive.com/rdkit-discuss@lists.sourceforge.net/msg01178.html
  
@@ -20,7 +20,7 @@ Index: rdkit/Docs/Book/Install.md
  
  *Problem:*
  
-@@ -387,7 +387,7 @@ This can be solved by providing the `-D
+@@ -399,7 +399,7 @@ This can be solved by providing the `-D
  cmake -D BOOST_ROOT=/usr/local -D Boost_NO_SYSTEM_PATHS=ON ..
  ```
  
