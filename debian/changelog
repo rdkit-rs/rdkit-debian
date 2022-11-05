@@ -1,4 +1,4 @@
-rdkit (202209.1-1) UNRELEASED; urgency=medium
+rdkit (202209.1-1) unstable; urgency=medium
 
   * New upstream release.
   * debian/patches/gcc12_compile_fixes.patch: Removed, applied upstream.
@@ -11,7 +11,7 @@ rdkit (202209.1-1) UNRELEASED; urgency=medium
   * debian/patches/postgres_Makefile_fixes.patch: Update RDKit version number.
   * debian/gbp.conf: Set import-orig filter for upstream .gitattributes. 
 
- -- Michael Banck <mbanck@debian.org>  Mon, 24 Oct 2022 10:02:15 +0200
+ -- Michael Banck <mbanck@debian.org>  Sat, 05 Nov 2022 10:43:38 +0100
 
 rdkit (202203.2-3) unstable; urgency=medium
 
