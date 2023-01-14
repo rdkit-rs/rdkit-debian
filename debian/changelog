@@ -1,13 +1,10 @@
-rdkit (202209.3-1) UNRELEASED; urgency=medium
+rdkit (202209.3-1) unstable; urgency=medium
 
-  [ Debichem Team ]
   * New upstream point release.
-
-  [ Michael Banck ]
   * debian/patches/postgres_Makefile_fixes.patch: Updated, removed one hunnk
     that got applied upstream. 
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 05 Nov 2022 10:44:57 +0100
+ -- Michael Banck <mbanck@debian.org>  Sat, 14 Jan 2023 13:24:33 +0100
 
 rdkit (202209.1-1) unstable; urgency=medium
 
