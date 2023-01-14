@@ -18,6 +18,7 @@
 #include <GraphMol/MolPickler.h>
 #include <GraphMol/QueryAtom.h>
 #include <GraphMol/QueryBond.h>
+#include <GraphMol/Chirality.h>
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <GraphMol/SmilesParse/SmartsWrite.h>
@@ -2280,5 +2281,62 @@ TEST_CASE("ring bond stereochemistry in CXSMILES") {
           *m, ops, SmilesWrite::CXSmilesFields::CX_ALL_BUT_COORDS);
       CHECK(cxsmi == val);
     }
+  }
+}
+
+TEST_CASE(
+    "Github #5722: check w/c/t/ctu CX labels use bond positions from SMILES",
+    "[SMILES][bug]") {
+  SECTION("'w:' label") {
+    auto m = "CC1CN1C=CC1CC1 |w:4.5|"_smiles;
+    REQUIRE(m);
+    auto b = m->getBondWithIdx(4);
+    REQUIRE(b->getBondType() == Bond::BondType::DOUBLE);
+    CHECK(b->getBondDir() == Bond::BondDir::UNKNOWN);
+  }
+  SECTION("'ctu:' label") {
+    auto m = "CC1CN1C=CC1CC1 |ctu:5|"_smiles;
+    REQUIRE(m);
+    auto b = m->getBondWithIdx(4);
+    REQUIRE(b->getBondType() == Bond::BondType::DOUBLE);
+    CHECK(b->getStereo() == Bond::STEREOANY);
+  }
+  SECTION("'c:' label") {
+    auto oval = Chirality::getUseLegacyStereoPerception();
+    Chirality::setUseLegacyStereoPerception(false);
+
+    auto m = "CC1CN1C=CC1CC1 |c:5|"_smiles;
+    REQUIRE(m);
+    auto b = m->getBondWithIdx(4);
+    REQUIRE(b->getBondType() == Bond::BondType::DOUBLE);
+    CHECK(b->getStereo() == Bond::STEREOCIS);
+
+    Chirality::setUseLegacyStereoPerception(oval);
+  }
+  SECTION("'t:' label") {
+    auto oval = Chirality::getUseLegacyStereoPerception();
+    Chirality::setUseLegacyStereoPerception(false);
+
+    auto m = "CC1CN1C=CC1CC1 |t:5|"_smiles;
+    REQUIRE(m);
+    auto b = m->getBondWithIdx(4);
+    REQUIRE(b->getBondType() == Bond::BondType::DOUBLE);
+    CHECK(b->getStereo() == Bond::STEREOTRANS);
+
+    Chirality::setUseLegacyStereoPerception(oval);
+  }
+}
+
+TEST_CASE("Github #5683: SMARTS bond ordering should be the same as SMILES") {
+  SECTION("basics") {
+    auto m = "C(OC)C"_smarts;
+    REQUIRE(m);
+    CHECK(m->getBondBetweenAtoms(0, 1)->getIdx() == 0);
+    CHECK(m->getBondBetweenAtoms(1, 2)->getIdx() == 1);
+    CHECK(m->getBondBetweenAtoms(0, 3)->getIdx() == 2);
+  }
+  SECTION("as reported: SMARTS which should generate an exception") {
+    auto sma = "O=C(C=CCC1CCCCC1)N1N=Cc2ccccc2C1c1ccccc1 |w:3.1|";
+    CHECK_THROWS_AS(SmartsToMol(sma), SmilesParseException);
   }
 }
