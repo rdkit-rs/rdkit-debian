@@ -17,8 +17,11 @@ jobs:
       - name: Install build tools
         run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential
 
+      - name: Debuild
+        run: DIST=focal ARCH=amd64 git-pbuilder create && DIST=focal ARCH=amd64 git-pbuilder --execute=debian/pbuilder-bootstrap.sh
+
       - name: Native debian build
-        run: DEB_BUILD_OPTIONS=nocheck gbp buildpackage --git-ignore-new --git-no-pristine-tar -us -uc
+        run: DEB_BUILD_OPTIONS=nocheck DIST=focal ARCH=amd64 gbp buildpackage --git-ignore-new --git-no-pristine-tar -us -uc
 #
 #  build_arm64:
 #    runs-on: ubuntu-20.04
