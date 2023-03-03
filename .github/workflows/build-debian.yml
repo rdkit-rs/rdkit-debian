@@ -9,7 +9,7 @@ env:
   CMAKE_BUILD_PARALLEL_LEVEL: 10
   CC: /usr/bin/clang
   CXX: /usr/bin/clang++
-  RDKIT_VERSION: 2022_03_2
+  RDKIT_VERSION: 2022_09_3
   LD_LIBRARY_PATH: /usr/local/lib
   DEB_BUILD_OPTIONS: nocheck
 
@@ -19,322 +19,38 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Cache libboost-v1
-        id: cache-libboost-v1
-        uses: actions/cache@v3
-        with:
-          path: "~/boost"
-          key: libboost_cache-v1
+      - name: Install build tools
+        run: | 
+        sudo apt-get update; sudo apt-get install -y git-buildpackage vim git wget; sudo apt install -y --no-install-recommends tzdata
+        sudo apt-get install -y clang libclang-dev llvm cmake debhelper javahelper dh-make debmake libboost-all-dev libfreetype6-dev libc6-dev libeigen3-dev python3-numpy tzdata
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-14 1000
+        sudo update-alternatives --install /usr/bin/cc  cc  /usr/bin/clang-14 1000
 
-      - name: Install libboost-v1
-        env:
-          CACHE_HIT: ${{steps.cache-libboost-v1.outputs.cache-hit}}
+      - name: Load Externals
         run: |
-          if [[ "$CACHE_HIT" == 'true' ]]; then
-            sudo cp --force --recursive ~/boost/* /
-          else
-            sudo apt-get update && sudo apt-get install -yq libboost1.74-dev libboost1.74-all-dev
-            mkdir -p ~/boost
-            for dep in libboost1.74-dev; do
-                dpkg -L $dep | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/
-            done
-            export LIBBOOST=$(apt-cache depends libboost1.74-all-dev | awk '/Depends:/ {print $2}')
-            for lib in $LIBBOOST; do 
-                for deb in $lib; do 
-                    dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/boost/ 
-                done; 
-            done      
-          fi
+          DEB_BUILD_OPTIONS=nocheck
+          git clone --depth 1 --branch Release_2022_09_3 https://github.com/rdkit/rdkit.git
+          mv rdkit rdkit-2022.9.3
+          cd rdkit-2022.9.3   
 
-      - name: test libboost-v1
+      - name: Build packages
         run: |
-          whereis boost
-          ls /usr/include
-          ls /usr/lib/x86_64-linux-gnu | grep libboost_nowide.so
-
-      - name: Cache coordgen
-        uses: actions/cache@v3
-        id: cache-coordgen
-        with:
-          path: "~/coordgen"
-          key: coordgen
-      - name: Install coordgen
-        env:
-          CACHE_HIT: ${{steps.cache-coordgen.outputs.cache-hit}}
-        run: |
-          if [[ "$CACHE_HIT" == 'true' ]]; then
-            ls  ~/coordgen/usr/include
-            ls  ~/coordgen/usr/share
-            sudo cp --force --recursive ~/coordgen/* /
-          else
-            sudo apt-get update && sudo apt-get install --yes libcoordgen-dev
-            mkdir -p ~/coordgen
-            sudo dpkg -L libcoordgen-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/coordgen/
-          fi
-
-      - name: test coordgen
-        run: |
-          whereis coordgen
+          debmake -y -b',librdkit1,librdkit-dev' -e maria.dubyaga@scientist.com -f 'Maria Dubyaga'
+          rm debian/librdkit*
           ls
-          ls ~/coordgen/usr/include
-          ls ~/coordgen/usr/include/coordgen
-
-
-      - name: Cache maeparser
-        uses: actions/cache@v3
-        id: cache-maeparser
-        with:
-          path: "~/maeparser"
-          key: maeparser
-
-      - name: Install maeparser
-        env:
-          CACHE_HIT: ${{steps.cache-maeparser.outputs.cache-hit}}
-        run: |
-          if [[ "$CACHE_HIT" == 'true' ]]; then
-            ls  ~/maeparser/usr/include
-            ls  ~/maeparser/usr/
-            sudo cp --force --recursive ~/maeparser/* /
-          else
-            sudo apt-get update && sudo apt-get install --yes libmaeparser-dev
-            mkdir -p ~/maeparser
-            sudo dpkg -L libmaeparser-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/maeparser/
-          fi
-
-      - name: test maeparser
-        run: |
-          whereis maeparser
-          ls
-          ls ~/maeparser/usr/include
-          ls ~/maeparser/usr/include/maeparser
-      #
-      #
-      #    - name: Cache cargo
-      #      id: cargo-cache
-      #      uses: actions/cache@v3
-      #      with:
-      #        path: |
-      #          ~/.cargo/bin/
-      #          ~/.cargo/registry/index/
-      #          ~/.cargo/registry/cache/
-      #          ~/.cargo/git/db/
-      #          target/
-      #        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      #
-      #    - name: Install cargo
-      #      if: steps.cargo-cache.outputs.cache-hit != 'true'
-      #      run: |
-      #        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      #        source $HOME/.cargo/env
-      #
-      #    - name: test cargo
-      #      run: whereis cargo
-      #
-      - name: Cache clang-llvm
-        uses: actions/cache@v3
-        id: cache-clang-llvm
-        with:
-          path: "~/clang"
-          key: clang
-
-      - name: Install clang-llvm
-        env:
-          CACHE_HIT: ${{steps.cache-clang-llvm.outputs.cache-hit}}
-        run: |
-          if [[ "$CACHE_HIT" == 'true' ]]; then
-            ls  ~/clang/usr/
-            sudo cp --force --recursive ~/clang/* /
-          else
-            sudo apt-get update && sudo apt-get install --yes clang llvm libclang-dev
-            mkdir -p ~/clang
-            export LIBCLANG=$(apt-cache depends clang | awk '/Depends:/ {print $2}')
-            export LIBLLVM=$(apt-cache depends llvm | awk '/Depends:/ {print $2}')
-            export LIBCLANG_DEV=$(apt-cache depends libclang-dev | awk '/Depends:/ {print $2}')
-            for lib in $LIBCLANG; do 
-                for deb in $lib; do 
-                    dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
-                done; 
-            done
-            for lib in $LIBLLVM; do 
-                for deb in $lib; do 
-                    dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
-                done; 
-            done
-            for lib in $LIBCLANG_DEV; do 
-                for deb in $lib; do 
-                    dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/ 
-                done; 
-            done 
-          fi
-
-      - name: test clang
-        run: |
-          whereis clang
-          whereis llvm-14
-          clang --version
-      #
-      #    - name: Cache cmake
-      #      uses: actions/cache@v3
-      #      id: cache-cmake
-      #      with:
-      #        path: "~/cmake"
-      #        key: cmake
-      #
-      #    - name: Install cmake
-      #      env:
-      #        CACHE_HIT: ${{steps.cache-cmake.outputs.cache-hit}}
-      #      run: |
-      #        if [[ "$CACHE_HIT" == 'true' ]]; then
-      #          ls  ~/cmake
-      #          sudo cp --force --recursive ~/cmake/* /
-      #        else
-      #          sudo apt-get update && sudo apt-get install -yq cmake
-      #          mkdir -p ~/cmake
-      #          export LIBCMAKE=$(apt-cache depends cmake | awk '/Depends:/ {print $2}')
-      #          dpkg -L cmake | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
-      #          for lib in $LIBCMAKE; do
-      #             for deb in $lib; do
-      #               dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/cmake/
-      #             done;
-      #          done
-      #        fi
-      #
-      #    - name: test cmake
-      #      run: |
-      #        whereis cmake
-      #        cmake --version
-      #
-      #    - name: Cache debian packages
-      #      uses: actions/cache@v3
-      #      id: cache-debian
-      #      with:
-      #        path: "~/debian"
-      #        key: debian
-      #
-      #    - name: Install debian packages
-      #      env:
-      #        CACHE_HIT: ${{steps.cache-debian.outputs.cache-hit}}
-      #      run: |
-      #        if [[ "$CACHE_HIT" == 'true' ]]; then
-      #          ls  ~/debian/
-      #          sudo cp --force --recursive ~/debian/* /
-      #        else
-      #          sudo apt-get update && sudo apt-get install --yes libc6-dev-arm64-cross ca-certificates dh-make debmake gem2deb npm2deb debhelper javahelper
-      #          mkdir -p ~/debian
-      #          sudo dpkg -L libc6-dev-arm64-cross | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-      #          sudo dpkg -L ca-certificates | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-      #          sudo dpkg -L dh-make | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-      #          sudo dpkg -L gem2deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-      #          sudo dpkg -L npm2deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-      #          sudo dpkg -L debhelper | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-      #          sudo dpkg -L javahelper | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/clang/
-      #        fi
-      #
-      #    - name: test debian_packages
-      #      run: |
-      #        whereis gem2deb
-      #        whereis javahelper
-      #        gem2deb --version
-      #
-      #    - name: Cache libfreetype
-      #      uses: actions/cache@v3
-      #      id: cache-libfreetype
-      #      with:
-      #        path: "~/libfreetype"
-      #        key: libfreetype
-      #
-      #    - name: Install libfreetype
-      #      env:
-      #        CACHE_HIT: ${{steps.cache-libfreetype.outputs.cache-hit}}
-      #      run: |
-      #        if [[ "$CACHE_HIT" == 'true' ]]; then
-      #          ls  ~/libfreetype
-      #          sudo cp --force --recursive ~/libfreetype/* /
-      #        else
-      #          sudo apt-get update && sudo apt-get install --yes libfreetype6-dev
-      #          mkdir -p ~/libfreetype
-      #          export LIBTYPE=$(apt-cache depends libfreetype-dev | awk '/Depends:/ {print $2}')
-      #          dpkg -L libfreetype-dev | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
-      #          for lib in $LIBTYPE; do
-      #             if [[ "$lib" != *"<"* ]]; then
-      #                for deb in $lib; do
-      #                  dpkg -L $deb | while IFS= read -r f; do if test -f $f; then echo $f; fi; done | xargs cp --parents --target-directory ~/libfreetype/
-      #                done;
-      #            fi;
-      #          done
-      #        fi
-      #
-      #    - name: test libfreetype
-      #      run: |
-      #        whereis freetype2
-
-      - name: Cache RDKIT archive
-        uses: actions/cache@v3
-        id: cache-rdkit-archive
-        with:
-          path: "~/rdkit-archive"
-          key: rdkit-archive
-
-      - name: Download RDKIT archive
-        env:
-          CACHE_HIT: ${{steps.cache-rdkit-archive.outputs.cache-hit}}
-        run: |
-          if [[ "$CACHE_HIT" == 'true' ]]; then
-            ls  ~/rdkit-archive
-            sudo cp --force --recursive ~/rdkit-archive/* /
-          else
-            mkdir -p ~/rdkit-archive
-            wget https://github.com/rdkit/rdkit/archive/Release_$RDKIT_VERSION.tar.gz
-            cp Release_$RDKIT_VERSION.tar.gz ~/rdkit-archive/Release_$RDKIT_VERSION.tar.gz
-          fi
-          ls
-          cp  ~/rdkit-archive/Release_$RDKIT_VERSION.tar.gz rdkit-2022.03.02.tar.gz
-          ls
-          tar xzf rdkit-2022.03.02.tar.gz
-          echo 'debian tar is here'
-          ls
-          cp -r rdkit-Release_$RDKIT_VERSION rdkit-2022.03.02
-          rm -r rdkit-Release_$RDKIT_VERSION
-          ls
-
-      - name: test rdkit archive
-        run: |
-          ls  ~/rdkit-archive
-
-      - name: Install required packages
-        run: |
-            echo $PWD "what is pwd"
-            sudo apt-get update  -y && sudo apt-get install wget git vim curl -y ca-certificates -y
-            DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends tzdata
-            sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get install -y cmake clang llvm libclang-dev libboost-all-dev libcoordgen-dev libeigen3-dev libmaeparser-dev make libfreetype6-dev libc6-dev-arm64-cross ca-certificates python3-pip javahelper dh-make debmake gem2deb npm2deb debhelper
-            pip3 install numpy
-            sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-14 1000
-            sudo update-alternatives --install /usr/bin/cc  cc  /usr/bin/clang-14 1000
-
-      - name: Build librdkit package
-        run: |
-          echo 'cd to debian pwd' $PWD
-          ls
-          cd rdkit-2022.03.02
-          ls
-          export RDBASE=$PWD  
-          echo 'PWD for build' $PWD
-          echo 'ls ..'
-          ls ..
-          echo 'ls here' 
-          ls
-          debmake -y -b',librdkit1,librdkit-dev' -e datascience@scientist.com -f 'Scientist'
-          rm debian/librdkit1.symbols
-          ls
-          export DATA=$(find .. -type f -name "librdkit1.install")
-          echo $DATA
           cp ../debian/control debian/control
           cp ../debian/compat debian/compat
           cp ../debian/rules debian/rules
-          cp ../debian/librdkit1.install debian/librdkit1.install
-          cp ../debian/librdkit-dev.install debian/librdkit-dev.install
-          debuild -j10
-          ls
+          cp ../debian/rdkit1.install debian/rdkit1.install
+          cp ../debian/rdkit-dev.install debian/rdkit-dev.install
+          debuild  --set-envvar=RDBASE=/rdkit-2022.9.3 --set-envvar=DEB_BUILD_OPTIONS=nocheck -S -j10 --no-lintian --no-sign
+          sudo apt-get install pbuilder debootstrap devscripts qemubuilder qemu-user-static binfmt-support -y
+          sudo apt-get install debian-archive-keyring -y
+          update-binfmts —display
+          update-binfmts --enable qemu-aarch64
+          sudo pbuilder create --distribution jammy --mirror http://ports.ubuntu.com/ubuntu-ports/   --architecture arm64
+          sudo pbuilder --build --architecture arm64 rdkit_2022.9.3-1.dsc
+          
 
       - name: CD to deb files
         run: |
@@ -342,10 +58,12 @@ jobs:
           echo 'pwd after debuild' $PWD
           cd ..
           ls
+          ls /var/cache/pbuilder/result/
 
       - uses: actions/upload-artifact@v3
         with:
           name: deb-packages
           path: |
-            librdkit-dev_2022.03.02-1_amd64.deb
-            librdkit1_2022.03.02-1_amd64.deb
+            /var/cache/pbuilder/result/rdkit-dev_2022.9.3-1_arm64.deb
+            /var/cache/pbuilder/result/rdkit1_2022.9.3-1_arm64.deb
+            /var/cache/pbuilder/result/rdkit_2022.9.3-1_arm64.deb
