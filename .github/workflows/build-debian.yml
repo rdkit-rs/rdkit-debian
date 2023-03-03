@@ -30,15 +30,15 @@ jobs:
 
       - name: Load Externals
         run: |
+          echo 'cd to debian pwd' $PWD
+          echo $PWD "what is pwd"
           DEB_BUILD_OPTIONS=nocheck
           wget https://github.com/rdkit/rdkit/archive/Release_2022_09_3.tar.gz
           cp Release_2022_09_3.tar.gz rdkit-2022.09.3.tar.gz
           tar xzf rdkit-2022.09.3.tar.gz
           mv rdkit-Release_2022_09_3 rdkit-2022.09.3
-          cd rdkit-2022.09.3   
-
-      - name: Build packages
-        run: |
+          cd rdkit-2022.09.3
+          echo $PWD "what is pwd"
           debmake -y -b',librdkit1,librdkit-dev' -e maria.dubyaga@scientist.com -f 'Maria Dubyaga'
           rm debian/librdkit*
           ls
