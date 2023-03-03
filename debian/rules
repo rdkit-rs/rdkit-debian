@@ -2,44 +2,46 @@
 export DH_VERBOSE = 1
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 export CPPFLAGS:=$(filter-out -O2 -flto -ffat-lto-objects,$(shell dpkg-buildflags --get CPPFLAGS))
-export CFLAGS:=$(filter-out -O2 -flto -ffat-lto-objects,$(shell dpkg-buildflags --get CPPFLAGS))
-export CXXFLAGS:=$(filter-out -O2 -flto -ffat-lto-objects,$(shell dpkg-buildflags --get CPPFLAGS))
+export CFLAGS       :=$(filter-out -O2 -flto -ffat-lto-objects,$(shell dpkg-buildflags --get CFLAGS)) $(CPPFLAGS)
+export CXXFLAGS     :=$(filter-out -O2 -flto -ffat-lto-objects,$(shell dpkg-buildflags --get CXXFLAGS)) $(CPPFLAGS)
 export LDFLAGS      :=$(shell dpkg-buildflags --get LDFLAGS)
 export RDBASE       := $(CURDIR)
 export CMAKE_BUILD_PARALLEL_LEVEL=10
 export DEB_TARGET_MULTIARCH=$(gcc -dumpmachine)
 export DEB_HOST_MULTIARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH)
+
 %:
-    dh $@ --buildsystem=cmake --parallel
+	dh $@ --buildsystem=cmake --parallel
 
 override_dh_auto_configure:
-    dh_auto_configure -- \
-        -DCMAKE_SKIP_RPATH:BOOL=ON \
-        -DCMAKE_CXX_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0' \
-        -DCMAKE_C_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0' \
-        -DCMAKE_CPP_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0' \
-        -DCMAKE_CXX_COMPILER=/usr/lib/llvm-14/bin/clang++ \
-        -DCMAKE_C_COMPILER=/usr/lib/llvm-14/bin/clang \
-        -DRDK_BUILD_COORDGEN_SUPPORT=ON \
-        -DRDK_BUILD_MAEPARSER_SUPPORT=ON \
-        -DCMAKE_C_COMPILER=/usr/bin/clang \
-        -DRDK_INSTALL_INTREE=OFF \
-        -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
-        -DRDK_OPTIMIZE_POPCNT=OFF \
-        -DRDK_BUILD_THREADSAFE_SSS=ON \
-        -DRDK_INSTALL_COMIC_FONTS=OFF \
-        -DRDK_BUILD_FREETYPE_SUPPORT=OFF \
-        -DRDK_INSTALL_STATIC_LIBS=ON \
-        -DRDK_BUILD_SWIG_JAVA_WRAPPER=OFF \
-        -DRDK_BUILD_CPP_TESTS=OFF  \
-        -DBOOST_ROOT=/usr/include/boost \
-        -DRDK_BUILD_CAIRO_SUPPORT=OFF \
-        -DRDK_BUILD_INCHI_SUPPORT=OFF \
-        -DRDK_BUILD_AVALON_SUPPORT=OFF \
-        -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_CXX_FLAGS='-std=c++17' \
-        -DCMAKE_CXX_STANDARD=17 \
-        -DCMAKE_LIBRARY_ARCHITECTURE="$(DEB_TARGET_MULTIARCH)"
+	dh_auto_configure -- \
+                -DCMAKE_SKIP_RPATH:BOOL=ON \
+                -DCMAKE_CXX_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0' \
+                -DCMAKE_C_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0' \
+                -DCMAKE_CPP_FLAGS='-D_GLIBCXX_USE_CXX11_ABI=0' \
+                -DCMAKE_CXX_COMPILER=/usr/lib/llvm-14/bin/clang++ \
+                -DCMAKE_C_COMPILER=/usr/lib/llvm-14/bin/clang \
+                -DRDK_BUILD_COORDGEN_SUPPORT=ON \
+                -DRDK_BUILD_MAEPARSER_SUPPORT=ON \
+                -DCMAKE_C_COMPILER=/usr/bin/clang \
+                -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
+                -DRDK_INSTALL_INTREE=OFF \
+                -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
+                -DRDK_OPTIMIZE_POPCNT=OFF \
+                -DRDK_BUILD_THREADSAFE_SSS=ON \
+                -DRDK_INSTALL_COMIC_FONTS=OFF \
+                -DRDK_BUILD_FREETYPE_SUPPORT=OFF \
+                -DRDK_INSTALL_STATIC_LIBS=ON \
+                -DRDK_BUILD_SWIG_JAVA_WRAPPER=OFF \
+                -DRDK_BUILD_CPP_TESTS=OFF  \
+                -DBOOST_ROOT=/usr/include/boost \
+                -DRDK_BUILD_CAIRO_SUPPORT=OFF \
+                -DRDK_BUILD_INCHI_SUPPORT=OFF \
+                -DRDK_BUILD_AVALON_SUPPORT=OFF \
+                -DCMAKE_INSTALL_PREFIX=/usr \
+                -DCMAKE_CXX_FLAGS='-std=c++17' \
+                -DCMAKE_CXX_STANDARD=17 \
+                -DCMAKE_LIBRARY_ARCHITECTURE="$(DEB_TARGET_MULTIARCH)"
 
 override_dh_shlibdeps:
-    dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
