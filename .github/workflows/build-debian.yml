@@ -50,20 +50,19 @@ jobs:
           update-binfmts --enable qemu-aarch64
           sudo pbuilder create --distribution jammy --mirror http://ports.ubuntu.com/ubuntu-ports/   --architecture arm64
           sudo pbuilder --build --architecture arm64 rdkit_2022.9.3-1.dsc
-          
-
-      - name: CD to deb files
-        run: |
-          ls
-          echo 'pwd after debuild' $PWD
-          cd ..
-          ls
-          ls /var/cache/pbuilder/result/
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: deb-packages
-          path: |
-            /var/cache/pbuilder/result/rdkit-dev_2022.9.3-1_arm64.deb
-            /var/cache/pbuilder/result/rdkit1_2022.9.3-1_arm64.deb
-            /var/cache/pbuilder/result/rdkit_2022.9.3-1_arm64.deb
+#
+#      - name: CD to deb files
+#        run: |
+#          ls
+#          echo 'pwd after debuild' $PWD
+#          cd ..
+#          ls
+#          ls /var/cache/pbuilder/result/
+#
+#      - uses: actions/upload-artifact@v3
+#        with:
+#          name: deb-packages
+#          path: |
+#            /var/cache/pbuilder/result/rdkit-dev_2022.9.3-1_arm64.deb
+#            /var/cache/pbuilder/result/rdkit1_2022.9.3-1_arm64.deb
+#            /var/cache/pbuilder/result/rdkit_2022.9.3-1_arm64.deb
