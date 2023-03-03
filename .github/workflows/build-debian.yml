@@ -50,7 +50,6 @@ jobs:
           debuild  --set-envvar=RDBASE=/rdkit-2022.09.3 --set-envvar=DEB_BUILD_OPTIONS=nocheck -S -j10 --no-sign
           sudo apt-get install pbuilder debootstrap devscripts qemubuilder qemu-user-static binfmt-support -y
           sudo apt-get install debian-archive-keyring -y
-          update-binfmts —display
           update-binfmts --enable qemu-aarch64
           sudo pbuilder create --distribution jammy --mirror http://ports.ubuntu.com/ubuntu-ports/   --architecture arm64
           sudo pbuilder --build --architecture arm64 rdkit_2022.09.3-1.dsc
