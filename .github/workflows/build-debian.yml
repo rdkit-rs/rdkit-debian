@@ -47,7 +47,32 @@ jobs:
           cp ../debian/rules debian/rules
           cp ../debian/rdkit1.install debian/rdkit1.install
           cp ../debian/rdkit-dev.install debian/rdkit-dev.install
-          debuild  --set-envvar=RDBASE=/rdkit-2022.09.3 --set-envvar=DEB_BUILD_OPTIONS=nocheck -S -j10 --no-sign
+          mdkir debian/source
+          cp ../debian/source/include-binaries debian/source/include-binaries
+          cd External/catch/
+          wget https://github.com/catchorg/Catch2/archive/v2.13.8.tar.gz
+          tar zxf v2.13.8.tar.gz
+          mv Catch2-2.13.8 catch
+          cd ../CoordGen/
+          wget https://github.com/schrodinger/coordgenlibs/archive/v3.0.0.tar.gz
+          tar zxf v3.0.0.tar.gz
+          mv coordgenlibs-3.0.0 coordgen
+          cd ../RingFamilies/
+          wget https://github.com/rareylab/RingDecomposerLib/archive/v1.1.3_rdkit.tar.gz
+          tar xzf v1.1.3_rdkit.tar.gz
+          mv RingDecomposerLib-1.1.3_rdkit RingDecomposerLib
+          cd ../CoordGen/
+          wget https://github.com/schrodinger/maeparser/archive/v1.2.4.tar.gz
+          tar xzf v1.2.4.tar.gz
+          mv maeparser-1.2.4 maeparser
+          cd ..
+          wget https://github.com/Tencent/rapidjson/archive/v1.1.0.tar.gz
+          tar xzf v1.1.0.tar.gz
+          echo 'ls External folder'
+          ls 
+          cd ..
+          EDITOR=/bin/true dpkg-source -q --commit . externals
+          debuild  --set-envvar=RDBASE=/rdkit-2022.09.3 --set-envvar=DEB_BUILD_OPTIONS=nocheck -S -j10 --source-option=--include-binaries --no-sign
           ls 
           echo 'list above'
           ls ..
