@@ -47,7 +47,7 @@ jobs:
           cp ../debian/rules debian/rules
           cp ../debian/rdkit1.install debian/rdkit1.install
           cp ../debian/rdkit-dev.install debian/rdkit-dev.install
-          mdkir debian/source
+          mkdir debian/source
           cp ../debian/source/include-binaries debian/source/include-binaries
           cd External/catch/
           wget https://github.com/catchorg/Catch2/archive/v2.13.8.tar.gz
