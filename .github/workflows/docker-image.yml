@@ -28,8 +28,11 @@ jobs:
       - name: Check the diff
         run: git status; git diff
 
+      - name: Remove github stuff
+        run: rm -rf .github/
+
       - name: Build package
-        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc -b
+        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
 
 #      - name: Write out apt installer script
 #        run: |
