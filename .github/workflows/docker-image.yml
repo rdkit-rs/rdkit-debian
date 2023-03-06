@@ -49,7 +49,7 @@ jobs:
       - name:  Copy index.html to s3
         run: |
           sudo apt-get install ruby
-          gem install deb-s3
+          sudo gem install deb-s3
           deb-s3 upload --bucket=rdkit-rs-debian /tmp/blah
 
 #  build_arm64:
