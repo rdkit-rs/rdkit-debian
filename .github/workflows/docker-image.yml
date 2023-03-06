@@ -7,7 +7,12 @@ on:
 jobs:
 
   build_amd64:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
+    env:
+      DIST: jammy
+      ARCH: amd64
+      DEB_BUILD_OPTIONS: nocheck
+
     steps:
       - name: Check out the repo
         uses: actions/checkout@v3
@@ -15,13 +20,28 @@ jobs:
           fetch-depth: 0
 
       - name: Install build tools
-        run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential
+        run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential sudo dh-make debhelper dh-python
 
-      - name: Debuild
-        run: DIST=focal ARCH=amd64 git-pbuilder create -- --execute=debian/pbuilder-bootstrap.sh
+      - name: Create base image
+        run: git-pbuilder create
+
+      - name: Build package
+        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar -us -uc --git-arch=arm64 --git-dist=jammy
+
+#      - name: Write out apt installer script
+#        run: |
+#          echo '#!/bin/bash'            > /tmp/apt-installer
+#          echo 'apt-get install -y $@' >> /tmp/apt-installer
+#          chmod a+x /tmp/apt-installer
+#
+#      - name: Get build-depends
+#        run: dpkg-checkbuilddeps
+#
+#      - name: Hop in to base image and install build depends
+#        run: cowbuilder execute --basepath=/var/cache/pbuilder/base-focal-arm64.cow  --save-after-exec -- /tmp/apt-installer
 
       - name: Native debian build
-        run: DEB_BUILD_OPTIONS=nocheck DIST=focal ARCH=amd64 gbp buildpackage --git-ignore-new --git-no-pristine-tar -us -uc
+        run:  git
 #
 #  build_arm64:
 #    runs-on: ubuntu-20.04
