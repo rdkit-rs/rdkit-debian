@@ -25,7 +25,7 @@ PY3 = $(shell which python$(PY3VERS))
 export DEBTMP := $(CURDIR)/debian/tmp
 
 DH_AUTO_CONFIGURE_OPTS := -DCMAKE_BUILD_TYPE=None -DCMAKE_SKIP_RPATH=ON \
-                          -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=ON \
+                          -DRDK_INSTALL_INTREE=OFF \
                           -DRDK_BUILD_THREADSAFE_SSS=ON -DRDK_BUILD_PYTHON_WRAPPERS=ON \
                           -DRDK_OPTIMIZE_POPCNT=OFF -DRDK_USE_URF=OFF \
                           -DRDK_INSTALL_COMIC_FONTS=OFF \
@@ -33,12 +33,14 @@ DH_AUTO_CONFIGURE_OPTS := -DCMAKE_BUILD_TYPE=None -DCMAKE_SKIP_RPATH=ON \
                           -DBoost_NO_BOOST_CMAKE=TRUE \
                           -DCMAKE_INSTALL_PREFIX=/usr \
                           -DCATCH_DIR=/usr/include/catch2 \
+                          -DRDK_INSTALL_STATIC_LIBS=ON \
                           -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
                           -DRDK_BUILD_CPP_TESTS=OFF \
                           -DRDK_BUILD_SWIG_JAVA_WRAPPER=OFF \
                           -DRDK_BUILD_FREETYPE_SUPPORT=OFF \
                           -DRDK_BUILD_PGSQL=OFF
 
+# Line 36 onward are rdkit-rs customizations to rdkit debian
 
 # include /usr/share/postgresql-common/pgxs_debian_control.mk
 
