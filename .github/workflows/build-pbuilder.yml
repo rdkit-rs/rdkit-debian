@@ -1,0 +1,47 @@
+on:
+  push:
+    branches: [ test-build ]
+  pull_request:
+    branches: [ test-build ]
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  CMAKE_BUILD_PARALLEL_LEVEL: 10
+  CC: /usr/bin/clang
+  CXX: /usr/bin/clang++
+  RDKIT_VERSION: 2022_09_3
+  LD_LIBRARY_PATH: /usr/local/lib
+  DEB_BUILD_OPTIONS: nocheck
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+            workflow: build-debian.yml
+            workflow_conclusion: success
+
+      - name: Install build tools
+        run: |
+          echo $PWD "what is pwd"
+          echo "what's here"
+          ls
+          sudo apt-get install pbuilder debootstrap devscripts qemubuilder qemu-user-static binfmt-support -y
+          sudo apt-get install debian-archive-keyring -y
+          update-binfmts --enable qemu-aarch64
+          sudo pbuilder create --distribution jammy --mirror http://ports.ubuntu.com/ubuntu-ports/   --architecture arm64
+          sudo pbuilder --build --architecture arm64 ../rdkit_2022.09.3-1.dsc
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: deb-packages
+          path: |
+            ls /var/cache/pbuilder/result/
+            /var/cache/pbuilder/result/rdkit-dev_20220.9.3-1_arm64.deb
+            /var/cache/pbuilder/result/rdkit1_2022.09.3-1_arm64.deb
+            /var/cache/pbuilder/result/rdkit_2022.09.3-1_arm64.deb
