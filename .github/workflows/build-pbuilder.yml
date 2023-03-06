@@ -32,9 +32,8 @@ jobs:
           echo "what's here"
           ls
           cd deb-packages
-          sudo apt-get install pbuilder debootstrap devscripts qemubuilder qemu-user-static binfmt-support -y
+          sudo apt-get install pbuilder debootstrap devscripts binfmt-support -y
           sudo apt-get install debian-archive-keyring -y
-          update-binfmts --enable qemu-aarch64
           sudo pbuilder create --distribution jammy --mirror http://ports.ubuntu.com/ubuntu-ports/
           sudo pbuilder --build rdkit_2022.09.3-1.dsc
 
