@@ -7,7 +7,6 @@ permissions:
   id-token: write   # This is required for requesting the JWT
   contents: read    # This is required for actions/checkout
 
-
 jobs:
   build_amd64:
     runs-on: buildjet-16vcpu-ubuntu-2204
@@ -43,7 +42,7 @@ jobs:
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          role-to-assume: arn:aws:iam::989722935798:role/gha-boost
+          role-to-assume: arn:aws:iam::989722935798:role/gha-rdkit-debian
           role-session-name: samplerolesession
           aws-region: eu-central-1
       # Upload a file to AWS s3
