@@ -6,7 +6,7 @@ Uploaders: Michael Banck <mbanck@debian.org>
 Build-Depends: bison,
                catch2,
                cmake,
-               debhelper-compat (= 13),
+               debhelper-compat,
                dh-python,
                doxygen,
                flex,

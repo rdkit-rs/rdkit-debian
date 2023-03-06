@@ -25,21 +25,27 @@ PY3 = $(shell which python$(PY3VERS))
 export DEBTMP := $(CURDIR)/debian/tmp
 
 DH_AUTO_CONFIGURE_OPTS := -DCMAKE_BUILD_TYPE=None -DCMAKE_SKIP_RPATH=ON \
-                          -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=OFF \
+                          -DRDK_INSTALL_INTREE=OFF -DRDK_INSTALL_STATIC_LIBS=ON \
                           -DRDK_BUILD_THREADSAFE_SSS=ON -DRDK_BUILD_PYTHON_WRAPPERS=ON \
                           -DRDK_OPTIMIZE_POPCNT=OFF -DRDK_USE_URF=OFF \
                           -DRDK_INSTALL_COMIC_FONTS=OFF \
                           -DRDK_BUILD_CAIRO_SUPPORT=ON \
                           -DBoost_NO_BOOST_CMAKE=TRUE \
                           -DCMAKE_INSTALL_PREFIX=/usr \
-                          -DCATCH_DIR=/usr/include/catch2
+                          -DCATCH_DIR=/usr/include/catch2 \
+                          -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
+                          -DRDK_BUILD_CPP_TESTS=OFF \
+                          -DRDK_BUILD_SWIG_JAVA_WRAPPER=OFF \
+                          -DRDK_BUILD_FREETYPE_SUPPORT=OFF \
+                          -DRDK_BUILD_PGSQL=OFF
 
-include /usr/share/postgresql-common/pgxs_debian_control.mk
+
+# include /usr/share/postgresql-common/pgxs_debian_control.mk
 
 %:
 	dh $@ --with python3 --buildsystem=cmake --parallel
 
-override_dh_auto_clean:
+xaviers_temp_disable_override_dh_auto_clean:
 	find $(CURDIR) -name "*.pyc" | xargs rm -f
 	$(RM) -r Projects/DbCLI/testData/bzr/ rdkit/Chem/inchi.py
 	$(RM) -r Docs/Book/_build Code/docs rdkit/docs Code/doxygen_sqlite3.db
@@ -83,14 +89,14 @@ override_dh_auto_clean:
 	rdkit/ML/Data/test_data/testquant.qdat.pkl
 	$(RM) Code/RDGeneral/versions.h rdkit/sping/tests/testallps.ps
 	dh_auto_clean
-	+pg_buildext clean $(CURDIR)/Code/PgSQL/rdkit build-%v
+	# +pg_buildext clean $(CURDIR)/Code/PgSQL/rdkit build-%v
 
 override_dh_auto_configure:
 	dh_auto_configure -- $(DH_AUTO_CONFIGURE_OPTS) -DPYTHON_EXECUTABLE=$(PY3) ../
 
 override_dh_auto_build:
 	dh_auto_build
-	+STATIC_LINK=0 RDKIT_LIBDIR=$(wildcard $(CURDIR)/obj-*/)/lib pg_buildext build $(CURDIR)/Code/PgSQL/rdkit build-%v
+	# +STATIC_LINK=0 RDKIT_LIBDIR=$(wildcard $(CURDIR)/obj-*/)/lib pg_buildext build $(CURDIR)/Code/PgSQL/rdkit build-%v
 	(cd $(CURDIR)/Code; doxygen doxygen/doxygen.config)
 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) html)
 	(cd $(CURDIR)/Docs/Book; RDBASE=$(CURDIR) $(MAKE) latexpdf)
@@ -108,7 +114,7 @@ override_dh_install:
 	mkdir -p $(DOCDIR)
 	cp $(CURDIR)/Docs/Book/_build/latex/RDKit.pdf $(DOCDIR)
 	cp -a $(CURDIR)/Docs/Book/_build/html $(DOCDIR)
-	+pg_buildext install $(CURDIR)/Code/PgSQL/rdkit build-%v postgresql-%v-rdkit
+	# +pg_buildext install $(CURDIR)/Code/PgSQL/rdkit build-%v postgresql-%v-rdkit
 	ln -sf /usr/share/javascript/jquery/jquery.js $(DOCDIR)/html/cppapi/jquery.js
 	ln -sf /usr/share/javascript/jquery/jquery.js $(DOCDIR)/html/_static/jquery.js
 	ln -sf /usr/share/javascript/underscore/underscore.js $(DOCDIR)/html/_static/underscore.js
