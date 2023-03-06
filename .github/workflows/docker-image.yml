@@ -52,7 +52,7 @@ jobs:
           sudo gem install deb-s3
           aws sts get-caller-identity
           aws s3 ls s3://rdkit-rs-debian/
-          deb-s3 upload --bucket=rdkit-rs-debian --s3-region=eu-central-1 --codename=$DIST /tmp/blah
+          deb-s3 upload --bucket=rdkit-rs-debian --s3-region=eu-central-1 --codename=$DIST ../*{.deb,.src}
 
 #  build_arm64:
 #    runs-on: buildjet-16vcpu-ubuntu-2204-arm
