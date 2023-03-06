@@ -3,9 +3,12 @@ name: Publish custom cross images
 on:
   push: {}
 
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
 
 jobs:
-
   build_amd64:
     runs-on: buildjet-16vcpu-ubuntu-2204
     env:
