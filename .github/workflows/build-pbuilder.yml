@@ -32,6 +32,7 @@ jobs:
           echo "what's here"
           ls
           cd deb-packages
+          sudo apt-get update
           sudo apt-get install pbuilder debootstrap devscripts binfmt-support -y
           sudo apt-get install debian-archive-keyring -y
           sudo pbuilder create --distribution jammy --mirror http://ports.ubuntu.com/ubuntu-ports/
