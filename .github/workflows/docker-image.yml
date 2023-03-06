@@ -16,25 +16,25 @@ jobs:
       DEB_BUILD_OPTIONS: nocheck
 
     steps:
-#      - name: Check out the repo
-#        uses: actions/checkout@v3
-#        with:
-#          fetch-depth: 0
-#
-#      - name: Install build tools
-#        run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential sudo dh-make debhelper dh-python
-#
-#      - name: Create base image
-#        run: git-pbuilder create
-#
-#      - name: Remove github stuff
-#        run: rm -rf .github/
-#
-#      - name: Build package
-#        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
-#
-#      - name: Check for debs
-#        run: ls -alh .; ls -alh ..
+      - name: Check out the repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install build tools
+        run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential sudo dh-make debhelper dh-python
+
+      - name: Create base image
+        run: git-pbuilder create
+
+      - name: Remove github stuff
+        run: rm -rf .github/
+
+      - name: Build package
+        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
+
+      - name: Check for debs
+        run: ls -alh .; ls -alh ..
 
       - name: Create dummy file
         run: touch /tmp/blah
