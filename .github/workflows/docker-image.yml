@@ -48,7 +48,7 @@ jobs:
       # Upload a file to AWS s3
       - name:  Copy index.html to s3
         run: |
-          apt-get install ruby
+          sudo apt-get install ruby
           gem install deb-s3
           deb-s3 upload --bucket=rdkit-rs-debian /tmp/blah
 
