@@ -1,0 +1,28 @@
+on:
+  push:
+    branches: [ test-build ]
+  pull_request:
+    branches: [ test-build ]
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+  CMAKE_BUILD_PARALLEL_LEVEL: 10
+  CC: /usr/bin/clang
+  CXX: /usr/bin/clang++
+  RDKIT_VERSION: 2022_09_3
+  LD_LIBRARY_PATH: /usr/local/lib
+  DEB_BUILD_OPTIONS: nocheck
+
+
+jobs:
+  test:
+#    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: buildjet-2vcpu-ubuntu-2204-arm
+    name: Test
+    steps:
+      - uses: actions/checkout@v2
+        
+      - name: Test update
+        run: |
+          uname -a
+          sudo apt-get update
