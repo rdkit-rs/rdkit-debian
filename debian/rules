@@ -34,7 +34,6 @@ DH_AUTO_CONFIGURE_OPTS := -DCMAKE_BUILD_TYPE=None -DCMAKE_SKIP_RPATH=ON \
                           -DCMAKE_INSTALL_PREFIX=/usr \
                           -DCATCH_DIR=/usr/include/catch2 \
                           -DRDK_INSTALL_STATIC_LIBS=ON \
-                          -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
                           -DRDK_BUILD_CPP_TESTS=OFF \
                           -DRDK_BUILD_SWIG_JAVA_WRAPPER=OFF \
                           -DRDK_BUILD_FREETYPE_SUPPORT=OFF \
