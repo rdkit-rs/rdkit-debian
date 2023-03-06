@@ -42,7 +42,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::989722935798:role/gha-boost
           role-session-name: samplerolesession
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: eu-central-1
       # Upload a file to AWS s3
       - name:  Copy index.html to s3
         run: |
