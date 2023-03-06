@@ -43,6 +43,6 @@ jobs:
           name: deb-packages
           path: |
             ls /var/cache/pbuilder/result/
-            /var/cache/pbuilder/result/rdkit-dev_20220.09.3-1_arm64.deb
+            /var/cache/pbuilder/result/rdkit-dev_2022.09.3-1_arm64.deb
             /var/cache/pbuilder/result/rdkit1_2022.09.3-1_arm64.deb
             /var/cache/pbuilder/result/rdkit_2022.09.3-1_arm64.deb
