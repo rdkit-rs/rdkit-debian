@@ -36,9 +36,6 @@ jobs:
       - name: Check for debs
         run: ls -alh .; ls -alh ..
 
-      - name: Create dummy file
-        run: touch /tmp/blah
-
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -54,27 +51,45 @@ jobs:
           aws s3 ls s3://rdkit-rs-debian/
           deb-s3 upload --bucket=rdkit-rs-debian --s3-region=eu-central-1 --arch=$ARCH --codename=$DIST ../*.deb
 
-#  build_arm64:
-#    runs-on: buildjet-16vcpu-ubuntu-2204-arm
-#    env:
-#      DIST: jammy
-#      ARCH: arm64
-#      DEB_BUILD_OPTIONS: nocheck
-#
-#    steps:
-#      - name: Check out the repo
-#        uses: actions/checkout@v3
-#        with:
-#          fetch-depth: 0
-#
-#      - name: Install build tools
-#        run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential sudo dh-make debhelper dh-python
-#
-#      - name: Create base image
-#        run: git-pbuilder create
-#
-#      - name: Remove github stuff
-#        run: rm -rf .github/
-#
-#      - name: Build package
-#        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
+  build_arm64:
+    runs-on: buildjet-16vcpu-ubuntu-2204-arm
+    env:
+      DIST: jammy
+      ARCH: arm64
+      DEB_BUILD_OPTIONS: nocheck
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install build tools
+        run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential sudo dh-make debhelper dh-python
+
+      - name: Create base image
+        run: git-pbuilder create
+
+      - name: Remove github stuff
+        run: rm -rf .github/
+
+      - name: Build package
+        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
+
+      - name: Check for debs
+        run: ls -alh .; ls -alh ..
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::989722935798:role/gha-rdkit-debian
+          role-session-name: samplerolesession
+          aws-region: eu-central-1
+      # Upload a file to AWS s3
+      - name:  Copy index.html to s3
+        run: |
+          sudo apt-get install ruby awscli
+          sudo gem install deb-s3
+          aws sts get-caller-identity
+          aws s3 ls s3://rdkit-rs-debian/
+          deb-s3 upload --bucket=rdkit-rs-debian --s3-region=eu-central-1 --arch=$ARCH --codename=$DIST ../*.deb
