@@ -107,6 +107,8 @@ override_dh_auto_install:
 	dh_auto_install
 
 override_dh_install:
+	ls -alh /usr/share/fonts/truetype/freefont/FreeSans.ttf
+	mkdir -p $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/Chem/Draw/
 	ln -sf /usr/share/fonts/truetype/freefont/FreeSans.ttf $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/Chem/Draw/FreeSans.ttf
 	dh_install -ppython3-rdkit /usr/lib/python3
 	$(RM) -rf $(DEBTMP)/usr/lib/python3/dist-packages/rdkit/docs/
