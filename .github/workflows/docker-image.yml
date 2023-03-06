@@ -26,7 +26,7 @@ jobs:
         run: git-pbuilder create
 
       - name: Build package
-        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar -us -uc --git-arch=arm64 --git-dist=jammy
+        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar -us -uc --git-arch=$ARCH --git-dist=$DIST
 
 #      - name: Write out apt installer script
 #        run: |
