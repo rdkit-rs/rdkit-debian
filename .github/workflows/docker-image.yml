@@ -1,4 +1,4 @@
-name: Publish custom cross images
+name: Build and publish Debian packages
 
 on:
   push: {}
@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install build tools
-        run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential sudo dh-make debhelper dh-python
+        run: sudo apt-get update; sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python
 
       - name: Create base image
         run: git-pbuilder create
@@ -65,7 +65,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install build tools
-        run: sudo apt-get update; sudo apt-get install -y git-buildpackage vim git build-essential sudo dh-make debhelper dh-python
+        run: sudo apt-get update; sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python
 
       - name: Create base image
         run: git-pbuilder create
