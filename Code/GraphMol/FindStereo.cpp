@@ -28,8 +28,9 @@ namespace detail {
 
 bool isAtomPotentialNontetrahedralCenter(const Atom *atom) {
   PRECONDITION(atom, "atom is null");
-  auto tnzdegree =
-      Chirality::detail::getAtomNonzeroDegree(atom) + atom->getTotalNumHs();
+  auto nzdegree = Chirality::detail::getAtomNonzeroDegree(atom);
+  auto impHDegree = atom->getTotalNumHs();
+  auto tnzdegree = nzdegree + impHDegree;
   auto anum = atom->getAtomicNum();
   if (tnzdegree > 6 || tnzdegree < 2 || (anum < 12 && anum != 4)) {
     return false;
@@ -59,8 +60,8 @@ bool isAtomPotentialTetrahedralCenter(const Atom *atom) {
     if (nzDegree == 4) {
       // chirality is always possible with 4 nbrs
       return true;
-    } else if (nzDegree == 1) {
-      // chirality is never possible with 1 nbr
+    } else if (nzDegree <= 1) {
+      // chirality is never possible with 0 or 1 nbr
       return false;
     } else if (nzDegree < 3 &&
                (atom->getAtomicNum() != 15 && atom->getAtomicNum() != 33)) {
@@ -76,6 +77,10 @@ bool isAtomPotentialTetrahedralCenter(const Atom *atom) {
     } else if (nzDegree == 3) {
       // three-coordinate with a single H we'll accept automatically:
       if (atom->getTotalNumHs() == 1) {
+        if (detail::has_protium_neighbor(mol, atom)) {
+          // more than one H is never stereogenic
+          return false;
+        }
         return true;
       } else {
         // otherwise we default to not being a legal center
@@ -106,9 +111,15 @@ bool isAtomPotentialTetrahedralCenter(const Atom *atom) {
   }
 }
 
-bool isAtomPotentialStereoAtom(const Atom *atom) {
+bool isAtomPotentialStereoAtom(const Atom *atom,
+                               bool allowNontetrahehdralStereo) {
   return isAtomPotentialTetrahedralCenter(atom) ||
-         isAtomPotentialNontetrahedralCenter(atom);
+         (allowNontetrahehdralStereo &&
+          isAtomPotentialNontetrahedralCenter(atom));
+}
+
+bool isAtomPotentialStereoAtom(const Atom *atom) {
+  return isAtomPotentialStereoAtom(atom, getAllowNontetrahedralChirality());
 }
 
 StereoInfo getStereoInfo(const Bond *bond) {
@@ -117,7 +128,7 @@ StereoInfo getStereoInfo(const Bond *bond) {
   const auto beginAtom = bond->getBeginAtom();
   const auto endAtom = bond->getEndAtom();
   if (bond->getBondType() == Bond::BondType::DOUBLE) {
-    if (beginAtom->getDegree() < 2 || endAtom->getDegree() < 2 ||
+    if (beginAtom->getDegree() < 1 || endAtom->getDegree() < 1 ||
         beginAtom->getDegree() > 3 || endAtom->getDegree() > 3) {
       throw ValueErrorException("invalid atom degree in getStereoInfo(bond)");
     }
@@ -128,30 +139,30 @@ StereoInfo getStereoInfo(const Bond *bond) {
 
     bool seenSquiggleBond = false;
     const auto &mol = bond->getOwningMol();
-    for (const auto nbr : mol.atomBonds(beginAtom)) {
-      if (nbr->getIdx() != bond->getIdx()) {
-        if (nbr->getBondDir() == Bond::BondDir::UNKNOWN) {
-          seenSquiggleBond = true;
+
+    if (beginAtom->getDegree() == 1 || endAtom->getDegree() == 1) {
+      seenSquiggleBond = true;
+    }
+
+    auto explore_bond_end = [&mol, &bond, &sinfo,
+                             &seenSquiggleBond](const Atom *atom) {
+      for (const auto nbr : mol.atomBonds(atom)) {
+        if (nbr->getIdx() != bond->getIdx()) {
+          if (nbr->getBondDir() == Bond::BondDir::UNKNOWN) {
+            seenSquiggleBond = true;
+          }
+          sinfo.controllingAtoms.push_back(
+              nbr->getOtherAtomIdx(atom->getIdx()));
         }
-        sinfo.controllingAtoms.push_back(
-            nbr->getOtherAtomIdx(beginAtom->getIdx()));
       }
-    }
-    if (beginAtom->getDegree() == 2) {
-      sinfo.controllingAtoms.push_back(StereoInfo::NOATOM);
-    }
-    for (const auto nbr : mol.atomBonds(endAtom)) {
-      if (nbr->getIdx() != bond->getIdx()) {
-        if (nbr->getBondDir() == Bond::BondDir::UNKNOWN) {
-          seenSquiggleBond = true;
-        }
-        sinfo.controllingAtoms.push_back(
-            nbr->getOtherAtomIdx(endAtom->getIdx()));
+
+      for (unsigned i = atom->getDegree(); i < 3; ++i) {
+        sinfo.controllingAtoms.push_back(StereoInfo::NOATOM);
       }
-    }
-    if (endAtom->getDegree() == 2) {
-      sinfo.controllingAtoms.push_back(StereoInfo::NOATOM);
-    }
+    };
+
+    explore_bond_end(beginAtom);
+    explore_bond_end(endAtom);
 
     if (!seenSquiggleBond) {
       // check to see if either the begin or end atoms has the _UnknownStereo
@@ -268,7 +279,8 @@ StereoInfo getStereoInfo(const Atom *atom) {
         default:
           UNDER_CONSTRUCTION("unrecognized chiral flag");
       }
-    } else if (isAtomPotentialNontetrahedralCenter(atom)) {
+    } else if (getAllowNontetrahedralChirality() &&
+               isAtomPotentialNontetrahedralCenter(atom)) {
       if (stereo == Atom::CHI_UNSPECIFIED) {
         switch (atom->getTotalDegree()) {
           case 4:
@@ -322,20 +334,17 @@ bool isBondPotentialStereoBond(const Bond *bond) {
   }
 
   // at the moment the condition for being a potential stereo bond is that
-  // each of the beginning and end neighbors must have at least 2 heavy atom
-  // neighbors i.e. C/C=N/[H] is not a possible stereo bond but no more than 3
-  // total neighbors.
+  // each of the beginning and end neighbors must have at least 2 explicit
+  // neighbors but no more than 3 total neighbors.
   // if it's a ring bond, the smallest ring it's in must have at least 8
   // members
   //  (this is common with InChI)
   const auto beginAtom = bond->getBeginAtom();
-  auto begHeavyDegree =
-      beginAtom->getTotalDegree() - beginAtom->getTotalNumHs(true);
+  auto begDegree = beginAtom->getTotalDegree();
   const auto endAtom = bond->getEndAtom();
-  auto endHeavyDegree =
-      endAtom->getTotalDegree() - endAtom->getTotalNumHs(true);
-  if (begHeavyDegree > 1 && beginAtom->getDegree() < 4 && endHeavyDegree > 1 &&
-      endAtom->getDegree() < 4) {
+  auto endDegree = endAtom->getTotalDegree();
+  if (begDegree > 1 && begDegree < 4 && endDegree > 1 && endDegree < 4 &&
+      beginAtom->getTotalNumHs(true) < 2 && endAtom->getTotalNumHs(true) < 2) {
     // check rings
     const auto ri = bond->getOwningMol().getRingInfo();
     for (const auto &bring : ri->bondRings()) {
@@ -452,10 +461,11 @@ void initAtomInfo(ROMol &mol, bool flagPossible, bool cleanIt,
                   boost::dynamic_bitset<> &knownAtoms,
                   std::vector<std::string> &atomSymbols,
                   boost::dynamic_bitset<> &possibleAtoms) {
+  bool allowNontetrahedralStereo = getAllowNontetrahedralChirality();
   for (const auto atom : mol.atoms()) {
     auto aidx = atom->getIdx();
     atomSymbols[aidx] = getAtomCompareSymbol(*atom);
-    if (detail::isAtomPotentialStereoAtom(atom)) {
+    if (detail::isAtomPotentialStereoAtom(atom, allowNontetrahedralStereo)) {
       auto sinfo = detail::getStereoInfo(atom);
       switch (sinfo.specified) {
         case Chirality::StereoSpecified::Unknown:
@@ -832,10 +842,10 @@ bool updateBonds(ROMol &mol, const std::vector<unsigned int> &aranks,
   return needAnotherRound;
 }
 
-void cleanMolStereo(ROMol &mol, boost::dynamic_bitset<> &fixedAtoms,
-                    boost::dynamic_bitset<> &knownAtoms,
-                    boost::dynamic_bitset<> &fixedBonds,
-                    boost::dynamic_bitset<> &knownBonds) {
+void cleanMolStereo(ROMol &mol, const boost::dynamic_bitset<> &fixedAtoms,
+                    const boost::dynamic_bitset<> &knownAtoms,
+                    const boost::dynamic_bitset<> &fixedBonds,
+                    const boost::dynamic_bitset<> &knownBonds) {
   for (auto i = 0u; i < mol.getNumAtoms(); ++i) {
     if (!fixedAtoms[i] && knownAtoms[i]) {
       switch (mol.getAtomWithIdx(i)->getChiralTag()) {
@@ -857,9 +867,11 @@ void cleanMolStereo(ROMol &mol, boost::dynamic_bitset<> &fixedAtoms,
     }
   }
   for (auto i = 0u; i < mol.getNumBonds(); ++i) {
+    auto bond = mol.getBondWithIdx(i);
     if (!fixedBonds[i] && knownBonds[i]) {
-      // FIX only does known double bonds
-      mol.getBondWithIdx(i)->setStereo(Bond::BondStereo::STEREONONE);
+      bond->setStereo(Bond::BondStereo::STEREONONE);
+      bond->setBondDir(Bond::BondDir::NONE);
+      bond->getStereoAtoms().clear();
     }
   }
 }

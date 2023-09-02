@@ -7,7 +7,6 @@
 
 """
 
-
 import copy
 
 import numpy
@@ -45,7 +44,7 @@ def BalanceComposite(model, set1, set2, weight, targetSize, names1=None, names2=
   res.quantizationRequirements = []
 
   startSize = len(model)
-  scores = numpy.zeros(startSize, numpy.float)
+  scores = numpy.zeros(startSize, float)
   actQuantBounds = model.GetActivityQuantBounds()
   if names1 is not None:
     model.SetInputOrder(names1)

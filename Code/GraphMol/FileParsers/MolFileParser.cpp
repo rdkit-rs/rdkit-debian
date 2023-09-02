@@ -79,10 +79,15 @@ int toInt(const std::string_view input, bool acceptSpaces) {
     while (*txt == ' ') {
       ++txt;
       --sz;
+      // have we run off the end of the view?
+      if (sz < 1U) {
+        return 0;
+      }
     }
   }
   int res = 0;
   std::from_chars(txt, txt + sz, res);
+
   return res;
 }
 int toInt(const std::string &input, bool acceptSpaces) {
@@ -109,6 +114,10 @@ unsigned int toUnsigned(const std::string_view input, bool acceptSpaces) {
     while (*txt == ' ') {
       ++txt;
       --sz;
+      // have we run off the end of the view?
+      if (sz < 1U) {
+        return 0;
+      }
     }
   }
   unsigned int res = 0;
@@ -290,6 +299,12 @@ void ParseOldAtomList(RWMol *mol, const std::string_view &text,
   int nQueries;
   try {
     nQueries = FileParserUtils::toInt(text.substr(9, 1));
+  } catch (const std::out_of_range &) {
+    delete q;
+    std::ostringstream errout;
+    errout << "Cannot convert position 9 of '" << text << "' to int on line "
+           << line;
+    throw FileParseException(errout.str());
   } catch (boost::bad_lexical_cast &) {
     delete q;
     std::ostringstream errout;
@@ -304,6 +319,12 @@ void ParseOldAtomList(RWMol *mol, const std::string_view &text,
     int atNum;
     try {
       atNum = FileParserUtils::toInt(text.substr(pos, 3));
+    } catch (const std::out_of_range &) {
+      delete q;
+      std::ostringstream errout;
+      errout << "Cannot convert position " << pos << " of '" << text
+             << "' to int on line " << line;
+      throw FileParseException(errout.str());
     } catch (boost::bad_lexical_cast &) {
       delete q;
       std::ostringstream errout;
@@ -471,9 +492,9 @@ void ParseIsotopeLine(RWMol *mol, const std::string &text, unsigned int line) {
               << " has a negative isotope value. line:  " << line << std::endl;
         } else {
           atom->setIsotope(isotope);
-          spos += 4;
         }
       }
+      spos += 4;
     } catch (boost::bad_lexical_cast &) {
       std::ostringstream errout;
       errout << "Cannot convert '" << text.substr(spos, 4)
@@ -500,7 +521,7 @@ void ParseSubstitutionCountLine(RWMol *mol, const std::string &text,
   unsigned int spos = 9;
   for (unsigned int ie = 0; ie < nent; ie++) {
     unsigned int aid;
-    int count;
+    int count = 0;
     try {
       aid = FileParserUtils::stripSpacesAndCast<unsigned int>(
           text.substr(spos, 4));
@@ -508,43 +529,43 @@ void ParseSubstitutionCountLine(RWMol *mol, const std::string &text,
       Atom *atom = mol->getAtomWithIdx(aid - 1);
       if (text.size() >= spos + 4 && text.substr(spos, 4) != "    ") {
         count = FileParserUtils::toInt(text.substr(spos, 4));
-        if (count == 0) {
-          continue;
-        }
-        ATOM_EQUALS_QUERY *q = makeAtomExplicitDegreeQuery(0);
-        switch (count) {
-          case -1:
-            q->setVal(0);
-            break;
-          case -2:
-            q->setVal(atom->getDegree());
-            break;
-          case 1:
-          case 2:
-          case 3:
-          case 4:
-          case 5:
-            q->setVal(count);
-            break;
-          case 6:
-            BOOST_LOG(rdWarningLog) << " atom degree query with value 6 found. "
-                                       "This will not match degree >6. The MDL "
-                                       "spec says it should.  line: "
-                                    << line;
-            q->setVal(6);
-            break;
-          default:
-            std::ostringstream errout;
-            errout << "Value " << count
-                   << " is not supported as a degree query. line: " << line;
-            throw FileParseException(errout.str());
-        }
-        if (!atom->hasQuery()) {
-          atom = QueryOps::replaceAtomWithQueryAtom(mol, atom);
-        }
-        atom->expandQuery(q, Queries::COMPOSITE_AND);
-        spos += 4;
       }
+      spos += 4;
+      if (count == 0) {
+        continue;
+      }
+      ATOM_EQUALS_QUERY *q = makeAtomExplicitDegreeQuery(0);
+      switch (count) {
+        case -1:
+          q->setVal(0);
+          break;
+        case -2:
+          q->setVal(atom->getDegree());
+          break;
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+          q->setVal(count);
+          break;
+        case 6:
+          BOOST_LOG(rdWarningLog) << " atom degree query with value 6 found. "
+                                      "This will not match degree >6. The MDL "
+                                      "spec says it should.  line: "
+                                  << line;
+          q->setVal(6);
+          break;
+        default:
+          std::ostringstream errout;
+          errout << "Value " << count
+                  << " is not supported as a degree query. line: " << line;
+          throw FileParseException(errout.str());
+      }
+      if (!atom->hasQuery()) {
+        atom = QueryOps::replaceAtomWithQueryAtom(mol, atom);
+      }
+      atom->expandQuery(q, Queries::COMPOSITE_AND);
     } catch (boost::bad_lexical_cast &) {
       std::ostringstream errout;
       errout << "Cannot convert '" << text.substr(spos, 4)
@@ -571,7 +592,7 @@ void ParseUnsaturationLine(RWMol *mol, const std::string &text,
   unsigned int spos = 9;
   for (unsigned int ie = 0; ie < nent; ie++) {
     unsigned int aid;
-    int count;
+    int count = 0;
     try {
       aid = FileParserUtils::stripSpacesAndCast<unsigned int>(
           text.substr(spos, 4));
@@ -579,23 +600,24 @@ void ParseUnsaturationLine(RWMol *mol, const std::string &text,
       Atom *atom = mol->getAtomWithIdx(aid - 1);
       if (text.size() >= spos + 4 && text.substr(spos, 4) != "    ") {
         count = FileParserUtils::toInt(text.substr(spos, 4));
-        if (count == 0) {
-          continue;
-        } else if (count == 1) {
-          ATOM_EQUALS_QUERY *q = makeAtomUnsaturatedQuery();
-          if (!atom->hasQuery()) {
-            atom = QueryOps::replaceAtomWithQueryAtom(mol, atom);
-          }
-          atom->expandQuery(q, Queries::COMPOSITE_AND);
-        } else {
-          std::ostringstream errout;
-          errout << "Value " << count
-                 << " is not supported as an unsaturation "
-                    "query (only 0 and 1 are allowed). "
-                    "line: "
-                 << line;
-          throw FileParseException(errout.str());
+      }
+      spos += 4;
+      if (count == 0) {
+        continue;
+      } else if (count == 1) {
+        ATOM_EQUALS_QUERY *q = makeAtomUnsaturatedQuery();
+        if (!atom->hasQuery()) {
+          atom = QueryOps::replaceAtomWithQueryAtom(mol, atom);
         }
+        atom->expandQuery(q, Queries::COMPOSITE_AND);
+      } else {
+        std::ostringstream errout;
+        errout << "Value " << count
+                << " is not supported as an unsaturation "
+                  "query (only 0 and 1 are allowed). "
+                  "line: "
+                << line;
+        throw FileParseException(errout.str());
       }
     } catch (boost::bad_lexical_cast &) {
       std::ostringstream errout;
@@ -623,7 +645,7 @@ void ParseRingBondCountLine(RWMol *mol, const std::string &text,
   unsigned int spos = 9;
   for (unsigned int ie = 0; ie < nent; ie++) {
     unsigned int aid;
-    int count;
+    int count = 0;
     try {
       aid = FileParserUtils::stripSpacesAndCast<unsigned int>(
           text.substr(spos, 4));
@@ -631,43 +653,43 @@ void ParseRingBondCountLine(RWMol *mol, const std::string &text,
       Atom *atom = mol->getAtomWithIdx(aid - 1);
       if (text.size() >= spos + 4 && text.substr(spos, 4) != "    ") {
         count = FileParserUtils::toInt(text.substr(spos, 4));
-        if (count == 0) {
-          continue;
-        }
-        ATOM_EQUALS_QUERY *q = makeAtomRingBondCountQuery(0);
-        switch (count) {
-          case -1:
-            q->setVal(0);
-            break;
-          case -2:
-            q->setVal(0xDEADBEEF);
-            mol->setProp(common_properties::_NeedsQueryScan, 1);
-            break;
-          case 1:
-          case 2:
-          case 3:
-            q->setVal(count);
-            break;
-          case 4:
-            delete q;
-            q = static_cast<ATOM_EQUALS_QUERY *>(new ATOM_LESSEQUAL_QUERY);
-            q->setVal(4);
-            q->setDescription("AtomRingBondCount");
-            q->setDataFunc(queryAtomRingBondCount);
-            break;
-          default:
-            std::ostringstream errout;
-            errout << "Value " << count
-                   << " is not supported as a ring-bond count query. line: "
-                   << line;
-            throw FileParseException(errout.str());
-        }
-        if (!atom->hasQuery()) {
-          atom = QueryOps::replaceAtomWithQueryAtom(mol, atom);
-        }
-        atom->expandQuery(q, Queries::COMPOSITE_AND);
-        spos += 4;
       }
+      spos += 4;
+      if (count == 0) {
+        continue;
+      }
+      ATOM_EQUALS_QUERY *q = makeAtomRingBondCountQuery(0);
+      switch (count) {
+        case -1:
+          q->setVal(0);
+          break;
+        case -2:
+          q->setVal(0xDEADBEEF);
+          mol->setProp(common_properties::_NeedsQueryScan, 1);
+          break;
+        case 1:
+        case 2:
+        case 3:
+          q->setVal(count);
+          break;
+        case 4:
+          delete q;
+          q = static_cast<ATOM_EQUALS_QUERY *>(new ATOM_LESSEQUAL_QUERY);
+          q->setVal(4);
+          q->setDescription("AtomRingBondCount");
+          q->setDataFunc(queryAtomRingBondCount);
+          break;
+        default:
+          std::ostringstream errout;
+          errout << "Value " << count
+                  << " is not supported as a ring-bond count query. line: "
+                  << line;
+          throw FileParseException(errout.str());
+      }
+      if (!atom->hasQuery()) {
+        atom = QueryOps::replaceAtomWithQueryAtom(mol, atom);
+      }
+      atom->expandQuery(q, Queries::COMPOSITE_AND);
     } catch (boost::bad_lexical_cast &) {
       std::ostringstream errout;
       errout << "Cannot convert '" << text.substr(spos, 4)
@@ -1378,6 +1400,22 @@ void setRGPProps(const std::string_view symb, Atom *res) {
   std::string symbc(symb);
   res->setProp(common_properties::dummyLabel, symbc);
 }
+
+void lookupAtomicNumber(Atom *res, const std::string &symb,
+                        bool strictParsing) {
+  try {
+    res->setAtomicNum(PeriodicTable::getTable()->getAtomicNumber(symb));
+  } catch (const Invar::Invariant &e) {
+    if (strictParsing || symb.empty()) {
+      delete res;
+      throw FileParseException(e.what());
+    } else {
+      res->setAtomicNum(0);
+      res->setProp(common_properties::dummyLabel, symb);
+    }
+  }
+}
+
 }  // namespace
 
 Atom *ParseMolFileAtomLine(const std::string_view text, RDGeom::Point3D &pos,
@@ -1474,9 +1512,9 @@ Atom *ParseMolFileAtomLine(const std::string_view text, RDGeom::Point3D &pos,
         }
       }
     }
-    if (symb[0] == 'R' && symb != "R#") {
-      // we're skipping R# here because that really should be handled by an RGP
-      // spec
+    if (symb[0] == 'R') {
+      // we used to skip R# here because that really should be handled by an
+      // RGP spec, but that turned out to not be permissive enough... <sigh>
       setRGPProps(symb, res);
     }
   } else if (symb == "D") {  // mol blocks support "D" and "T" as shorthand...
@@ -1494,12 +1532,7 @@ Atom *ParseMolFileAtomLine(const std::string_view text, RDGeom::Point3D &pos,
     if (symb.size() == 2 && symb[1] >= 'A' && symb[1] <= 'Z') {
       symb[1] = static_cast<char>(tolower(symb[1]));
     }
-    try {
-      res->setAtomicNum(PeriodicTable::getTable()->getAtomicNumber(symb));
-    } catch (const Invar::Invariant &e) {
-      delete res;
-      throw FileParseException(e.what());
-    }
+    lookupAtomicNumber(res, symb, strictParsing);
   }
 
   // res->setPos(pX,pY,pZ);
@@ -2067,7 +2100,8 @@ bool ParseMolBlockProperties(std::istream *inStream, unsigned int &line,
   return fileComplete;
 }
 
-Atom *ParseV3000AtomSymbol(std::string_view token, unsigned int &line) {
+Atom *ParseV3000AtomSymbol(std::string_view token, unsigned int &line,
+                           bool strictParsing) {
   bool negate = false;
   token = FileParserUtils::strip(token);
   if (token.size() > 3 && (token[0] == 'N' || token[0] == 'n') &&
@@ -2172,8 +2206,8 @@ Atom *ParseV3000AtomSymbol(std::string_view token, unsigned int &line) {
       if (token.size() == 2 && token[1] >= 'A' && token[1] <= 'Z') {
         tcopy[1] = static_cast<char>(tolower(token[1]));
       }
-
-      res = new Atom(PeriodicTable::getTable()->getAtomicNumber(tcopy));
+      res = new Atom(0);
+      lookupAtomicNumber(res, tcopy, strictParsing);
     }
   }
 
@@ -2473,7 +2507,7 @@ void ParseV3000AtomBlock(std::istream *inStream, unsigned int &line,
       errout << "Bad atom line : '" << tempStr << "' on line " << line;
       throw FileParseException(errout.str());
     }
-    Atom *atom = ParseV3000AtomSymbol(*token, line);
+    Atom *atom = ParseV3000AtomSymbol(*token, line, strictParsing);
 
     // now the position;
     RDGeom::Point3D pos;
@@ -2840,6 +2874,7 @@ void processSMARTSQ(RWMol &mol, const SubstanceGroup &sg) {
       query = new RecursiveStructureQuery(m.release());
     }
     at->setQuery(query);
+    at->setProp(common_properties::MRV_SMA, sma);
     at->setProp(common_properties::_MolFileAtomQuery, 1);
   }
 }
@@ -3036,9 +3071,7 @@ bool ParseV3000CTAB(std::istream *inStream, unsigned int &line, RWMol *mol,
     chiralFlag = FileParserUtils::toUnsigned(splitLine[4]);
   }
 
-  if (chiralFlag) {
-    mol->setProp(common_properties::_MolFileChiralFlag, chiralFlag);
-  }
+  mol->setProp(common_properties::_MolFileChiralFlag, chiralFlag);
 
   if (nAtoms) {
     ParseV3000AtomBlock(inStream, line, nAtoms, mol, conf, strictParsing);
@@ -3419,9 +3452,7 @@ RWMol *MolDataStreamToMol(std::istream *inStream, unsigned int &line,
     }
   }
 
-  if (chiralFlag) {
-    res->setProp(common_properties::_MolFileChiralFlag, chiralFlag);
-  }
+  res->setProp(common_properties::_MolFileChiralFlag, chiralFlag);
 
   Conformer *conf = nullptr;
   try {

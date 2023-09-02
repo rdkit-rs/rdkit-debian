@@ -1,5 +1,6 @@
 //
-//  Copyright (c) 2011, Novartis Institutes for BioMedical Research Inc.
+//  Copyright (c) 2011-2022 Novartis Institutes for BioMedical Research Inc. and
+//  other RDkit contributors
 //  All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -70,7 +71,7 @@
 #include <algorithm>
 
 #include <RDGeneral/BoostStartInclude.h>
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 #include <RDGeneral/BoostEndInclude.h>
 
 //#define DEBUG 1
@@ -1277,7 +1278,7 @@ RWMol* InchiToMol(const std::string& inchi, ExtraInchiReturnValues& rv,
     }
 
     // for isotopes of H
-    typedef std::vector<boost::tuple<unsigned int, unsigned int, unsigned int>>
+    typedef std::vector<std::tuple<unsigned int, unsigned int, unsigned int>>
         ISOTOPES_t;
     ISOTOPES_t isotopes;
     if (retcode == inchi_Ret_OKAY || retcode == inchi_Ret_WARNING) {
@@ -1314,11 +1315,11 @@ RWMol* InchiToMol(const std::string& inchi, ExtraInchiReturnValues& rv,
         // number of hydrogens
         atom->setNumExplicitHs(inchiAtom->num_iso_H[0]);
         if (inchiAtom->num_iso_H[1]) {
-          isotopes.push_back(boost::make_tuple(1, i, inchiAtom->num_iso_H[1]));
+          isotopes.push_back(std::make_tuple(1, i, inchiAtom->num_iso_H[1]));
         } else if (inchiAtom->num_iso_H[2]) {
-          isotopes.push_back(boost::make_tuple(2, i, inchiAtom->num_iso_H[2]));
+          isotopes.push_back(std::make_tuple(2, i, inchiAtom->num_iso_H[2]));
         } else if (inchiAtom->num_iso_H[3]) {
-          isotopes.push_back(boost::make_tuple(3, i, inchiAtom->num_iso_H[3]));
+          isotopes.push_back(std::make_tuple(3, i, inchiAtom->num_iso_H[3]));
         }
         // at this point the molecule has all Hs it should have. Set the
         // noImplicit flag so
@@ -1350,14 +1351,21 @@ RWMol* InchiToMol(const std::string& inchi, ExtraInchiReturnValues& rv,
           bondRegister.insert(std::make_pair(i, nbr));
           Bond* bond = nullptr;
           // bond type
-          if (inchiAtom->bond_type[b] <= INCHI_BOND_TYPE_TRIPLE) {
+          if ((unsigned int)inchiAtom->bond_type[b] <= INCHI_BOND_TYPE_TRIPLE) {
             bond = new Bond((Bond::BondType)inchiAtom->bond_type[b]);
-          } else {
+          } else if ((unsigned int)inchiAtom->bond_type[b] ==
+                     INCHI_BOND_TYPE_ALTERN) {
             BOOST_LOG(rdWarningLog)
                 << "receive ALTERN bond type which should be avoided. "
                 << "This is treated as aromatic." << std::endl;
             bond = new Bond(Bond::AROMATIC);
             bond->setIsAromatic(true);
+          } else {
+            BOOST_LOG(rdErrorLog) << "illegal bond type ("
+                                  << (unsigned int)inchiAtom->bond_type[b]
+                                  << ") in InChI" << std::endl;
+            delete m;
+            return nullptr;
           }
           // bond ends
           bond->setBeginAtomIdx(indexToAtomIndexMapping[i]);
@@ -1397,8 +1405,7 @@ RWMol* InchiToMol(const std::string& inchi, ExtraInchiReturnValues& rv,
 
       // adding isotopes at the end
       for (auto& ii : isotopes) {
-        unsigned int isotope, aid, repeat;
-        boost::tie(isotope, aid, repeat) = ii;
+        auto [isotope, aid, repeat] = ii;
         aid = indexToAtomIndexMapping[aid];
         for (unsigned int i = 0; i < repeat; i++) {
           // create atom
