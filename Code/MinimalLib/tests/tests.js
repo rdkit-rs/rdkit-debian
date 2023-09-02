@@ -13,10 +13,26 @@ const assert = require('assert');
 const {
     performance
   } = require('perf_hooks');
-var initRDKitModule = require("../demo/RDKit_minimal.js");
+// the default path to RDKit_minimal.js can be overridden through
+// the RDKIT_MINIMAL_JS variable if needed
+const minimalLib = process.env.RDKIT_MINIMAL_JS || '../demo/RDKit_minimal.js';
+console.log('Loading ' + minimalLib);
+var initRDKitModule = require(minimalLib);
 var RDKitModule;
 const fs       = require('fs');
 const readline = require('readline');
+
+const extractBondCoords = (svg, bondDetail) => {
+    const getStartEndCoords = (bond) => {
+        const m = bond.match(/^.*\s+d='M\s+([^,]+),([^ ]+)\s+L\s+([^,]+),([^ ]+)'.*$/);
+        return [[m[1], m[2]], [m[3], m[4]]];
+    };
+    const bond = svg.split('\n').filter(line => line.includes(bondDetail));
+    assert(bond.length === 1);
+    return getStartEndCoords(bond[0]);
+}
+const angleDegBetweenVectors = (v1, v2) => 180 / Math.PI * Math.acos((v1[0] * v2[0] + v1[1] * v2[1])
+    / Math.sqrt((v1[0] * v1[0] + v1[1] * v1[1]) * (v2[0] * v2[0] + v2[1] * v2[1])));
 
 // the goal here isn't to be comprehensive (the RDKit has tests for that),
 // just to make sure that the wrappers are working as expected
@@ -41,7 +57,7 @@ function test_basics() {
     assert.equal(mol2.get_smiles(),"Oc1ccccc1");
 
     var mjson = mol.get_json();
-    assert(mjson.search("commonchem")>0);
+    assert(mjson.search("rdkitjson")>0);
     var mol3 = RDKitModule.get_mol(mjson);
     assert.equal(mol3.is_valid(),1);
     assert.equal(mol3.get_smiles(),"Oc1ccccc1");
@@ -52,7 +68,7 @@ function test_basics() {
     assert.equal(descrs.amw,94.11299);
 
     var checkStringBinaryFpIdentity = (stringFp, binaryFp) => {
-        assert.equal(binaryFp.length, stringFp.length / 8);
+        assert.equal(binaryFp.length, Math.ceil(stringFp.length / 8));
         for (var i = 0, c = 0; i < binaryFp.length; ++i) {
             var byte = 0;
             for (var j = 0; j < 8; ++j, ++c) {
@@ -75,11 +91,6 @@ function test_basics() {
         assert.equal((fp2.match(/1/g)||[]).length, 3);
         var fp2Uint8Array = mol.get_morgan_fp_as_uint8array(JSON.stringify({ radius: 0, nBits: 512 }));
         checkStringBinaryFpIdentity(fp2, fp2Uint8Array);
-        var fp3 = mol.get_morgan_fp(0, 512);
-        assert.equal(fp3.length, 512);
-        assert.equal((fp3.match(/1/g)||[]).length, 3);
-        var fp3Uint8Array = mol.get_morgan_fp_as_uint8array(0, 512);
-        checkStringBinaryFpIdentity(fp3, fp3Uint8Array);
     }
 
     {
@@ -93,12 +104,7 @@ function test_basics() {
         assert.equal((fp2.match(/1/g)||[]).length, 65);
         var fp2Uint8Array = mol.get_pattern_fp_as_uint8array(JSON.stringify({ nBits: 256 }));
         checkStringBinaryFpIdentity(fp2, fp2Uint8Array);
-        var fp3 = mol.get_pattern_fp(256);
-        assert.equal(fp3.length, 256);
-        assert.equal((fp3.match(/1/g)||[]).length, 65);
-        var fp3Uint8Array = mol.get_pattern_fp_as_uint8array(256);
-        checkStringBinaryFpIdentity(fp3, fp3Uint8Array);
-    }
+   }
 
     {
         var fp1 = mol.get_topological_torsion_fp();
@@ -157,6 +163,14 @@ function test_basics() {
         assert.equal((fp4.match(/1/g)||[]).length, 12);
         var fp4Uint8Array = mol.get_atom_pair_fp_as_uint8array(JSON.stringify({ nBits: 512, minLength: 2, maxLength: 3 }));
         checkStringBinaryFpIdentity(fp4, fp4Uint8Array);
+    }
+
+    {
+        var fp1 = mol.get_maccs_fp();
+        assert.equal(fp1.length, 167);
+        assert.equal((fp1.match(/1/g)||[]).length, 10);
+        var fp1Uint8Array = mol.get_maccs_fp_as_uint8array();
+        checkStringBinaryFpIdentity(fp1, fp1Uint8Array);
     }
 
     if (typeof Object.getPrototypeOf(mol).get_avalon_fp === 'function') {
@@ -403,7 +417,7 @@ function test_generate_aligned_coords() {
     var mol = RDKitModule.get_mol(smiles);
     var template = "CC";
     var qmol = RDKitModule.get_mol(template);
-    assert.equal(mol.generate_aligned_coords(qmol, true), "");
+    assert.equal(mol.generate_aligned_coords(qmol, JSON.stringify({useCoordGen: true})), "");
 }
 
 function test_isotope_labels() {
@@ -465,7 +479,7 @@ M  END`;
     var biphenyl = RDKitModule.get_mol(biphenyl_smiles);
     var phenyl = RDKitModule.get_mol(phenyl_smiles);
     assert.equal(JSON.parse(ortho_meta.generate_aligned_coords(
-        template_ref, false, true)).atoms.length, 9);
+        template_ref, JSON.stringify({ useCoordGen: false, allowRGroups: true}))).atoms.length, 9);
     [ true, false ].forEach(alignOnly => {
         var opts = JSON.stringify({ useCoordGen: false, allowRGroups: true, alignOnly })
         assert.equal(JSON.parse(ortho_meta.generate_aligned_coords(
@@ -533,13 +547,10 @@ M  END
 `;
     var template_ref = RDKitModule.get_mol(template_molblock);
     var mol = RDKitModule.get_mol(mol_molblock);
-    var res = mol.generate_aligned_coords(template_ref, false, true, false);
-    assert(res === "");
-    assert.equal(mol.get_molblock(), mol_molblock);
-    res = mol.generate_aligned_coords(template_ref, JSON.stringify({
+    var res = mol.generate_aligned_coords(template_ref, JSON.stringify({
         useCoordGen: false,
         allowRGroups: true,
-        acceptFailure: false,
+        acceptFailure: false
     }));
     assert(res === "");
     assert.equal(mol.get_molblock(), mol_molblock);
@@ -780,44 +791,91 @@ M  END
 }
 
 function test_straighten_depiction() {
-    var mol1 = RDKitModule.get_mol(`
-  MJ201900
+    var benzeneHoriz = RDKitModule.get_mol(`
+  MJ201100                      
 
-  2  1  0  0  0  0  0  0  0  0999 V2000
-   -0.3904    2.1535    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
-   -1.1049    1.7410    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
-  2  1  1  0  0  0  0
+  6  6  0  0  0  0  0  0  0  0999 V2000
+   -0.0785    1.6073    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.9035    1.6073    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.3160    0.8928    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.9036    0.1783    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.0786    0.1783    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.3339    0.8929    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
 M  END
 `);
-    var mol2 = RDKitModule.get_mol(`
-  MJ201900
+    var benzeneVert = RDKitModule.get_mol(`
+  MJ201100                      
 
-  2  1  0  0  0  0  0  0  0  0999 V2000
-    0.1899    1.9526    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
-   -0.5245    1.5401    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
-  2  1  1  0  0  0  0
+  6  6  0  0  0  0  0  0  0  0999 V2000
+    0.2234    1.3054    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.4910    1.7178    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.2055    1.3053    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.2056    0.4803    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.4911    0.0678    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.2234    0.4804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  1  1  0  0  0  0
 M  END
 `);
-    mol1.normalize_depiction();
-    mol1Copy1 = RDKitModule.get_mol_copy(mol1)
-    mol1Copy2 = RDKitModule.get_mol_copy(mol1)
-    mol1.straighten_depiction();
-    mol2.normalize_depiction();
-    mol2.straighten_depiction();
-    assert(mol1.get_molblock() === mol2.get_molblock());
-    mol1Copy1.straighten_depiction(true);
-    assert(mol1Copy1.get_molblock() !== mol2.get_molblock());
-    assert(mol1Copy1.get_molblock() === mol1Copy2.get_molblock());
+    var benzeneHorizCopy = RDKitModule.get_mol_copy(benzeneHoriz);
+    var benzeneVertCopy = RDKitModule.get_mol_copy(benzeneVert);
+    benzeneHoriz.straighten_depiction();
+    benzeneVert.straighten_depiction();
+    assert(benzeneHoriz.get_molblock() !== benzeneHorizCopy.get_molblock());
+    assert(benzeneVert.get_molblock() === benzeneVertCopy.get_molblock());
+    benzeneHoriz = benzeneHorizCopy;
+    benzeneVert = benzeneVertCopy;
+    benzeneHorizCopy = RDKitModule.get_mol_copy(benzeneHoriz);
+    benzeneVertCopy = RDKitModule.get_mol_copy(benzeneVert);
+    benzeneHoriz.straighten_depiction(true);
+    benzeneVert.straighten_depiction(true);
+    assert(benzeneHoriz.get_molblock() === benzeneHorizCopy.get_molblock());
+    assert(benzeneVert.get_molblock() === benzeneVertCopy.get_molblock());
 }
 
 function test_has_coords() {
     var mol = RDKitModule.get_mol('CC');
     assert(!mol.has_coords());
     var mol2 = RDKitModule.get_mol(mol.get_new_coords());
-    assert(mol2.has_coords());
+    assert(mol2.has_coords() === 2);
     assert(!mol.has_coords());
     mol.set_new_coords();
-    assert(mol.has_coords());
+    assert(mol.has_coords() === 2);
+    var mol3 = RDKitModule.get_mol(`
+     RDKit          3D
+
+  9  9  0  0  0  0  0  0  0  0999 V2000
+   -0.5909   -0.6086    0.0018 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.2459    0.8185   -0.0936 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8271   -0.1760    0.1017 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.1425   -0.9648    0.9113 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8767   -1.2011   -0.8967 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.5849    1.4596    0.7584 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.2393    1.3618   -1.0674 H   0  0  0  0  0  0  0  0  0  0  0  0
+    1.4853   -0.4161   -0.7761 H   0  0  0  0  0  0  0  0  0  0  0  0
+    1.3678   -0.2732    1.0608 H   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0
+  2  3  1  0
+  3  1  1  0
+  1  4  1  0
+  1  5  1  0
+  2  6  1  0
+  2  7  1  0
+  3  8  1  0
+  3  9  1  0
+M  END
+`);
+    assert(mol3.has_coords() === 3);
 }
 
 function test_kekulize() {
@@ -849,6 +907,12 @@ function test_sanitize() {
         assert(mol === null);
     }
     mol = RDKitModule.get_mol(badValenceSmiles, JSON.stringify({ sanitize: false }));
+    assert(mol.is_valid());
+}
+
+function test_removehs() {
+    const badValenceSmiles = 'N1C=CC(=O)c2ccc(N(C)(C)(C)(C)C)cc12';
+    mol = RDKitModule.get_mol(badValenceSmiles, JSON.stringify({ sanitize: false, removeHs: false }));
     assert(mol.is_valid());
 }
 
@@ -961,15 +1025,51 @@ M  END`);
 }
 
 function test_legacy_stereochem() {
-    RDKitModule.use_legacy_stereo_perception(true);
-    var mol = RDKitModule.get_mol("C[C@H]1CCC2(CC1)CC[C@H](C)C(C)C2");
-    assert.equal(mol.is_valid(),1);
-    assert.equal(mol.get_smiles(),"CC1CCC2(CC1)CC[C@H](C)C(C)C2");
+    var origSetting;
+    try {
+        origSetting = RDKitModule.use_legacy_stereo_perception(true);
+        var mol = RDKitModule.get_mol("O[C@@]1(C)C/C(/C1)=C(/C)\\CC");
+        assert.equal(mol.is_valid(),1);
+        assert.equal(mol.get_smiles(),"CCC(C)=C1CC(C)(O)C1");
 
-    RDKitModule.use_legacy_stereo_perception(false);
-    mol = RDKitModule.get_mol("C[C@H]1CCC2(CC1)CC[C@H](C)C(C)C2");
-    assert.equal(mol.is_valid(),1);
-    //assert.equal(mol.get_smiles(),"CC1CC2(CC[C@H](C)CC2)CC[C@@H]1C");
+        RDKitModule.use_legacy_stereo_perception(false);
+        mol = RDKitModule.get_mol("O[C@@]1(C)C/C(/C1)=C(/C)\\CC");
+        assert.equal(mol.is_valid(),1);
+        assert.equal(mol.get_smiles(),"CC/C(C)=C1\\C[C@](C)(O)C1");
+    } finally {
+        RDKitModule.use_legacy_stereo_perception(origSetting);
+    }
+}
+
+function test_allow_non_tetrahedral_chirality() {
+    var ctab = `
+  Mrv2108 09132105183D          
+
+  5  4  0  0  0  0            999 V2000
+   -1.2500    1.4518    0.0000 Pt  0  0  0  0  0  0  0  0  0  0  0  0
+   -1.2500    2.2768    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.4250    1.4518    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0
+   -2.0750    1.4518    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.2500    0.6268    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  1  3  1  0  0  0  0
+  1  4  1  0  0  0  0
+  1  5  1  0  0  0  0
+M  END
+`;
+    var origSetting;
+    try {
+        origSetting = RDKitModule.allow_non_tetrahedral_chirality(true);
+        var mol = RDKitModule.get_mol(ctab);
+        assert.equal(mol.is_valid(),1);
+        assert.equal(mol.get_smiles(), "F[Pt@SP3](F)(Cl)Cl");
+        RDKitModule.allow_non_tetrahedral_chirality(false);
+        var mol = RDKitModule.get_mol(ctab);
+        assert.equal(mol.is_valid(),1);
+        assert.equal(mol.get_smiles(), "F[Pt](F)(Cl)Cl");
+    } finally {
+        RDKitModule.allow_non_tetrahedral_chirality(origSetting);
+    }
 }
 
 function test_prop() {
@@ -990,6 +1090,10 @@ M  END
     props = mol.get_prop_list(false, false);
     assert.equal(props.get(0), "test1");
     assert.equal(props.get(1), "test2");
+    assert.equal(mol.clear_prop("test3"), false);
+    assert.equal(mol.has_prop("test2"), true);
+    assert.equal(mol.clear_prop("test2"), true);
+    assert.equal(mol.has_prop("test2"), false);
 }
 
 function test_highlights() {
@@ -1021,6 +1125,793 @@ function test_highlights() {
     assert(svg.includes('fill:#00B2E5'));
     assert(svg.includes("width='127px'"));
     assert(svg.includes('</svg>'));
+}
+
+function test_add_chiral_hs() {
+    var mol = RDKitModule.get_mol(`
+  MJ201100                      
+
+ 18 21  0  0  1  0  0  0  0  0999 V2000
+   -0.8540   -1.4441    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.3019   -0.8310    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.5185   -0.9172    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8540   -0.1635    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.6825    0.6434    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.1379    0.7296    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.5504    1.4441    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.4734   -0.0239    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.2409    0.3885    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.6609   -1.2726    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.2130   -1.8857    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.9580   -2.6703    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.1511   -2.8419    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.5990   -2.2287    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.0201   -1.7143    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.5720   -2.3275    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.3171   -3.1121    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.5100   -3.2835    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+  2  3  1  0  0  0  0
+  4  3  1  0  0  0  0
+  4  5  1  0  0  0  0
+  6  5  1  0  0  0  0
+  6  7  1  1  0  0  0
+  6  8  1  0  0  0  0
+  8  9  1  1  0  0  0
+  8  2  1  0  0  0  0
+  4  9  1  1  0  0  0
+  2  1  1  1  0  0  0
+ 10 11  1  0  0  0  0
+ 11 12  2  0  0  0  0
+ 12 13  1  0  0  0  0
+ 13 14  2  0  0  0  0
+  1 10  2  0  0  0  0
+  1 14  1  0  0  0  0
+ 15 16  2  0  0  0  0
+ 16 17  1  0  0  0  0
+ 11 15  1  0  0  0  0
+ 17 18  2  0  0  0  0
+ 12 18  1  0  0  0  0
+M  END
+`);
+    var quinoline_scaffold = RDKitModule.get_mol(`
+  MJ201100                      
+
+ 10 11  0  0  1  0  0  0  0  0999 V2000
+   -8.1001    2.8219    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+   -8.8145    2.4094    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -8.8145    1.5843    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -8.1001    1.1718    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -7.3856    1.5843    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -7.3856    2.4094    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -6.6711    1.1718    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -5.9566    1.5842    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -5.9566    2.4092    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -6.6711    2.8218    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  2  3  1  0  0  0  0
+  3  4  2  0  0  0  0
+  4  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  7  8  2  0  0  0  0
+  8  9  1  0  0  0  0
+  9 10  2  0  0  0  0
+  5  7  1  0  0  0  0
+ 10  6  1  0  0  0  0
+  1  2  2  0  0  0  0
+  6  1  1  0  0  0  0
+M  END
+`);
+    var svg1 = mol.get_svg_with_highlights(JSON.stringify({width: 350, height: 300}));
+    assert(svg1.includes("width='350px'"));
+    assert(svg1.includes("height='300px'"));
+    assert(svg1.includes("</svg>"));
+    assert(svg1.includes("atom-17"));
+    assert(svg1.includes("atom-18"));
+    assert(svg1.includes("atom-19"));
+    var svg2 = mol.get_svg_with_highlights(JSON.stringify({
+        width: 350, height: 300, useMolBlockWedging: true, wedgeBonds: false, addChiralHs: false
+    }));
+    assert(svg2.includes("width='350px'"));
+    assert(svg2.includes("height='300px'"));
+    assert(svg2.includes("</svg>"));
+    assert(svg2.includes("atom-17"));
+    assert(!svg2.includes("atom-18"));
+    assert(!svg2.includes("atom-19"));
+    assert(mol.get_molblock().includes("4  3  1  6"));
+    var molblock = mol.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(!molblock.includes("4  3  1  6"));
+    assert(molblock.includes("6  7  1  1"));
+    // Here we want to test that the original molblock wedging is preserved and inverted
+    // as the coordinates are rigid-body rotated
+    var molCopy;
+    molCopy = RDKitModule.get_mol_copy(mol);
+    assert(JSON.parse(molCopy.generate_aligned_coords(quinoline_scaffold, JSON.stringify({ acceptFailure: false, alignOnly: true }))));
+    molblock = molCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(molblock.split('\n').some(line => line.match(/^ [1 ]\d [1 ]\d  [12]  6 *$/)));
+    assert(!molblock.split('\n').some(line => line.match(/^ [1 ]\d [1 ]\d  [12]  1 *$/)));
+    assert(!molblock.includes("4  3  1  6"));
+    assert(molblock.includes("6  7  1  6"));
+    molCopy.delete();
+    // Here we want to test that the original molblock wedging gets cleared
+    // and hence wedging is recomputed as the coordinates are re-generated
+    molCopy = RDKitModule.get_mol_copy(mol);
+    assert(JSON.parse(molCopy.generate_aligned_coords(quinoline_scaffold, JSON.stringify({ acceptFailure: false }))));
+    molblock = molCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(molblock.split('\n').some(line => line.match(/^ [1 ]\d [1 ]\d  [12]  6 *$/)));
+    assert(molblock.split('\n').some(line => line.match(/^ [1 ]\d [1 ]\d  [12]  1 *$/)));
+    molCopy.delete();
+    mol.delete();
+    quinoline_scaffold.delete();
+}
+
+function getWedgedMolAndInvertedWedges() {
+    const wedgedMol = RDKitModule.get_mol(`
+     RDKit          2D
+
+ 29 34  0  0  1  0  0  0  0  0999 V2000
+    1.3719    5.1304    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    0.5985    3.7907    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.9482    3.7907    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.7216    5.1304    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.2685    5.1304    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.8994    3.5835    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.5597    4.3569    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.5597    5.9038    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.8994    6.6771    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -5.2389    5.9038    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -6.5784    6.6771    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+   -5.2389    4.3569    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.3719    2.4510    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.5985    1.1115    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.3719   -0.2276    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.9188   -0.2276    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.6921    1.1115    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.9188    2.4510    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.2389    1.1115    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.0124   -0.2276    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.2389   -1.5673    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.6921   -1.5673    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    3.8996   -5.0201    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.2391   -4.2467    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.5777   -6.5331    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.9909   -5.9040    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.0124   -2.9070    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.3306   -6.6772    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.5784   -5.0201    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  2  1  1  1
+  2  3  1  0
+  3  4  1  0
+  5  4  1  6
+  5  6  1  0
+  6  7  1  0
+  7  8  1  0
+  9  8  1  1
+  5  9  1  0
+  9 10  1  0
+ 10 11  1  1
+ 10 12  1  0
+  6 12  1  1
+  2 13  1  0
+ 13 14  2  0
+ 14 15  1  0
+ 15 16  2  0
+ 16 17  1  0
+ 17 18  2  0
+ 13 18  1  0
+ 17 19  1  0
+ 19 20  1  0
+ 20 21  1  0
+ 21 22  1  0
+ 16 22  1  0
+ 23 24  1  0
+ 23 25  1  0
+ 25 26  1  0
+ 24 27  1  0
+ 27 26  1  0
+ 26 28  1  0
+ 24 29  1  0
+ 28 29  1  0
+ 21 27  1  0
+M  END
+`);
+
+    const invertedWedges = `  2  1  1  6
+  2  3  1  0
+  3  4  1  0
+  5  4  1  1
+  5  6  1  0
+  6  7  1  0
+  7  8  1  0
+  9  8  1  6
+  5  9  1  0
+  9 10  1  0
+ 10 11  1  6
+ 10 12  1  0
+  6 12  1  6
+  2 13  1  0
+ 13 14  2  0
+ 14 15  1  0
+ 15 16  2  0
+ 16 17  1  0
+ 17 18  2  0
+ 13 18  1  0
+ 17 19  1  0
+ 19 20  1  0
+ 20 21  1  0
+ 21 22  1  0
+ 16 22  1  0
+ 23 24  1  0
+ 23 25  1  0
+ 25 26  1  0
+ 24 27  1  0
+ 27 26  1  0
+ 26 28  1  0
+ 24 29  1  0
+ 28 29  1  0
+ 21 27  1  0
+`;
+    return { wedgedMol, invertedWedges };
+}
+
+function test_wedging_all_within_scaffold() {
+    const { wedgedMol, invertedWedges } = getWedgedMolAndInvertedWedges();
+    const scaffold = RDKitModule.get_mol(`
+     RDKit          2D
+
+ 13 14  0  0  1  0  0  0  0  0999 V2000
+   -1.6549    2.5755    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8814    1.2358    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.6653    1.2358    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.4385    2.5755    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.9854    2.5755    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.6161    1.0286    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.2766    1.8019    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.2766    3.3487    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.6161    4.1222    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.9558    3.3487    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.2953    4.1222    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    4.9558    1.8019    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.6549   -0.1037    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  2  1  1  0
+  2  3  1  0
+  3  4  1  0
+  5  4  1  1
+  5  6  1  0
+  6  7  1  6
+  7  8  1  0
+  9  8  1  6
+  5  9  1  0
+  9 10  1  0
+ 10 11  1  6
+ 10 12  1  0
+  6 12  1  0
+  2 13  1  6
+M  END
+`);
+    // the "alignOnly" alignment should succeed and preserve molblock wedging
+    // (inverted with respect to the original molecule)
+    // it should feature a narrow angle between the bridge bonds
+    // as the original geometry of the bridge is preserved
+    let wedgedMolCopy;
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(JSON.parse(wedgedMolCopy.generate_aligned_coords(scaffold, JSON.stringify({ acceptFailure: false, alignOnly: true }))));
+    const mbAlignOnly = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    const svgAlignOnly = wedgedMolCopy.get_svg_with_highlights(JSON.stringify({
+        width: 350, height: 300, useMolBlockWedging: true, wedgeBonds: false, addChiralHs: false
+    }));
+    {
+        const [xy23, xy26] = extractBondCoords(svgAlignOnly, 'atom-23 atom-26');
+        const [_, xy25] = extractBondCoords(svgAlignOnly, 'atom-26 atom-25');
+        const v1 = [xy23[0] - xy26[0], xy23[1] - xy26[1]];
+        const v2 = [xy25[0] - xy26[0], xy25[1] - xy26[1]];
+        const v1v2Theta = angleDegBetweenVectors(v1, v2);
+        assert(v1v2Theta > 10 && v1v2Theta < 15);
+    }
+    assert(mbAlignOnly.includes(invertedWedges));
+    // the "rebuild" alignment should succeed and preserve molblock wedging
+    // (inverted with respect to the original molecule)
+    // it should feature a much wider angle between the bridge bonds as the
+    // bridged system is entirely rebuilt since it is not part of the scaffold
+    wedgedMolCopy.delete();
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(JSON.parse(wedgedMolCopy.generate_aligned_coords(scaffold, JSON.stringify({ acceptFailure: false }))));
+    const mbRebuild = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    const svgRebuild = wedgedMolCopy.get_svg_with_highlights(JSON.stringify({
+        width: 350, height: 300, useMolBlockWedging: true, wedgeBonds: false, addChiralHs: false
+    }));
+    {
+        const [xy23, xy26] = extractBondCoords(svgRebuild, 'atom-23 atom-26');
+        const [_, xy25] = extractBondCoords(svgRebuild, 'atom-26 atom-25');
+        const v1 = [xy23[0] - xy26[0], xy23[1] - xy26[1]];
+        const v2 = [xy25[0] - xy26[0], xy25[1] - xy26[1]];
+        const v1v2Theta = angleDegBetweenVectors(v1, v2);
+        assert(v1v2Theta > 105 && v1v2Theta < 110);
+    }
+    assert(mbRebuild.includes(invertedWedges));
+    // the "rebuildCoordGen" alignment should succeed and clear original wedging
+    // it should feature an even wider angle between the bridge bonds as CoordGen
+    // has a template for the bridged system.
+    // Additionally, CoordGen also rebuilds the scaffold, therefore original wedging
+    // should be cleared
+    wedgedMolCopy.delete();
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(JSON.parse(wedgedMolCopy.generate_aligned_coords(scaffold, JSON.stringify({ acceptFailure: false, useCoordGen: true }))));
+    const mbRebuildCoordGen = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    const svgRebuildCoordGen = wedgedMolCopy.get_svg_with_highlights(JSON.stringify({
+        width: 350, height: 300, useMolBlockWedging: true, wedgeBonds: false, addChiralHs: false
+    }));
+    {
+        const [xy23, xy26] = extractBondCoords(svgRebuildCoordGen, 'atom-23 atom-26');
+        const [_, xy25] = extractBondCoords(svgRebuildCoordGen, 'atom-26 atom-25');
+        const v1 = [xy23[0] - xy26[0], xy23[1] - xy26[1]];
+        const v2 = [xy25[0] - xy26[0], xy25[1] - xy26[1]];
+        const v1v2Theta = angleDegBetweenVectors(v1, v2);
+        assert(v1v2Theta > 145 && v1v2Theta < 150);
+    }
+    assert(!mbRebuildCoordGen.includes(invertedWedges));
+    wedgedMolCopy.delete();
+}
+
+function test_wedging_outside_scaffold() {
+    const { wedgedMol, invertedWedges } = getWedgedMolAndInvertedWedges();
+    const scaffold = RDKitModule.get_mol(`
+     RDKit          2D
+
+  9 10  0  0  1  0  0  0  0  0999 V2000
+   -0.8816    0.5663    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.6651    0.5663    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.2958   -0.9804    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.0435   -0.2072    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.0435    1.3395    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.2958    2.1129    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.6355    1.3395    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.9750    2.1129    0.0000 F   0  0  0  0  0  0  0  0  0  0  0  0
+    2.6355   -0.2072    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  2  1  1  1
+  2  3  1  0
+  3  4  1  6
+  4  5  1  0
+  6  5  1  6
+  2  6  1  0
+  6  7  1  0
+  7  8  1  6
+  7  9  1  0
+  3  9  1  0
+M  END
+`);
+    let wedgedMolCopy;
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    // the "alignOnly" alignment should succeed and preserve molblock wedging
+    // (inverted with respect to the original molecule)
+    // it should feature a narrow angle between the bridge bonds
+    // as the original geometry of the bridge is preserved
+    assert(JSON.parse(wedgedMolCopy.generate_aligned_coords(scaffold, JSON.stringify({ acceptFailure: false, alignOnly: true }))));
+    const mbAlignOnly = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    const svgAlignOnly = wedgedMolCopy.get_svg_with_highlights(JSON.stringify({
+        width: 350, height: 300, useMolBlockWedging: true, wedgeBonds: false, addChiralHs: false
+    }));
+    {
+        const [xy23, xy26] = extractBondCoords(svgAlignOnly, 'atom-23 atom-26');
+        const [_, xy25] = extractBondCoords(svgAlignOnly, 'atom-26 atom-25');
+        const v1 = [xy23[0] - xy26[0], xy23[1] - xy26[1]];
+        const v2 = [xy25[0] - xy26[0], xy25[1] - xy26[1]];
+        const v1v2Theta = angleDegBetweenVectors(v1, v2);
+        assert(v1v2Theta > 10 && v1v2Theta < 15);
+    }
+    assert(mbAlignOnly.includes(invertedWedges));
+    // the "rebuild" alignment should succeed and clear original wedging
+    // it should feature a much wider angle between the bridge bonds as the
+    // bridged system is entirely rebuilt since it is not part of the scaffold
+    wedgedMolCopy.delete();
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(JSON.parse(wedgedMolCopy.generate_aligned_coords(scaffold, JSON.stringify({ acceptFailure: false }))));
+    const mbRebuild = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    const svgRebuild = wedgedMolCopy.get_svg_with_highlights(JSON.stringify({
+        width: 350, height: 300, useMolBlockWedging: true, wedgeBonds: false, addChiralHs: false
+    }));
+    {
+        const [xy23, xy26] = extractBondCoords(svgRebuild, 'atom-23 atom-26');
+        const [_, xy25] = extractBondCoords(svgRebuild, 'atom-26 atom-25');
+        const v1 = [xy23[0] - xy26[0], xy23[1] - xy26[1]];
+        const v2 = [xy25[0] - xy26[0], xy25[1] - xy26[1]];
+        const v1v2Theta = angleDegBetweenVectors(v1, v2);
+        assert(v1v2Theta > 105 && v1v2Theta < 110);
+    }
+    assert(!mbRebuild.includes(invertedWedges));
+    // the "rebuildCoordGen" alignment should succeed and clear original wedging
+    // it should feature an even wider angle between the bridge bonds as CoordGen
+    // has a template for the bridged system.
+    // Additionally, CoordGen also rebuilds the scaffold, therefore original wedging
+    // should be cleared
+    wedgedMolCopy.delete();
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(JSON.parse(wedgedMolCopy.generate_aligned_coords(scaffold, JSON.stringify({ acceptFailure: false, useCoordGen: true }))));
+    const mbRebuildCoordGen = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    const svgRebuildCoordGen = wedgedMolCopy.get_svg_with_highlights(JSON.stringify({
+        width: 350, height: 300, useMolBlockWedging: true, wedgeBonds: false, addChiralHs: false
+    }));
+    {
+        const [xy23, xy26] = extractBondCoords(svgRebuildCoordGen, 'atom-23 atom-26');
+        const [_, xy25] = extractBondCoords(svgRebuildCoordGen, 'atom-26 atom-25');
+        const v1 = [xy23[0] - xy26[0], xy23[1] - xy26[1]];
+        const v2 = [xy25[0] - xy26[0], xy25[1] - xy26[1]];
+        const v1v2Theta = angleDegBetweenVectors(v1, v2);
+        assert(v1v2Theta > 145 && v1v2Theta < 150);
+    }
+    assert(!mbRebuildCoordGen.includes(invertedWedges));
+    wedgedMolCopy.delete();
+}
+
+function test_wedging_if_no_match() {
+    const { wedgedMol, invertedWedges } = getWedgedMolAndInvertedWedges();
+    const scaffoldNoMatch = RDKitModule.get_mol(`
+     RDKit          2D
+
+ 13 14  0  0  1  0  0  0  0  0999 V2000
+   -1.6549    2.5755    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8814    1.2358    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.6653    1.2358    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.4385    2.5755    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.9854    2.5755    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.6161    1.0286    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.2766    1.8019    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.2766    3.3487    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.6161    4.1222    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.9558    3.3487    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    6.2953    4.1222    0.0000 Cl  0  0  0  0  0  0  0  0  0  0  0  0
+    4.9558    1.8019    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.6549   -0.1037    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  2  1  1  0
+  2  3  1  0
+  3  4  1  0
+  5  4  1  1
+  5  6  1  0
+  6  7  1  6
+  7  8  1  0
+  9  8  1  6
+  5  9  1  0
+  9 10  1  0
+ 10 11  1  6
+ 10 12  1  0
+  6 12  1  0
+  2 13  1  6
+M  END
+`);
+    let wedgedMolCopy;
+    let mb;
+    const origMolBlock = wedgedMol.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    // the "alignOnly" alignment should return "" if acceptFailure is false
+    // and preserve the original coordinates
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(wedgedMolCopy.generate_aligned_coords(scaffoldNoMatch, JSON.stringify({ acceptFailure: false, alignOnly: true })) === "");
+    mb = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(mb === origMolBlock);
+    assert(!mb.includes(invertedWedges));
+    wedgedMolCopy.delete();
+    // the "alignOnly" alignment should return "{}" if acceptFailure is true
+    // and generate new coordinates, hence wedging should be cleared
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(wedgedMolCopy.generate_aligned_coords(scaffoldNoMatch, JSON.stringify({ acceptFailure: true, alignOnly: true })) === "{}");
+    mb = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(mb !== origMolBlock);
+    assert(!mb.includes(invertedWedges));
+    wedgedMolCopy.delete();
+    // the "rebuild" alignment should return "" if acceptFailure is false
+    // and preserve the original coordinates
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(wedgedMolCopy.generate_aligned_coords(scaffoldNoMatch, JSON.stringify({ acceptFailure: false })) === "");
+    mb = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(mb === origMolBlock);
+    assert(!mb.includes(invertedWedges));
+    wedgedMolCopy.delete();
+    // the "rebuild" alignment should return "{}" if acceptFailure is true
+    // and generate new coordinates, hence wedging should be cleared
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(wedgedMolCopy.generate_aligned_coords(scaffoldNoMatch, JSON.stringify({ acceptFailure: true })) === "{}");
+    mb = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(mb !== origMolBlock);
+    assert(!mb.includes(invertedWedges));
+    wedgedMolCopy.delete();
+    // the "rebuildCoordGen" alignment should return "" if acceptFailure is false
+    // and preserve the original coordinates
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(wedgedMolCopy.generate_aligned_coords(scaffoldNoMatch, JSON.stringify({ acceptFailure: false, useCoordGen: true })) === "");
+    mb = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(mb === origMolBlock);
+    assert(!mb.includes(invertedWedges));
+    wedgedMolCopy.delete();
+    // the "rebuildCoordGen" alignment should return "{}" if acceptFailure is true
+    // and generate new coordinates, hence wedging should be cleared
+    wedgedMolCopy = RDKitModule.get_mol_copy(wedgedMol);
+    assert(wedgedMolCopy.generate_aligned_coords(scaffoldNoMatch, JSON.stringify({ acceptFailure: true, useCoordGen: true })) === "{}");
+    mb = wedgedMolCopy.get_molblock(JSON.stringify({ useMolBlockWedging: true }));
+    assert(mb !== origMolBlock);
+    assert(!mb.includes(invertedWedges));
+    wedgedMolCopy.delete();
+}
+
+function test_get_frags() {
+    {
+        var mol = RDKitModule.get_mol("n1ccccc1.CC(C)C.OCCCN");
+        var expectedFragSmiles = ["c1ccncc1", "CC(C)C", "NCCCO"];
+        var expectedFragSmilesNonSanitized = ["CN(C)(C)C", "c1ccc1"];
+        var expectedMappings = {
+            frags: [0,0,0,0,0,0,1,1,1,1,2,2,2,2,2],
+            fragsMolAtomMapping: [[0,1,2,3,4,5],[6,7,8,9],[10,11,12,13,14]],
+        };
+        var { molIterator, mappings } = mol.get_frags();
+        assert(molIterator.size() === 3);
+        assert(JSON.stringify(JSON.parse(mappings)) === JSON.stringify(expectedMappings));
+        var i = 0;
+        while (!molIterator.at_end()) {
+            var mol = molIterator.next();
+            assert(mol.get_smiles() === expectedFragSmiles[i++]);
+            mol.delete();
+        }
+        assert(!molIterator.next());
+        molIterator.delete();
+    }
+    {
+        var mol = RDKitModule.get_mol("N(C)(C)(C)C.c1ccc1", JSON.stringify({sanitize: false}));
+        var exceptionThrown = false;
+        try {
+            mol.get_frags();
+        } catch (e) {
+            exceptionThrown = true;
+        }
+        assert(exceptionThrown);
+        var { molIterator, mappings } = mol.get_frags(JSON.stringify({sanitizeFrags: false}));
+        assert(molIterator.size() === 2);
+        var i = 0;
+        while (!molIterator.at_end()) {
+            var mol = molIterator.next();
+            assert(mol.get_smiles() === expectedFragSmilesNonSanitized[i++]);
+            mol.delete();
+        }
+        assert(!molIterator.next());
+        molIterator.delete();
+    }
+}
+
+function test_hs_in_place() {
+    {
+        var mol = RDKitModule.get_mol("CC");
+        assert(!mol.has_coords());
+        var descNoH = JSON.parse(mol.get_descriptors());
+        assert(`${descNoH.chi0v}` === '2');
+        assert(`${descNoH.chi1v}` === '1');
+        mol.add_hs_in_place();
+        assert(!mol.has_coords());
+        assert(mol.get_smiles() === '[H]C([H])([H])C([H])([H])[H]');
+        var descH = JSON.parse(mol.get_descriptors());
+        assert(`${descH.chi0v}` === '1');
+        assert(`${descH.chi1v}` === '0.25');
+        mol.delete();
+    }
+    {
+        var mol = RDKitModule.get_mol("C([H])([H])([H])C([H])([H])[H]", JSON.stringify({ removeHs: false }));
+        assert(!mol.has_coords());
+        var descH = JSON.parse(mol.get_descriptors());
+        assert(`${descH.chi0v}` === '1');
+        assert(`${descH.chi1v}` === '0.25');
+        mol.remove_hs_in_place();
+        assert(!mol.has_coords());
+        assert(mol.get_smiles() === 'CC');
+        var descNoH = JSON.parse(mol.get_descriptors());
+        assert(`${descNoH.chi0v}` === '2');
+        assert(`${descNoH.chi1v}` === '1');
+        mol.delete();
+    }
+    {
+        var mol = RDKitModule.get_mol(`
+  MJ201100                      
+
+  2  1  0  0  0  0  0  0  0  0999 V2000
+  -13.9955    5.1116    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.2810    5.5241    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+M  END
+`);
+        assert(mol.has_coords());
+        assert(mol.get_molblock() === `
+     RDKit          2D
+
+  2  1  0  0  0  0  0  0  0  0999 V2000
+  -13.9955    5.1116    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.2810    5.5241    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0
+M  END
+`);
+        var descNoH = JSON.parse(mol.get_descriptors());
+        assert(`${descNoH.chi0v}` === '2');
+        assert(`${descNoH.chi1v}` === '1');
+        mol.add_hs_in_place();
+        assert(mol.has_coords());
+        assert(mol.get_smiles() === '[H]C([H])([H])C([H])([H])[H]');
+        var descH = JSON.parse(mol.get_descriptors());
+        assert(`${descH.chi0v}` === '1');
+        assert(`${descH.chi1v}` === '0.25');
+        assert(mol.get_molblock().includes(`
+     RDKit          2D
+
+  8  7  0  0  0  0  0  0  0  0999 V2000
+  -13.9955    5.1116    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.2810    5.5241    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+`));
+        assert(mol.get_molblock().includes(`  1  2  1  0
+  1  3  1  0
+  1  4  1  0
+  1  5  1  0
+  2  6  1  0
+  2  7  1  0
+  2  8  1  0
+M  END
+`));
+        mol.delete();
+    }
+    {
+        var mol = RDKitModule.get_mol(`
+  MJ201100                      
+
+  8  7  0  0  0  0  0  0  0  0999 V2000
+  -13.9955    5.1116    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.2810    5.5241    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  -14.4080    5.8260    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -14.7100    4.6991    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.5830    4.3971    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -12.8685    4.8096    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -12.5665    5.9366    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.6935    6.2385    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  1  3  1  0  0  0  0
+  1  4  1  0  0  0  0
+  1  5  1  0  0  0  0
+  2  6  1  0  0  0  0
+  2  7  1  0  0  0  0
+  2  8  1  0  0  0  0
+M  END
+`, JSON.stringify({ removeHs: false }));
+        assert(mol.has_coords());
+        assert(mol.get_molblock() === `
+     RDKit          2D
+
+  8  7  0  0  0  0  0  0  0  0999 V2000
+  -13.9955    5.1116    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.2810    5.5241    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  -14.4080    5.8260    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -14.7100    4.6991    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.5830    4.3971    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -12.8685    4.8096    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -12.5665    5.9366    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.6935    6.2385    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0
+  1  3  1  0
+  1  4  1  0
+  1  5  1  0
+  2  6  1  0
+  2  7  1  0
+  2  8  1  0
+M  END
+`);
+        var descH = JSON.parse(mol.get_descriptors());
+        assert(`${descH.chi0v}` === '1');
+        assert(`${descH.chi1v}` === '0.25');
+        mol.remove_hs_in_place();
+        assert(mol.has_coords());
+        assert(mol.get_smiles() === 'CC');
+        var descNoH = JSON.parse(mol.get_descriptors());
+        assert(`${descNoH.chi0v}` === '2');
+        assert(`${descNoH.chi1v}` === '1');
+        assert(mol.get_molblock() === `
+     RDKit          2D
+
+  2  1  0  0  0  0  0  0  0  0999 V2000
+  -13.9955    5.1116    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  -13.2810    5.5241    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0
+M  END
+`);
+        mol.delete();
+    }
+}
+
+function test_query_colour() {
+    var mol;
+    try {
+        mol = RDKitModule.get_qmol('c1ccc2nc([*:1])nc([*:2])c2c1');
+        var svg1 = mol.get_svg_with_highlights(JSON.stringify({width: 350, height: 300}));
+        assert(svg1.includes("width='350px'"));
+        assert(svg1.includes("height='300px'"));
+        assert(svg1.includes("</svg>"));
+        assert(svg1.includes("#7F7F7F"));
+        var svg2 = mol.get_svg_with_highlights(JSON.stringify({width: 350, height: 300, queryColour: [0.0, 0.0, 0.0]}));
+        assert(svg2.includes("width='350px'"));
+        assert(svg2.includes("height='300px'"));
+        assert(svg2.includes("</svg>"));
+        assert(!svg2.includes("#7F7F7F"));
+    } finally {
+        if (mol) {
+            mol.delete();
+        }
+    }
+}
+
+function test_alignment_r_groups_aromatic_ring() {
+    var mol;
+    var scaffold;
+    try {
+        mol = RDKitModule.get_mol('c1ccc2nccnc2c1');
+        assert(mol && mol.is_valid());
+        scaffold = RDKitModule.get_mol(`
+  MJ201100                      
+
+  8  8  0  0  0  0  0  0  0  0999 V2000
+   -1.0263   -0.3133    0.0000 R#  0  0  0  0  0  0  0  0  0  0  0  0
+   -2.4553    0.5116    0.0000 R#  0  0  0  0  0  0  0  0  0  0  0  0
+   -1.7408   -0.7258    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.7408   -1.5509    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.4553   -1.9633    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.1698   -1.5509    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -3.1698   -0.7258    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.4553   -0.3133    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+  3  1  1  0  0  0  0
+  8  2  1  0  0  0  0
+  4  3  2  0  0  0  0
+  5  4  1  0  0  0  0
+  6  5  2  0  0  0  0
+  7  6  1  0  0  0  0
+  8  3  1  0  0  0  0
+  8  7  2  0  0  0  0
+M  RGP  2   1   2   2   1
+M  END`);
+        assert(scaffold && scaffold.is_valid());
+        var res = mol.generate_aligned_coords(scaffold, JSON.stringify({useCoordGen: true, allowRGroups: true}));
+        assert(res);
+        assert.equal(JSON.parse(res).atoms.length, 8);
+        assert.equal(JSON.parse(res).bonds.length, 8);
+    } finally {
+        if (mol) {
+            mol.delete();
+        }
+    }
+    try {
+        mol = RDKitModule.get_mol(`
+  MJ201100                      
+
+ 10 11  0  0  0  0  0  0  0  0999 V2000
+    3.6937    2.5671    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.8687    2.5671    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.4561    1.8526    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.8687    1.1382    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.6937    1.1381    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.1062    1.8526    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.9313    1.8527    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+    5.3438    2.5671    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.9313    3.2816    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.1062    3.2816    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+  5  6  1  0  0  0  0
+  4  5  2  0  0  0  0
+  3  4  1  0  0  0  0
+  2  3  2  0  0  0  0
+  1  6  2  0  0  0  0
+  1  2  1  0  0  0  0
+  8  9  1  0  0  0  0
+  9 10  2  0  0  0  0
+ 10  1  1  0  0  0  0
+  7  8  2  0  0  0  0
+  6  7  1  0  0  0  0
+M  END`);
+        var res = mol.generate_aligned_coords(scaffold, JSON.stringify({allowRGroups: true, alignOnly: true}));
+        assert(res);
+        assert.equal(JSON.parse(res).atoms.length, 8);
+        assert.equal(JSON.parse(res).bonds.length, 8);
+    } finally {
+        if (mol) {
+            mol.delete();
+        }
+        if (scaffold) {
+            scaffold.delete();
+        }
+    }
 }
 
 initRDKitModule().then(function(instance) {
@@ -1060,13 +1951,23 @@ initRDKitModule().then(function(instance) {
     test_has_coords();
     test_kekulize();
     test_sanitize();
+    test_removehs();
     test_normalize_depiction();
     test_straighten_depiction();
     test_flexicanvas();
     test_rxn_drawing();
     test_legacy_stereochem();
+    test_allow_non_tetrahedral_chirality();
     test_prop();
     test_highlights();
+    test_add_chiral_hs();
+    test_wedging_all_within_scaffold();
+    test_wedging_outside_scaffold();
+    test_wedging_if_no_match();
+    test_get_frags();
+    test_hs_in_place();
+    test_query_colour();
+    test_alignment_r_groups_aromatic_ring();
     waitAllTestsFinished().then(() =>
         console.log("Tests finished successfully")
     );

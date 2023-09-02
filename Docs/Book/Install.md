@@ -16,19 +16,19 @@ The easiest way to get Conda is having it installed as part of the [Anaconda Pyt
 
 Creating a new conda environment with the RDKit installed requires one single command similar to the following::
 
-```shellsession
+```shell-session
 $ conda create -c conda-forge -n my-rdkit-env rdkit
 ```
 
 Finally, the new environment must be activated so that the corresponding python interpreter becomes available in the same shell:
 
-```shellsession
+```shell-session
 $ conda activate my-rdkit-env
 ```
 
 If for some reason this does not work, try:
 
-```shellsession
+```shell-session
 $ cd [anaconda folder]/bin
 $ source activate my-rdkit-env
 ```
@@ -119,6 +119,12 @@ cmake -DPy_ENABLE_SHARED=1 \
 
 And finally, `make`, `make install` and `ctest`
 
+The `ctest` build requires that the installation path (the root of the source tree with RDK_INSTALL_INTREE=ON as above) be set in the RDBASE environment variable, and that the location of the installed Python files and shared library files to use for the tests be properly specified. This can be done by setting environment variables for the ctest run as follows:
+
+```
+RDBASE=$PWD/.. PYTHONPATH=$RDBASE LD_LIBRARY_PATH=$RDBASE/lib:$LD_LIBRARY_PATH ctest
+```
+
 
 ### Installing and using PostgreSQL and the RDKit PostgreSQL cartridge from a conda environment
 
@@ -181,7 +187,7 @@ Note: Older versions of RDKit might be available at the [`rdkit-pypi`](https://p
 
 Thanks to the efforts of the Debichem team, RDKit is available via the Ubuntu repositories. To install:
 
-```shellsession
+```shell-session
 $ sudo apt-get install python-rdkit librdkit1 rdkit-data
 ```
 
@@ -239,7 +245,7 @@ If you have any problems with this step, check the boost [installation instructi
 
 Fetch the source, here as tar.gz but you could use git as well:
 
-```shellsession
+```shell-session
 $ wget https://github.com/rdkit/rdkit/archive/Release_XXXX_XX_X.tar.gz
 ```
 

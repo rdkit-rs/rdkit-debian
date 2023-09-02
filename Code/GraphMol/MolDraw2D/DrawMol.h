@@ -159,7 +159,7 @@ class DrawMol {
                       const std::pair<DrawColour, DrawColour> &cols);
   void makeWavyBond(Bond *bond, double offset,
                     const std::pair<DrawColour, DrawColour> &cols);
-  void makeDativeBond(Bond *bond,
+  void makeDativeBond(Bond *bond, double offset,
                       const std::pair<DrawColour, DrawColour> &cols);
   void makeZeroBond(Bond *bond, const std::pair<DrawColour, DrawColour> &cols,
                     const DashPattern &dashPattern);
@@ -178,8 +178,6 @@ class DrawMol {
   void calcAnnotationPosition(const Atom *atom, DrawAnnotation &annot) const;
   void calcAnnotationPosition(const Bond *bond, DrawAnnotation &annot) const;
   double getNoteStartAngle(const Atom *atom) const;
-  void calcMolNotePosition(const std::vector<Point2D> atCds,
-                           DrawAnnotation &annot) const;
   // see if the note will clash with anything else drawn on the molecule.
   // Returns 0 if no clash, 1-4 if there is a clash, denoting what clashed.
   int doesNoteClash(const DrawAnnotation &annot) const;
@@ -338,6 +336,12 @@ void getBondHighlightsForAtoms(const ROMol &mol,
 // direction to at3->at4.  Basically, if the dot product is negative.
 bool areBondsTrans(const Point2D &at1, const Point2D &at2, const Point2D &at3,
                    const Point2D &at4);
+// returns true if the vector at2->at1 points is roughly linear with
+// direction of at3->at4.  Basically, if the dot product is 1.0 within the
+// given tolerance.
+bool areBondsParallel(const Point2D &at1, const Point2D &at2,
+                      const Point2D &at3, const Point2D &at4,
+                      double tol = 1.0e-4);
 
 // find the nborNum'th neighbour of firstAtom that isn't secondAtom
 const Atom *otherNeighbor(const Atom *firstAtom, const Atom *secondAtom,

@@ -138,6 +138,7 @@ struct CXXAtomIterator {
       ++pos;
       return *this;
     }
+    bool operator==(const CXXAtomIter &it) const { return pos == it.pos; }
     bool operator!=(const CXXAtomIter &it) const { return pos != it.pos; }
   };
 
@@ -180,6 +181,7 @@ struct CXXBondIterator {
       ++pos;
       return *this;
     }
+    bool operator==(const CXXBondIter &it) const { return pos == it.pos; }
     bool operator!=(const CXXBondIter &it) const { return pos != it.pos; }
   };
 
@@ -833,7 +835,7 @@ class RDKIT_GRAPHMOL_EXPORT ROMol : public RDProps {
     atom
                          instead of copying it.
 
-    \return the new number of atoms
+    \return the index of the new atom
   */
   unsigned int addAtom(Atom *atom, bool updateLabel = true,
                        bool takeOwnership = false);
