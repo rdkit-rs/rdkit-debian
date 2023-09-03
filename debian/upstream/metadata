@@ -5,3 +5,6 @@ Registry:
    Entry: SCR_014274
  - Name: bio.tools
    Entry: NA
+Repository: https://github.com/rdkit/rdkit
+Repository-Browse: https://github.com/rdkit/rdkit
+Bug-Database: https://github.com/rdkit/rdkit/issues
