@@ -37,7 +37,7 @@ DH_AUTO_CONFIGURE_OPTS := -DCMAKE_BUILD_TYPE=None -DCMAKE_SKIP_RPATH=ON \
 include /usr/share/postgresql-common/pgxs_debian_control.mk
 
 %:
-	dh $@ --with python3 --buildsystem=cmake --parallel
+	dh $@ --with python3 --buildsystem=cmake
 
 override_dh_auto_clean:
 	find $(CURDIR) -name "*.pyc" | xargs rm -f
