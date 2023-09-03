@@ -1,2 +1,7 @@
 # the library package contains several libraries by intention
 librdkit1: package-name-doesnt-match-sonames
+# seem to be false positives - #896012 against lintian possibly related
+librdkit1: library-not-linked-against-libc [usr/lib/libRDKitCatalogs.so.*]
+librdkit1: library-not-linked-against-libc [usr/lib/libRDKitOptimizer.so.*]
+# CONECT is used in the PDB file format
+librdkit1: spelling-error-in-binary CONECT CONNECT [*]
