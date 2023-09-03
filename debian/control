@@ -41,7 +41,7 @@ Build-Depends: bison,
                texlive-latex-base,
                texlive-latex-extra,
                texlive-latex-recommended
-Standards-Version: 4.6.1
+Standards-Version: 4.6.2
 Rules-Requires-Root: no
 Vcs-Browser: https://salsa.debian.org/debichem-team/rdkit
 Vcs-Git: https://salsa.debian.org/debichem-team/rdkit.git
@@ -57,7 +57,6 @@ Depends: fonts-freefont-ttf,
          ${shlibs:Depends}
 Suggests: rdkit-doc
 Provides: ${python3:Provides}
-XB-Python-Version: ${python3:Versions}
 Description: Collection of cheminformatics and machine-learning software
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
@@ -171,7 +170,6 @@ Package: postgresql-15-rdkit
 Architecture: any
 Section: database
 Depends: ${misc:Depends}, ${shlibs:Depends}, postgresql-15
-Suggests:
 Description: Cheminformatics and machine-learning software (PostgreSQL Cartridge)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
