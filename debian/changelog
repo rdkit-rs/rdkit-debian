@@ -1,8 +1,25 @@
-rdkit (202303.3-1) UNRELEASED; urgency=medium
+rdkit (202303.3-1) unstable; urgency=medium
 
+  * Team upload.
   * New upstream release.
+    - Builds with GCC-13. (Closes: #1037837)
+    - Builds with LTO enabled. (Closes: #1015650)
+  * debian/rules (override_dh_install): work around files going to a
+    versioned /usr/lib/python3.XX/site-packages directory, instead of the
+    desired /usr/lib/python3/dist-packages.
+  * debian/rules (override_dh_auto_clean): Docs/Book/Cookbook.rst is shipped
+    in the current upstream tarball, so don't remove it in the clean target.
+  * debian/control, control.in:
+    - rdkit-doc: add Depends on libjs-jquery, libjs-underscore. (Closes: #990653)
+    - Add Build-Depends on python3-myst-parser.
+    - Update B-Ds on transitional packages, libfreetype6-dev -> libfreetype-dev
+      and libcairo-dev -> libcairo2-dev.
+    - Bump Standards-Version to 4.6.2 and remove unused fields.
+  * debian/upstream/metadata: Add Repository, Bug-Database URLs.
+  * debian/rules: Remove obsolete --parallel option.
+  * Rebase patches and update lintian overrides.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 02 Sep 2023 12:46:58 -0700
+ -- Nicholas Breen <nbreen@debian.org>  Sun, 03 Sep 2023 09:06:22 -0700
 
 rdkit (202209.3-1) unstable; urgency=medium
 
