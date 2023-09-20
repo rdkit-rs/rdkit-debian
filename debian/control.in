@@ -169,7 +169,7 @@ Description: Collection of cheminformatics and machine-learning software (develo
 Package: postgresql-PGVERSION-rdkit
 Architecture: any
 Section: database
-Depends: ${misc:Depends}, ${shlibs:Depends}, postgresql-PGVERSION
+Depends: ${misc:Depends}, ${shlibs:Depends}, ${postgresql:Depends}
 Description: Cheminformatics and machine-learning software (PostgreSQL Cartridge)
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
