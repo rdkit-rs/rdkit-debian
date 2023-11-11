@@ -33,7 +33,7 @@ Index: rdkit/Docs/Book/GettingStartedInPython.rst
 ===================================================================
 --- rdkit.orig/Docs/Book/GettingStartedInPython.rst
 +++ rdkit/Docs/Book/GettingStartedInPython.rst
-@@ -3576,7 +3576,7 @@ Pan Assay Interference Compounds (or PAI
+@@ -3741,7 +3741,7 @@ Pan Assay Interference Compounds (or PAI
  
  The Brenk filter [#brenk]_ removes molecules containing substructures with undesirable pharmacokinetics or toxicity. These include sulfates and phosphates that contribute to unfavourable pharmacokinetics, nitro groups which are mutagenic and 2-halopyridines and thiols which are both reactive.
  
