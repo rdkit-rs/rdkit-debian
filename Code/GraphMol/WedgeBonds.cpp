@@ -148,7 +148,6 @@ Bond::BondDir determineBondWedgeState(const Bond *bond,
 
   neighborBondIndices.push_back(bond->getIdx());
   neighborBondAngles.push_back(0.0);
-  unsigned int neighborsWithDirection = 0;
   for (const auto nbrBond : mol->atomBonds(atom)) {
     const auto otherAtom = nbrBond->getOtherAtom(atom);
     if (nbrBond != bond) {
@@ -169,11 +168,6 @@ Bond::BondDir determineBondWedgeState(const Bond *bond,
       }
       neighborBondAngles.insert(angleIt, angle);
       neighborBondIndices.insert(nbrIt, nbrBond->getIdx());
-      if (nbrBond->getBeginAtomIdx() == atom->getIdx() &&
-          (nbrBond->getBondDir() == Bond::BondDir::BEGINDASH ||
-           nbrBond->getBondDir() == Bond::BondDir::BEGINWEDGE)) {
-        ++neighborsWithDirection;
-      }
     }
   }
 
@@ -508,6 +502,75 @@ void wedgeBond(Bond *bond, unsigned int fromAtomIdx, const Conformer *conf) {
   Bond::BondDir dir = detail::determineBondWedgeState(bond, fromAtomIdx, conf);
   if (dir == Bond::BEGINWEDGE || dir == Bond::BEGINDASH) {
     bond->setBondDir(dir);
+  }
+}
+
+void reapplyMolBlockWedging(ROMol &mol) {
+  MolOps::clearSingleBondDirFlags(mol);
+  for (auto b : mol.bonds()) {
+    int explicit_unknown_stereo = -1;
+    if (b->getPropIfPresent<int>(common_properties::_UnknownStereo,
+                                 explicit_unknown_stereo) &&
+        explicit_unknown_stereo) {
+      b->setBondDir(Bond::UNKNOWN);
+    }
+    int bond_dir = -1;
+    if (b->getPropIfPresent<int>(common_properties::_MolFileBondStereo,
+                                 bond_dir)) {
+      if (bond_dir == 1) {
+        b->setBondDir(Bond::BEGINWEDGE);
+      } else if (bond_dir == 6) {
+        b->setBondDir(Bond::BEGINDASH);
+      }
+    }
+    int cfg = -1;
+    if (b->getPropIfPresent<int>(common_properties::_MolFileBondCfg, cfg)) {
+      switch (cfg) {
+        case 1:
+          b->setBondDir(Bond::BEGINWEDGE);
+          break;
+        case 2:
+          if (b->getBondType() == Bond::SINGLE) {
+            b->setBondDir(Bond::UNKNOWN);
+          } else if (b->getBondType() == Bond::DOUBLE) {
+            b->setBondDir(Bond::EITHERDOUBLE);
+            b->setStereo(Bond::STEREOANY);
+          }
+          break;
+        case 3:
+          b->setBondDir(Bond::BEGINDASH);
+          break;
+      }
+    }
+  }
+}
+
+void clearMolBlockWedgingInfo(ROMol &mol) {
+  for (auto b : mol.bonds()) {
+    b->clearProp(common_properties::_MolFileBondStereo);
+    b->clearProp(common_properties::_MolFileBondCfg);
+  }
+}
+
+void invertMolBlockWedgingInfo(ROMol &mol) {
+  for (auto b : mol.bonds()) {
+    int bond_dir = -1;
+    if (b->getPropIfPresent<int>(common_properties::_MolFileBondStereo,
+                                 bond_dir)) {
+      if (bond_dir == 1) {
+        b->setProp<int>(common_properties::_MolFileBondStereo, 6);
+      } else if (bond_dir == 6) {
+        b->setProp<int>(common_properties::_MolFileBondStereo, 1);
+      }
+    }
+    int cfg = -1;
+    if (b->getPropIfPresent<int>(common_properties::_MolFileBondCfg, cfg)) {
+      if (cfg == 1) {
+        b->setProp<int>(common_properties::_MolFileBondCfg, 3);
+      } else if (cfg == 3) {
+        b->setProp<int>(common_properties::_MolFileBondCfg, 1);
+      }
+    }
   }
 }
 

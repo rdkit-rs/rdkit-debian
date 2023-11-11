@@ -840,7 +840,9 @@ class TestCase(unittest.TestCase):
     smi = Chem.MolToSmiles(query)
     self.assertEqual(smi, 'c1ccccc1')
     smi = Chem.MolToSmarts(query)
-    self.assertEqual(smi, '[#6]1:[#6]:[#6]:[#6]:[#6]:[#6,#7,#15]:1', smi)
+    self.assertEqual(smi, '[#6]1:[#6]:[#6]:[#6]:[#6]:[#6,#7,#15]:1')
+    smi = Chem.MolToSmarts(query, rootedAtAtom=5)
+    self.assertEqual(smi, '[#6,#7,#15]1:[#6]:[#6]:[#6]:[#6]:[#6]:1')
 
     query = Chem.MolFromMolFile(fileN, sanitize=False)
     smi = Chem.MolToSmiles(query)
@@ -848,6 +850,8 @@ class TestCase(unittest.TestCase):
     query.UpdatePropertyCache()
     smi = Chem.MolToSmarts(query)
     self.assertEqual(smi, '[#6]1=[#6]-[#6]=[#6]-[#6]=[#6,#7,#15]-1')
+    smi = Chem.MolToSmarts(query, rootedAtAtom=3)
+    self.assertEqual(smi, '[#6]1=[#6]-[#6]=[#6]-[#6,#7,#15]=[#6]-1')
     smi = "C1=CC=CC=C1"
     mol = Chem.MolFromSmiles(smi, 0)
     self.assertTrue(mol.HasSubstructMatch(query))
@@ -2181,6 +2185,11 @@ CAS<~>
     self.assertFalse(ri.AreAtomsInSameRingOfSize(2, 3, 5))
     self.assertEqual(len(ri.BondMembers(2)), 2)
     self.assertEqual(len(ri.BondMembers(0)), 1)
+    self.assertTrue(ri.IsRingFused(0))
+    self.assertTrue(ri.IsRingFused(1))
+    self.assertTrue(ri.AreRingsFused(0, 1))
+    self.assertTrue(ri.NumFusedBonds(0) == 1)
+    self.assertTrue(ri.NumFusedBonds(1) == 1)
     self.assertEqual(ri.BondRingSizes(2), (4, 3))
     self.assertEqual(ri.BondRingSizes(0), (4, ))
     self.assertEqual(ri.BondRingSizes(99), ())
@@ -4556,35 +4565,35 @@ $$$$
     m = Chem.MolFromSmiles("CC")
     errors = {
       "int":
-      "key `foo` exists but does not result in an integer value reason: boost::bad_any_cast: failed conversion using boost::any_cast",
+      r"key `foo` exists but does not result in an integer value reason: [B,b]ad any[\ ,_]cast",
       "uint overflow":
       "key `foo` exists but does not result in an unsigned integer value reason: bad numeric conversion: negative overflow",
       "int overflow":
       "key `foo` exists but does not result in an integer value reason: bad numeric conversion: positive overflow",
       "double":
-      "key `foo` exists but does not result in a double value reason: boost::bad_any_cast: failed conversion using boost::any_cast",
+      r"key `foo` exists but does not result in a double value reason: [B,b]ad any[\ ,_]cast",
       "bool":
-      "key `foo` exists but does not result in a True or False value reason: boost::bad_any_cast: failed conversion using boost::any_cast"
+      r"key `foo` exists but does not result in a True or False value reason: [B,b]ad any[\ ,_]cast"
     }
 
     for ob in [m, list(m.GetAtoms())[0], list(m.GetBonds())[0]]:
       ob.SetDoubleProp("foo", 2.0)
       with self.assertRaises(ValueError) as e:
         ob.GetBoolProp("foo")
-      self.assertEqual(str(e.exception), errors["bool"])
+      self.assertRegex(str(e.exception), errors["bool"])
 
       with self.assertRaises(ValueError) as e:
         ob.GetIntProp("foo")
-      self.assertEqual(str(e.exception), errors["int"])
+      self.assertRegex(str(e.exception), errors["int"])
 
       ob.SetBoolProp("foo", True)
       with self.assertRaises(ValueError) as e:
         ob.GetDoubleProp("foo")
-      self.assertEqual(str(e.exception), errors["double"])
+      self.assertRegex(str(e.exception), errors["double"])
 
       with self.assertRaises(ValueError) as e:
         ob.GetIntProp("foo")
-      self.assertEqual(str(e.exception), errors["int"])
+      self.assertRegex(str(e.exception), errors["int"])
 
       ob.SetIntProp("foo", -1)
       with self.assertRaises(ValueError) as e:
@@ -5039,6 +5048,12 @@ M  END
       len(
         b.GetSubstructMatches(Chem.MolFromSmiles('C[C@@](Cl)(F)C[C@@H](F)(Br)'),
                               useChirality=False)[0]), 8)
+
+    if Chem.MolBundleCanSerialize():
+      for b2 in (pickle.loads(pickle.dumps(b)), Chem.MolBundle(b.ToBinary())):
+        self.assertEqual(len(b2), len(b))
+        for m, m2 in zip(b, b2):
+          self.assertEqual(Chem.MolToSmiles(m), Chem.MolToSmiles(m2))
 
   def testMolBundles2(self):
     b = Chem.MolBundle()
@@ -5553,6 +5568,43 @@ M  END
     self.assertEqual(m.GetSubstructMatches(p2, ps), ())
     self.assertEqual(m.GetSubstructMatches(p3, ps), ((0, 1, 2, 3, 4), ))
 
+  def testForwardEnhancedStereoGroupIds(self):
+    m = Chem.MolFromSmiles('C[C@H](O)Cl |o5:1|')
+    self.assertIsNotNone(m)
+
+    # StereoGroup id is read, but not forwarded to "write id"
+    stgs = m.GetStereoGroups()
+    self.assertEqual(len(stgs), 1)
+    self.assertEqual(stgs[0].GetGroupType(), Chem.StereoGroupType.STEREO_OR)
+    self.assertEqual(stgs[0].GetReadId(), 5)
+    self.assertEqual(stgs[0].GetWriteId(), 0)
+
+    self.assertEqual(Chem.MolToCXSmiles(m), 'C[C@H](O)Cl |o1:1|')
+
+    stgs[0].SetWriteId(7)
+    self.assertEqual(stgs[0].GetWriteId(), 7)
+    self.assertEqual(Chem.MolToCXSmiles(m), 'C[C@H](O)Cl |o7:1|')
+
+    # ids are forwarded to copies of the mol
+    m2 = Chem.RWMol(m)
+    self.assertIsNotNone(m2)
+
+    stgs2 = m2.GetStereoGroups()
+    self.assertEqual(len(stgs), 1)
+    self.assertEqual(stgs2[0].GetGroupType(), Chem.StereoGroupType.STEREO_OR)
+    self.assertEqual(stgs2[0].GetReadId(), 5)
+    self.assertEqual(stgs2[0].GetWriteId(), 7)
+
+    self.assertEqual(Chem.MolToCXSmiles(m2), 'C[C@H](O)Cl |o7:1|')
+
+    # Forwardings the ids overrides the WriteId
+    Chem.ForwardStereoGroupIds(m)
+    self.assertEqual(stgs[0].GetWriteId(), 5)
+    self.assertEqual(Chem.MolToCXSmiles(m), 'C[C@H](O)Cl |o5:1|')
+
+    # the copy mol is not affected
+    self.assertEqual(stgs2[0].GetWriteId(), 7)
+
   def testSubstructParametersBundles(self):
     b = Chem.MolBundle()
     smis = ('C[C@](F)(Cl)O', 'C[C@](Br)(Cl)O', 'C[C@](I)(Cl)O')
@@ -5605,6 +5657,46 @@ M  END
     self.assertEqual(b.GetSubstructMatches(b, ps), ((0, 1, 2, 3, 4), ))
     self.assertEqual(b.GetSubstructMatches(b2, ps), ())
     self.assertEqual(b2.GetSubstructMatches(b, ps), ())
+
+  def testSubstructMatchAtomProperties(self):
+    m = Chem.MolFromSmiles("CCCCCCCCC")
+    query = Chem.MolFromSmiles("CCC")
+    m.GetAtomWithIdx(0).SetProp("test_prop", "1")
+    query.GetAtomWithIdx(0).SetProp("test_prop", "1")
+    ps = Chem.SubstructMatchParameters()
+    ps.atomProperties = ["test_prop"]
+
+    self.assertEqual(len(m.GetSubstructMatches(query)), 7)
+    self.assertEqual(len(m.GetSubstructMatches(query, ps)), 1)
+
+    # more than one property works as well
+    m.GetAtomWithIdx(1).SetProp("test_prop2", "1")
+    query.GetAtomWithIdx(1).SetProp("test_prop2", "1")
+    ps.atomProperties = ["test_prop", "test_prop2"]
+    self.assertEqual(len(m.GetSubstructMatches(query, ps)), 1)
+
+  def testSubstructMatchBondProperties(self):
+    m = Chem.MolFromSmiles("CCCCCCCCC")
+    query = Chem.MolFromSmiles("CCC")
+    m.GetBondWithIdx(0).SetProp("test_prop", "1")
+    query.GetBondWithIdx(0).SetProp("test_prop", "1")
+    ps = Chem.SubstructMatchParameters()
+    ps.bondProperties = ["test_prop"]
+
+    self.assertEqual(len(m.GetSubstructMatches(query)), 7)
+    self.assertEqual(len(m.GetSubstructMatches(query, ps)), 1)
+
+    # more than one property works as well
+    m.GetBondWithIdx(1).SetProp("test_prop2", "1")
+    query.GetBondWithIdx(1).SetProp("test_prop2", "1")
+    ps.bondProperties = ["test_prop", "test_prop2"]
+    self.assertEqual(len(m.GetSubstructMatches(query, ps)), 1)
+
+    # atom and bond properties work together
+    m.GetAtomWithIdx(0).SetProp("test_prop", "1")
+    query.GetAtomWithIdx(0).SetProp("test_prop", "1")
+    ps.atomProperties = ["test_prop"]
+    self.assertEqual(len(m.GetSubstructMatches(query, ps)), 1)
 
   def testGithub2285(self):
     fileN = os.path.join(RDConfig.RDBaseDir, 'Code', 'GraphMol', 'FileParsers', 'test_data',
@@ -6468,6 +6560,8 @@ M  END
     self.assertEqual(len(ctrs), 2)
     self.assertEqual(ctrs, [(1, 'S'), (5, '?')])
 
+  @unittest.skipUnless(hasattr(Chem,'MolFromPNGFile'),
+                     "RDKit not built with iostreams support")
   def testMolFromPNG(self):
     fileN = os.path.join(RDConfig.RDBaseDir, 'Code', 'GraphMol', 'FileParsers', 'test_data',
                          'colchicine.png')
@@ -6481,6 +6575,8 @@ M  END
     self.assertIsNotNone(mol)
     self.assertEqual(mol.GetNumAtoms(), 29)
 
+  @unittest.skipUnless(hasattr(Chem,'MolFromPNGFile'),
+                     "RDKit not built with iostreams support")
   def testMolToPNG(self):
     fileN = os.path.join(RDConfig.RDBaseDir, 'Code', 'GraphMol', 'FileParsers', 'test_data',
                          'colchicine.no_metadata.png')
@@ -6501,6 +6597,8 @@ M  END
     self.assertIsNotNone(mol)
     self.assertEqual(mol.GetNumAtoms(), 29)
 
+  @unittest.skipUnless(hasattr(Chem,'MolFromPNGFile'),
+                     "RDKit not built with iostreams support")
   def testMolsFromPNG(self):
     refMols = [Chem.MolFromSmiles(x) for x in ('c1ccccc1', 'CCO', 'CC(=O)O', 'c1ccccn1')]
     fileN = os.path.join(RDConfig.RDBaseDir, 'Code', 'GraphMol', 'FileParsers', 'test_data',
@@ -6510,6 +6608,8 @@ M  END
     for mol, refMol in zip(mols, refMols):
       self.assertEqual(Chem.MolToSmiles(mol), Chem.MolToSmiles(refMol))
 
+  @unittest.skipUnless(hasattr(Chem,'MolFromPNGFile'),
+                     "RDKit not built with iostreams support")
   def testMetadataToPNG(self):
     fileN = os.path.join(RDConfig.RDBaseDir, 'Code', 'GraphMol', 'FileParsers', 'test_data',
                          'colchicine.png')
@@ -7254,6 +7354,48 @@ CAS<~>
 
     self.assertEqual(sgs[1].GetGroupType(), Chem.StereoGroupType.STEREO_OR)
     self.assertEqual(len(sgs[1].GetAtoms()), 1)
+
+  def testHasQueryHs(self):
+    for sma, hasQHs in [
+        ("[#1]", (True, False)),
+        ("[#1,N]", (True, True)),
+        ("[$(C-[H])]", (True, False)),
+        ("[$([C,#1])]", (True, True)),
+        ("[$(c([C;!R;!$(C-[N,O,S]);!$(C-[H])](=O))1naaaa1),$(c([C;!R;!$(C-[N,O,S]);!$(C-[H])](=O))1naa[n,s,o]1)]",
+         (True, False))]:
+      pat = Chem.MolFromSmarts(sma)
+      self.assertEqual(Chem.HasQueryHs(pat), hasQHs)
+
+  def testMolHasQuery(self):
+    m1 = Chem.MolFromSmiles("CCO")
+    self.assertFalse(m1.HasQuery())
+
+    m2 = Chem.MolFromSmarts("[#6][#6][#8]")
+    self.assertTrue(m2.HasQuery())
+
+    m3 = Chem.MolFromSmiles("CC~O")
+    self.assertTrue(m3.HasQuery())
+
+  def testMrvHandling(self):
+    fn1 = os.path.join(RDConfig.RDBaseDir,'Code','GraphMol','MarvinParse','test_data','aspirin.mrv')
+    mol = Chem.MolFromMrvFile(fn1)
+    self.assertIsNotNone(mol)
+    self.assertEqual(mol.GetNumAtoms(),13)
+    mrv = Chem.MolToMrvBlock(mol)
+    self.assertTrue('<molecule molID="m1">' in mrv)
+    self.assertFalse('<reaction>' in mrv)
+
+    fName = tempfile.NamedTemporaryFile(suffix='.mrv').name
+    self.assertFalse(os.path.exists(fName))
+    Chem.MolToMrvFile(mol,fName)
+    self.assertTrue(os.path.exists(fName))
+    os.unlink(fName)
+
+    with open(fn1,'r') as inf:
+      ind = inf.read()
+    mol = Chem.MolFromMrvBlock(ind)
+    self.assertIsNotNone(mol)
+    self.assertEqual(mol.GetNumAtoms(),13)
 
 
 if __name__ == '__main__':

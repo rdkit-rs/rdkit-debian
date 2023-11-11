@@ -140,10 +140,6 @@ StereoInfo getStereoInfo(const Bond *bond) {
     bool seenSquiggleBond = false;
     const auto &mol = bond->getOwningMol();
 
-    if (beginAtom->getDegree() == 1 || endAtom->getDegree() == 1) {
-      seenSquiggleBond = true;
-    }
-
     auto explore_bond_end = [&mol, &bond, &sinfo,
                              &seenSquiggleBond](const Atom *atom) {
       for (const auto nbr : mol.atomBonds(atom)) {
@@ -224,6 +220,8 @@ StereoInfo getStereoInfo(const Bond *bond) {
         default:
           UNDER_CONSTRUCTION("unrecognized bond stereo type");
       }
+    } else {
+      sinfo.specified = Chirality::StereoSpecified::Unspecified;
     }
   } else {
     UNDER_CONSTRUCTION("unsupported bond type in getStereoInfo()");
@@ -770,6 +768,20 @@ bool updateBonds(ROMol &mol, const std::vector<unsigned int> &aranks,
       auto sinfo = detail::getStereoInfo(bond);
       ASSERT_INVARIANT(sinfo.controllingAtoms.size() == 4,
                        "bad controlling atoms size");
+
+      if ((sinfo.controllingAtoms[0] == Chirality::StereoInfo::NOATOM &&
+           sinfo.controllingAtoms[1] == Chirality::StereoInfo::NOATOM) ||
+          (sinfo.controllingAtoms[2] == Chirality::StereoInfo::NOATOM &&
+           sinfo.controllingAtoms[3] == Chirality::StereoInfo::NOATOM)) {
+        // we have a bond with no neighbors on one side, which means it must
+        // have a single implicit H on that side. Since the H is implicit,
+        // there is no way to know whether it is cis or trans. It must either be
+        // unspecified (no information) or explicitly marked as unknown.
+        ASSERT_INVARIANT(sinfo.specified != StereoSpecified::Specified,
+                         "stereo bond without neighbors cannot be specified");
+        fixedBonds.set(bidx);
+      }
+
       if (fixedBonds[bidx]) {
         sinfos.push_back(std::move(sinfo));
       } else {
@@ -1057,7 +1069,6 @@ std::vector<StereoInfo> runCleanup(ROMol &mol, bool flagPossible,
     }
   }
   delete[] atomOrder;
-  Canon::detail::freeCanonAtoms(canonAtoms);
   return res;
 }
 }  // namespace
