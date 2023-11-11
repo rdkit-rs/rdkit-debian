@@ -309,6 +309,18 @@ RDKIT_GRAPHMOL_EXPORT void mergeQueryHs(RWMol &mol,
                                         bool mergeUnmappedOnly = false,
                                         bool mergeIsotopes = false);
 
+//! returns a pair of booleans (hasQueryHs, hasUnmergaebleQueryHs)
+/*!
+  This is really intended to be used with molecules that contain QueryAtoms
+  such as when checking smarts patterns for explicit hydrogens
+   
+
+  \param mol the molecule to check for query Hs from
+  \return std::pair  if pair.first is true if the molecule has query hydrogens, if pair.second
+                     is true, the queryHs cannot be removed my mergeQueryHs
+*/
+RDKIT_GRAPHMOL_EXPORT std::pair<bool,bool> hasQueryHs(const ROMol &mol);
+
 typedef enum {
   ADJUST_IGNORENONE = 0x0,
   ADJUST_IGNORECHAINS = 0x1,
@@ -376,6 +388,7 @@ struct RDKIT_GRAPHMOL_EXPORT AdjustQueryParameters {
   bool adjustSingleBondsBetweenAromaticAtoms =
       false; /**<  sets non-ring single bonds between two aromatic or conjugated
                 atoms to SINGLE|AROMATIC */
+
   //! \brief returns an AdjustQueryParameters object with all adjustments
   //! disabled
   static AdjustQueryParameters noAdjustments() {
@@ -441,6 +454,7 @@ typedef enum {
   SANITIZE_SETHYBRIDIZATION = 0x80,
   SANITIZE_CLEANUPCHIRALITY = 0x100,
   SANITIZE_ADJUSTHS = 0x200,
+  SANITIZE_CLEANUP_ORGANOMETALLICS = 0x400,
   SANITIZE_ALL = 0xFFFFFFF
 } SanitizeFlags;
 

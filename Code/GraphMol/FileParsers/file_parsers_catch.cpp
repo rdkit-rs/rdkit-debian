@@ -2498,6 +2498,7 @@ M  END
   }
 }
 
+#ifdef RDK_USE_BOOST_IOSTREAMS
 TEST_CASE("read metadata from PNG", "[reader][PNG]") {
   std::string rdbase = getenv("RDBASE");
   SECTION("basics") {
@@ -2551,7 +2552,6 @@ TEST_CASE("read metadata from PNG", "[reader][PNG]") {
     REQUIRE_THROWS_AS(PNGStringToMetadata(data.substr(1000)),
                       FileParseException);
   }
-#ifdef RDK_USE_BOOST_IOSTREAMS
   SECTION("compressed metadata") {
     std::string fname =
         rdbase + "/Code/GraphMol/FileParsers/test_data/colchicine.mrv.png";
@@ -2564,7 +2564,6 @@ TEST_CASE("read metadata from PNG", "[reader][PNG]") {
     REQUIRE(iter != metadata.end());
     CHECK(iter->second.find("<MChemicalStruct>") != std::string::npos);
   }
-#endif
 }
 
 TEST_CASE("write metadata to PNG", "[writer][PNG]") {
@@ -2625,6 +2624,7 @@ TEST_CASE("read molecule from PNG", "[reader][PNG]") {
     REQUIRE_THROWS_AS(PNGFileToMol(fname), FileParseException);
   }
 }
+#endif
 
 TEST_CASE("write molecule to PNG", "[writer][PNG]") {
   std::string rdbase = getenv("RDBASE");
@@ -2740,6 +2740,7 @@ TEST_CASE("multiple molecules in the PNG, second example", "[writer][PNG]") {
   for (const auto &smi : smiles) {
     mols.emplace_back(SmilesToMol(smi));
   }
+#ifdef RDK_USE_BOOST_IOSTREAMS
   SECTION("pickles") {
     std::string fname =
         rdbase + "/Code/GraphMol/FileParsers/test_data/multiple_mols.png";
@@ -2750,6 +2751,7 @@ TEST_CASE("multiple molecules in the PNG, second example", "[writer][PNG]") {
       CHECK(MolToSmiles(*molsRead[i]) == MolToSmiles(*mols[i]));
     }
   }
+#endif
   SECTION("SMILES") {
     std::vector<std::pair<std::string, std::string>> metadata;
     for (const auto &mol : mols) {
@@ -5019,16 +5021,16 @@ M  END
 )CTAB"_ctab;
     REQUIRE(m);
     CHECK(m->getBondWithIdx(2)->getBondDir() == Bond::BondDir::NONE);
-    reapplyMolBlockWedging(*m);
+    Chirality::reapplyMolBlockWedging(*m);
     CHECK(m->getBondWithIdx(2)->getBondDir() == Bond::BondDir::BEGINWEDGE);
-    invertMolBlockWedgingInfo(*m);
-    reapplyMolBlockWedging(*m);
+    Chirality::invertMolBlockWedgingInfo(*m);
+    Chirality::reapplyMolBlockWedging(*m);
     CHECK(m->getBondWithIdx(2)->getBondDir() == Bond::BondDir::BEGINDASH);
-    invertMolBlockWedgingInfo(*m);
-    reapplyMolBlockWedging(*m);
+    Chirality::invertMolBlockWedgingInfo(*m);
+    Chirality::reapplyMolBlockWedging(*m);
     CHECK(m->getBondWithIdx(2)->getBondDir() == Bond::BondDir::BEGINWEDGE);
-    clearMolBlockWedgingInfo(*m);
-    reapplyMolBlockWedging(*m);
+    Chirality::clearMolBlockWedgingInfo(*m);
+    Chirality::reapplyMolBlockWedging(*m);
     CHECK(m->getBondWithIdx(2)->getBondDir() == Bond::BondDir::NONE);
   }
   SECTION("GitHub5448") {
@@ -5076,7 +5078,7 @@ M  END)CTAB"_ctab;
       WedgeMolBonds(*m, &m->getConformer());
       CHECK(m->getBondWithIdx(10)->getBondDir() == Bond::BondDir::BEGINWEDGE);
       CHECK(m->getBondWithIdx(11)->getBondDir() == Bond::BondDir::NONE);
-      reapplyMolBlockWedging(*m);
+      Chirality::reapplyMolBlockWedging(*m);
       CHECK(m->getBondWithIdx(10)->getBondDir() == Bond::BondDir::NONE);
       CHECK(m->getBondWithIdx(11)->getBondDir() == Bond::BondDir::BEGINWEDGE);
     }
@@ -5328,7 +5330,7 @@ M  V30 BEGIN CTAB
 M  V30 COUNTS 2 1 0 0 0
 M  V30 BEGIN ATOM
 M  V30 1 C 0.5 6.0833 0 0
-M  V30 2 ARY 1.8337 6.8533 0 0
+M  V30 2 QQQ 1.8337 6.8533 0 0
 M  V30 END ATOM
 M  V30 BEGIN BOND
 M  V30 1 1 1 2
@@ -5353,7 +5355,7 @@ M  END
 
   2  1  0  0  0  0            999 V2000
    -1.5625    1.6071    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
-   -0.8480    2.0196    0.0000 ARY 0  0  0  0  0  0  0  0  0  0  0  0
+   -0.8480    2.0196    0.0000 QQQ 0  0  0  0  0  0  0  0  0  0  0  0
   1  2  1  0  0  0  0
 M  END
       )CTAB";
@@ -6378,9 +6380,11 @@ f_m_ct {
     CHECK_THROWS_AS(supplier.next(), FileParseException);
   }
 }
+#endif
+
 TEST_CASE("Chained bond stereo and wiggly bonds") {
-    SECTION("github6434") {
-        std::string molblock = R"CTAB(
+  SECTION("github6434") {
+    std::string molblock = R"CTAB(
   Mrv2004 07102311132D
 
  10  9  0  0  0  0            999 V2000
@@ -6405,11 +6409,331 @@ TEST_CASE("Chained bond stereo and wiggly bonds") {
   8 10  1  0  0  0  0
 M  END
   )CTAB";
-        std::unique_ptr<RWMol> m;
-        m.reset(MolBlockToMol(molblock));
-        REQUIRE(m);
-        CHECK(m->getNumAtoms() == 8);
-}
+    std::unique_ptr<RWMol> m;
+    m.reset(MolBlockToMol(molblock));
+    REQUIRE(m);
+    CHECK(m->getNumAtoms() == 8);
+  }
 }
 
-#endif
+TEST_CASE("StereoGroup id forwarding", "[StereoGroup][ctab]") {
+  auto m = "C[C@@H](O)[C@H](C)[C@@H](C)[C@@H](C)O |&7:3,o1:7,&8:1,&9:5|"_smiles;
+  REQUIRE(m);
+  CHECK(m->getStereoGroups().size() == 4);
+
+  SECTION("ids reassigned by default") {
+    const auto mb_out = MolToMolBlock(*m);
+    CHECK(mb_out.find("M  V30 MDLV30/STERAC1") != std::string::npos);
+    CHECK(mb_out.find("M  V30 MDLV30/STERAC2") != std::string::npos);
+    CHECK(mb_out.find("M  V30 MDLV30/STERAC3") != std::string::npos);
+    CHECK(mb_out.find("M  V30 MDLV30/STEREL1") != std::string::npos);
+  }
+
+  SECTION("forward input ids") {
+    forwardStereoGroupIds(*m);
+    const auto mb_out = MolToMolBlock(*m);
+    CHECK(mb_out.find("M  V30 MDLV30/STERAC7") != std::string::npos);
+    CHECK(mb_out.find("M  V30 MDLV30/STERAC8") != std::string::npos);
+    CHECK(mb_out.find("M  V30 MDLV30/STERAC9") != std::string::npos);
+    CHECK(mb_out.find("M  V30 MDLV30/STEREL1") != std::string::npos);
+  }
+}
+
+TEST_CASE(
+    "GitHub issue #6664: Mol file parser strips stereogenic H from imine bonds",
+    "[reader]") {
+  SECTION("mol file") {
+    auto mol = R"CTAB(
+                    2D
+
+  7  7  0  0  0  0  0  0  0  0999 V2000
+   -5.6250    1.1481    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -6.2924    0.6631    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -6.0375   -0.1214    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -5.2125   -0.1214    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.9576    0.6631    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.1729    0.9181    0.0000 N   0  0  0  0  0  0  0  0  0  0  0  0
+   -4.0014    1.7250    0.0000 H   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  2  3  1  0  0  0  0
+  1  5  1  0  0  0  0
+  5  6  2  0  0  0  0
+  6  7  1  0  0  0  0
+  3  4  1  0  0  0  0
+  4  5  1  0  0  0  0
+M  END
+  )CTAB"_ctab;
+    REQUIRE(mol);
+    CHECK(mol->getNumAtoms() == 7);
+
+    auto dblBond = mol->getBondWithIdx(3);
+    REQUIRE(dblBond->getBondType() == Bond::DOUBLE);
+    CHECK(dblBond->getStereo() == Bond::STEREOE);
+  }
+  SECTION("mol2 file") {
+    auto mol = R"MOL2(
+@<TRIPOS>MOLECULE
+title: molecule 1
+7   7    1
+SMALL
+USER_CHARGES
+
+
+@<TRIPOS>ATOM
+      1 C1         -5.6250    1.1481    0.0000 C.3       1 UNK         0.0000 
+      2 C2         -6.2924    0.6631    0.0000 C.3       1 UNK         0.0000 
+      3 C3         -6.0375   -0.1214    0.0000 C.3       1 UNK         0.0000 
+      4 O4         -5.2125   -0.1214    0.0000 O.3       1 UNK         0.0000 
+      5 C5         -4.9576    0.6631    0.0000 C.2       1 UNK         0.0000 
+      6 N6         -4.1729    0.9181    0.0000 N.2       1 UNK         0.0000 
+      7 H7         -4.0014    1.7250    0.0000 H         1 UNK         0.0000 
+@<TRIPOS>BOND
+     1    1    2 1    
+     2    1    5 1    
+     3    2    3 1    
+     4    3    4 1    
+     5    4    5 1    
+     6    5    6 2    
+     7    6    7 1    
+  )MOL2"_mol2;
+    REQUIRE(mol);
+    CHECK(mol->getNumAtoms() == 7);
+
+    auto dblBond = mol->getBondWithIdx(5);
+    REQUIRE(dblBond->getBondType() == Bond::DOUBLE);
+    CHECK(dblBond->getStereo() == Bond::STEREOE);
+  }
+}
+
+TEST_CASE(
+    "z coordinate tolerance in flat structures"
+    "[bug][molblock]") {
+  const auto mol = R"CTAB(
+     RDKit          2D
+
+  4  3  0  0  0  0  0  0  0  0999 V2000
+    0.0000    0.0000    0.0010 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.2990    0.7500    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.5981   -0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    1.2990    2.2500    0.0000 S   0  0  0  0  0  0  0  0  0  0  0  0
+  2  1  1  1
+  2  3  1  0
+  2  4  1  0
+M  END
+)CTAB"_ctab;
+  REQUIRE(mol);
+  REQUIRE(mol->getNumConformers() == 1);
+
+  auto conf = mol->getConformer();
+  CHECK(!conf.is3D());
+
+  CHECK(mol->getAtomWithIdx(1)->getChiralTag() ==
+        Atom::ChiralType::CHI_TETRAHEDRAL_CCW);
+}
+
+TEST_CASE("Calculate 2D/3D from coordinates", "[molblock]") {
+  SECTION("v2000, 2D structure marked as 3D without 2D stereo marks") {
+    const auto mol = R"CTAB(
+     RDKit          3D
+
+  4  3  0  0  0  0  0  0  0  0999 V2000
+    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.2990    0.7500    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.5981   -0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    1.2990    2.2500    0.0000 S   0  0  0  0  0  0  0  0  0  0  0  0
+  2  1  1
+  2  3  1
+  2  4  1
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    REQUIRE(mol->getNumConformers() == 1);
+
+    auto conf = mol->getConformer();
+    CHECK(conf.is3D());
+
+    CHECK(mol->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_UNSPECIFIED);
+  }
+
+  SECTION("v2000, 2D structure marked as 3D with 2D stereo marks") {
+    const auto mol = R"CTAB(
+     RDKit          3D
+
+  4  3  0  0  0  0  0  0  0  0999 V2000
+    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.2990    0.7500    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.5981   -0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0
+    1.2990    2.2500    0.0000 S   0  0  0  0  0  0  0  0  0  0  0  0
+  2  1  1  1
+  2  3  1  0
+  2  4  1  0
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    REQUIRE(mol->getNumConformers() == 1);
+
+    auto conf = mol->getConformer();
+    CHECK(!conf.is3D());
+
+    CHECK(mol->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_TETRAHEDRAL_CCW);
+  }
+
+  SECTION("v2000, 3D structure marked as 2D") {
+    const auto mol = R"CTAB(
+     RDKit          2D
+
+  4  3  0  0  0  0  0  0  0  0999 V2000
+   -0.0017    0.0135    0.0027 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.8238    0.0150    0.0040 C   0  0  0  0  0  0  0  0  0  0  0  0
+    1.0881   -0.3228    0.6346 O   0  0  0  0  0  0  0  0  0  0  0  0
+    1.1772    0.9156   -0.0296 S   0  0  0  0  0  0  0  0  0  0  0  0
+  2  1  1
+  2  3  1
+  2  4  1
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    REQUIRE(mol->getNumConformers() == 1);
+
+    auto conf = mol->getConformer();
+    CHECK(conf.is3D());
+
+    CHECK(mol->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_TETRAHEDRAL_CCW);
+  }
+
+  SECTION("v3000, 2D structure marked as 3D without 2D stereo marks") {
+    const auto mol = R"CTAB(
+     RDKit          3D
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 4 3 0 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C 1.0912 0.945 0 0
+M  V30 2 C 2.4248 1.715 0 0
+M  V30 3 O 3.7586 0.945 0 0
+M  V30 4 S 2.4248 3.255 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 2 1
+M  V30 2 1 2 3
+M  V30 3 1 2 4
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    REQUIRE(mol->getNumConformers() == 1);
+
+    auto conf = mol->getConformer();
+    CHECK(conf.is3D());
+
+    CHECK(mol->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_UNSPECIFIED);
+  }
+
+  SECTION("v3000, 2D structure marked as 3D with 2D stereo marks") {
+    const auto mol = R"CTAB(
+     RDKit          3D
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 4 3 0 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C 1.0912 0.945 0 0
+M  V30 2 C 2.4248 1.715 0 0 CFG=2
+M  V30 3 O 3.7586 0.945 0 0
+M  V30 4 S 2.4248 3.255 0 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 2 1 CFG=1
+M  V30 2 1 2 3
+M  V30 3 1 2 4
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    REQUIRE(mol->getNumConformers() == 1);
+
+    auto conf = mol->getConformer();
+    CHECK(!conf.is3D());
+
+    CHECK(mol->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_TETRAHEDRAL_CCW);
+  }
+
+  SECTION("v3000, 3D structure marked as 2D") {
+    const auto mol = R"CTAB(
+     RDKit          2D
+
+  0  0  0     0  0            999 V3000
+M  V30 BEGIN CTAB
+M  V30 COUNTS 4 3 0 0 0
+M  V30 BEGIN ATOM
+M  V30 1 C -0.0033 0.0252 0.0052 0
+M  V30 2 C 1.5379 0.028 0.0075 0 CFG=2
+M  V30 3 O 2.0313 -0.6027 1.1846 0
+M  V30 4 S 2.1975 1.7092 -0.0554 0
+M  V30 END ATOM
+M  V30 BEGIN BOND
+M  V30 1 1 2 1
+M  V30 2 1 2 3
+M  V30 3 1 2 4
+M  V30 END BOND
+M  V30 END CTAB
+M  END
+)CTAB"_ctab;
+    REQUIRE(mol);
+    REQUIRE(mol->getNumConformers() == 1);
+
+    auto conf = mol->getConformer();
+    CHECK(conf.is3D());
+
+    CHECK(mol->getAtomWithIdx(1)->getChiralTag() ==
+          Atom::ChiralType::CHI_TETRAHEDRAL_CCW);
+  }
+}
+
+TEST_CASE(
+    "GitHub Issue #6703: Exporting to mol marks imine bonds EITHERDOUBLE when imine H is implicit",
+    "[bug][writer][stereo]") {
+  auto m = "NC(O)=N"_smiles;
+  REQUIRE(m);
+  REQUIRE(m->getNumAtoms() == 4);
+  auto bond = m->getBondWithIdx(2);
+  REQUIRE(bond->getBondType() == Bond::DOUBLE);
+  REQUIRE(bond->getStereo() == Bond::BondStereo::STEREONONE);
+  REQUIRE(bond->getBondDir() == Bond::BondDir::NONE);
+
+  std::string molblock;
+  SECTION("v2000") {
+    molblock = MolToMolBlock(*m);
+    REQUIRE(molblock.find("  4  3  0  0  0  0  0  0  0  0999 V2000") !=
+            std::string::npos);
+
+    // There must be a double bond, but it must not be marked as either
+    REQUIRE(molblock.find("  2  4  2") != std::string::npos);
+    CHECK(molblock.find("  2  4  2  3") == std::string::npos);
+  }
+  SECTION("v3000") {
+    molblock = MolToV3KMolBlock(*m);
+    REQUIRE(molblock.find("M  V30 COUNTS 4 3 0 0 0") != std::string::npos);
+
+    // There must be a double bond, but it must not be marked as either
+    REQUIRE(molblock.find("M  V30 3 2 2 4") != std::string::npos);
+    CHECK(molblock.find("CFG=2") == std::string::npos);
+  }
+
+  std::unique_ptr<ROMol> m2{MolBlockToMol(molblock)};
+  REQUIRE(m2);
+  REQUIRE(m2->getNumAtoms() == 4);
+
+  auto bond2 = m2->getBondWithIdx(2);
+  REQUIRE(bond2->getBondType() == Bond::DOUBLE);
+  CHECK(bond2->getStereo() == Bond::BondStereo::STEREONONE);
+  CHECK(bond2->getBondDir() == Bond::BondDir::NONE);
+}

@@ -500,7 +500,7 @@ Here are the non-element atom queries that are supported:
   - A: any heavy atom
   - Q: any non-carbon heavy atom
   - \*: unspecfied (interpreted as any atom)
-  - L: (v2000): atom list
+  - L: (V2000): atom list
   - AH: (ChemAxon Extension) any atom
   - QH: (ChemAxon Extension) any non-carbon atom
   - X: (ChemAxon Extension) halogen
@@ -514,6 +514,7 @@ Here's a partial list of the features that are supported:
   - enhanced stereochemistry (V3000 only)
   - Sgroups: Sgroups are read and written, but interpretation of their contents is still very much
     a work in progress
+  - Dative bonds in V2000 (type 9), despite them not being part of the standard, we support them because they frequently show up in real-world data
 
 Ring Finding and SSSR
 =====================
@@ -1546,21 +1547,40 @@ Here's an example of using the features:
 Here are the supported groups and a brief description of what they mean:
 
  ========================   =========
-  Alkyl (ALK)               alkyl side chains
-  Alkenyl (AEL)             alkenyl side chains                
+  Alkyl (ALK)               alkyl side chains (not an H atom)
+  AlkylH (ALH)              alkyl side chains including an H atom
+  Alkenyl (AEL)             alkenyl side chains      
+  AlkenylH (AEH)            alkenyl side chains or an H atom 
   Alkynyl (AYL)             alkynyl side chains               
-  Alkoxy (AOX)              alkoxy side chains                
-  Carbocyclic (CBC)         carbocyclic side chains                
+  AlkynylH (AYH)            alkynyl side chains or an H atom
+  Alkoxy (AOX)              alkoxy side chains           
+  AlkoxyH (AOH)             alkoxy side chains or an H atom
+  Carbocyclic (CBC)         carbocyclic side chains
+  CarbocyclicH (CBH)        carbocyclic side chains or an H atom
   Carbocycloalkyl (CAL)     cycloalkyl side chains
+  CarbocycloalkylH (CAH)    cycloalkyl side chains or an H atom
   Carbocycloalkenyl (CEL)   cycloalkenyl side chains
+  CarbocycloalkenylH (CEH)  cycloalkenyl side chains or an H atom
   Carboaryl (ARY)           all-carbon aryl side chains
+  CarboarylH (ARH)          all-carbon aryl side chains or an H atom
   Cyclic (CYC)              cyclic side chains
-  Acyclic(ACY)              acyclic side chains
+  CyclicH (CYH)             cyclic side chains or an H atom
+  Acyclic(ACY)              acyclic side chains (not an H atom)
+  AcyclicH (ACH)            acyclic side chains or an H atom
   Carboacyclic (ABC)        all-carbon acyclic side chains
+  CarboacyclicH (ABH)       all-carbon acyclic side chains or an H atom
   Heteroacyclic (AHC)       acyclic side chains with at least one heteroatom
+  HeteroacyclicH (AHH)      acyclic side chains with at least one heteroatom or an H atom
   Heterocyclic (CHC)        cyclic side chains with at least one heteroatom
+  HeterocyclicH (CHH)       cyclic side chains with at least one heteroatom or an H atom
   Heteroaryl (HAR)          aryl side chains with at least one heteroatom
+  HeteroarylH (HAH)         aryl side chains with at least one heteroatom or an H atom
   NoCarbonRing (CXX)        ring containing no carbon atoms
+  NoCarbonRingH (CXH)       ring containing no carbon atoms or an H atom
+  Group (G)                 any group (not H atom)
+  GroupH (GH)               any group (including H atom)
+  Group* (G*)               any group with a ring closure
+  GroupH* (GH*)             any group with a ring closure or an H atom
  ========================   =========
  
 For more detailed descriptions, look at the documentation for the C++ file GenericGroups.h
@@ -1603,38 +1623,44 @@ Here are the steps involved, in order.
         Example: ``O=Cl(=O)O -> [O-][Cl+2][O-]O``
 
      This step should not generate exceptions.
+  3. ``cleanUpOrganometallics``: standardizes a small number of non-standard
+     situations encountered in organometallics. The cleanup operations are:
 
-  3. ``updatePropertyCache``: calculates the explicit and implicit valences on
+       - replaces single bonds from hypervalent atoms to metals with dative bonds.
+
+     This step should not generate exceptions.
+
+  4. ``updatePropertyCache``: calculates the explicit and implicit valences on
      all atoms. This generates exceptions for atoms in higher-than-allowed
      valence states. This step is always performed, but if it is "skipped"
      the test for non-standard valences will not be carried out.
 
-  4. ``symmetrizeSSSR``: calls the symmetrized smallest set of smallest rings
+  5. ``symmetrizeSSSR``: calls the symmetrized smallest set of smallest rings
      algorithm (discussed in the Getting Started document).
 
-  5. ``Kekulize``: converts aromatic rings to their Kekule form. Will raise an
+  6. ``Kekulize``: converts aromatic rings to their Kekule form. Will raise an
      exception if a ring cannot be kekulized or if aromatic bonds are found
      outside of rings.
 
-  6. ``assignRadicals``: determines the number of radical electrons (if any) on
+  7. ``assignRadicals``: determines the number of radical electrons (if any) on
      each atom.
 
-  7. ``setAromaticity``: identifies the aromatic rings and ring systems
+  8. ``setAromaticity``: identifies the aromatic rings and ring systems
      (see above), sets the aromatic flag on atoms and bonds, sets bond orders
      to aromatic.
 
-  8. ``setConjugation``: identifies which bonds are conjugated
+  9. ``setConjugation``: identifies which bonds are conjugated
 
-  9. ``setHybridization``: calculates the hybridization state of each atom
+  10. ``setHybridization``: calculates the hybridization state of each atom
 
-  10. ``cleanupChirality``: removes chiral tags from atoms that are not sp3
+  11. ``cleanupChirality``: removes chiral tags from atoms that are not sp3
       hybridized.
 
-  11. ``adjustHs``: adds explicit Hs where necessary to preserve the chemistry.
+  12. ``adjustHs``: adds explicit Hs where necessary to preserve the chemistry.
       This is typically needed for heteroatoms in aromatic rings. The classic
       example is the nitrogen atom in pyrrole.
 
-  12. ``updatePropertyCache``: re-calculates the explicit and implicit valences on
+  13. ``updatePropertyCache``: re-calculates the explicit and implicit valences on
      all atoms. This generates exceptions for atoms in higher-than-allowed
      valence states. This step is required to catch some edge cases where input 
      atoms with non-physical valences are accepted if they are flagged as aromatic.
