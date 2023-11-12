@@ -1,5 +1,7 @@
---- ./Code/PgSQL/rdkit/Makefile.orig	2023-11-11 11:37:57.423212653 +0100
-+++ ./Code/PgSQL/rdkit/Makefile	2023-11-11 11:39:46.810935208 +0100
+Index: rdkit/Code/PgSQL/rdkit/Makefile
+===================================================================
+--- rdkit.orig/Code/PgSQL/rdkit/Makefile
++++ rdkit/Code/PgSQL/rdkit/Makefile
 @@ -10,9 +10,8 @@
  #STATIC_LINK=1
  # -------------------------
@@ -11,7 +13,7 @@
  
  ifeq ($(USE_INCHI),1)
    INCHILIBS=-lRDKitRDInchiLib -lRDKitInchi
-@@ -26,18 +25,17 @@
+@@ -26,18 +25,17 @@ ifeq ($(USE_AVALON),1)
    AVALONREGRESS=avalon
  endif
  
@@ -33,7 +35,7 @@
  endif
  
  ifndef BOOSTHOME
-@@ -47,7 +45,7 @@
+@@ -47,7 +45,7 @@ SHLIB_LINK += -pthread
  
  SHLIB_LINK += ${THREADLIBS}
  
@@ -42,7 +44,7 @@
  
  CPLUSPLUSFLAGS = $(filter-out -fexcess-precision=standard -Wmissing-prototypes -Wdeclaration-after-statement, $(CFLAGS))
  CPLUSPLUSFLAGS += -Wno-unused-function
-@@ -56,7 +54,7 @@
+@@ -56,16 +54,31 @@ CPLUSPLUSFLAGS += $(PG_CPPFLAGS)
  CPLUSPLUSFLAGS := $(filter-out -fexcess-precision=standard,$(CPLUSPLUSFLAGS))
  
  EXTENSION  = rdkit
@@ -51,9 +53,25 @@
  PG_CONFIG  = pg_config
  MODULE_big = rdkit
  OBJS       = rdkit_io.o mol_op.o bfp_op.o sfp_op.o rxn_op.o rdkit_gist.o bfp_gist.o bfp_gin.o low_gist.o guc.o cache.o adapter.o bitstring.o
-@@ -65,7 +63,7 @@
+ PGXS       := $(shell $(PG_CONFIG) --pgxs)
++PGVER := $(shell $(PG_CONFIG) --version | sed 's/[^0-9]//g' | cut -c 1-2)
+ 
  all: $(EXTENSION)--$(EXTVERSION).sql
  
++ifeq ($(shell test $(PGVER) -gt 13; echo $$?),0)
++$(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
++	sed -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@/FUNCTION    11   gmol_sortsupport (internal),/' \
++ -e's/@@RDKIT_PG_QMOL_GIST_SORTSUPPORT@/FUNCTION    11   gmol_sortsupport (internal),/' \
++ -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@/FUNCTION    11   gmol_sortsupport (internal),/' \
++ $< > $@
++else
++$(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
++	sed -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@//' \
++ -e's/@@RDKIT_PG_QMOL_GIST_SORTSUPPORT@//' \
++ -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@//' \
++ $< > $@
++endif
++
  REGRESS    = rdkit-91 props btree molgist bfpgist-91 bfpgin sfpgist slfpgist fps reaction ${INCHIREGRESS} ${AVALONREGRESS}
 -DATA = $(EXTENSION)--$(EXTVERSION).sql
 +DATA_built = $(EXTENSION)--$(EXTVERSION).sql

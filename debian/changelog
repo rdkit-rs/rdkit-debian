@@ -4,7 +4,6 @@ rdkit (202309.2-1) UNRELEASED; urgency=medium
   * New upstream release.
 
   [ Michael Banck ]
-  * debian/patches/postgres_Makefile_fixes.patch: Updated.
   * debian/patches/sphinx_imgconverter.patch: Refreshed.
   * debian/patches/sphinx_compile_fixes.patch: Likewise.
   * debian/patches/catch2_header.patch: Removed, no longer needed.
@@ -12,6 +11,7 @@ rdkit (202309.2-1) UNRELEASED; urgency=medium
     catch2 as system library, taken from upstream pull request #6898 (Closes:
     #1054790).
   * debian/patches/pg16: Updated with changes from upstream pull request #6733.
+  * debian/patches/postgres_Makefile_fixes.patch: Updated for new changes.
 
  -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 11 Nov 2023 10:45:40 +0100
 
