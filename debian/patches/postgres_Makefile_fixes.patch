@@ -61,13 +61,13 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
 +ifeq ($(shell test $(PGVER) -gt 13; echo $$?),0)
 +$(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
 +	sed -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@/FUNCTION    11   gmol_sortsupport (internal),/' \
-+ -e's/@@RDKIT_PG_QMOL_GIST_SORTSUPPORT@/FUNCTION    11   gmol_sortsupport (internal),/' \
++ -e's/@RDKIT_PG_QMOL_GIST_SORTSUPPORT@/FUNCTION    11   gmol_sortsupport (internal),/' \
 + -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@/FUNCTION    11   gmol_sortsupport (internal),/' \
 + $< > $@
 +else
 +$(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
 +	sed -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@//' \
-+ -e's/@@RDKIT_PG_QMOL_GIST_SORTSUPPORT@//' \
++ -e's/@RDKIT_PG_QMOL_GIST_SORTSUPPORT@//' \
 + -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@//' \
 + $< > $@
 +endif
