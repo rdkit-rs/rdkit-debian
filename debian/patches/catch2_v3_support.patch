@@ -1,0 +1,1361 @@
+From 1d434d200877bbcad675ef2a2cc36ca8c3c4b85e Mon Sep 17 00:00:00 2001
+From: greg landrum <greg.landrum@gmail.com>
+Date: Sun, 12 Nov 2023 11:03:03 +0100
+Subject: [PATCH 1/2] switch to catch2 v3 Fixes #6894
+
+---
+ CMakeLists.txt                                | 16 ++++++--
+ Code/Geometry/catch_tests.cpp                 |  2 +-
+ Code/GraphMol/Abbreviations/catch_tests.cpp   |  2 +-
+ Code/GraphMol/CIPLabeler/catch_tests.cpp      |  2 +-
+ Code/GraphMol/ChemReactions/catch_tests.cpp   |  2 +-
+ Code/GraphMol/ChemTransforms/catch_tests.cpp  |  9 ++---
+ Code/GraphMol/Depictor/catch_tests.cpp        |  2 +-
+ Code/GraphMol/Deprotect/deprotectTest.cpp     |  2 +-
+ Code/GraphMol/Descriptors/catch_tests.cpp     |  6 +--
+ Code/GraphMol/DetermineBonds/catch_tests.cpp  |  2 +-
+ Code/GraphMol/DistGeomHelpers/catch_tests.cpp |  4 +-
+ .../FileParsers/XYZFileParserCatchTest.cpp    | 20 +++++-----
+ .../FileParsers/cdxml_parser_catch.cpp        |  2 +-
+ .../FileParsers/connectTheDots_catch.cpp      |  2 +-
+ .../FileParsers/file_parsers_catch.cpp        | 12 +++---
+ .../FileParsers/molfile_stereo_catch.cpp      |  2 +-
+ .../FileParsers/testPropertyLists.cpp         |  2 +-
+ Code/GraphMol/Fingerprints/catch_tests.cpp    |  2 +-
+ .../Fingerprints/fpgen_catch_tests.cpp        |  2 +-
+ .../GeneralizedSubstruct/catch_tests.cpp      |  2 +-
+ Code/GraphMol/GenericGroups/generic_tests.cpp |  5 +--
+ Code/GraphMol/MolAlign/catch_tests.cpp        | 14 +++----
+ Code/GraphMol/MolDraw2D/Qt/catch_qt.cpp       |  2 +-
+ Code/GraphMol/MolDraw2D/catch_tests.cpp       | 20 +++++-----
+ .../MolEnumerator/enumerator_catch.cpp        |  2 +-
+ Code/GraphMol/MolHash/catch_tests.cpp         | 11 ++---
+ .../MolInterchange/molinterchange_catch.cpp   |  6 +--
+ Code/GraphMol/MolStandardize/catch_tests.cpp  |  2 +-
+ .../RGroupDecomposition/catch_rgd.cpp         |  2 +-
+ Code/GraphMol/RascalMCES/mces_catch.cpp       |  2 +-
+ .../RascalMCES/mces_cluster_catch.cpp         |  2 +-
+ Code/GraphMol/ScaffoldNetwork/catch_tests.cpp |  2 +-
+ Code/GraphMol/SmilesParse/catch_tests.cpp     |  2 +-
+ Code/GraphMol/SmilesParse/cxsmiles_test.cpp   |  2 +-
+ .../SmilesParse/nontetrahedral_tests.cpp      |  2 +-
+ Code/GraphMol/Subgraphs/catch_tests.cpp       |  2 +-
+ Code/GraphMol/Substruct/catch_tests.cpp       |  4 +-
+ .../GraphMol/SubstructLibrary/catch_tests.cpp |  2 +-
+ Code/GraphMol/TautomerQuery/catch_tests.cpp   |  2 +-
+ Code/GraphMol/catch_adjustquery.cpp           |  5 ++-
+ Code/GraphMol/catch_canon.cpp                 |  2 +-
+ Code/GraphMol/catch_chirality.cpp             |  6 +--
+ Code/GraphMol/catch_graphmol.cpp              | 25 ++++++------
+ Code/GraphMol/catch_molbundle.cpp             |  2 +-
+ Code/GraphMol/catch_moliterators.cpp          |  2 +-
+ Code/GraphMol/catch_organometallics.cpp       | 10 ++---
+ Code/GraphMol/catch_pickles.cpp               |  2 +-
+ Code/GraphMol/catch_queries.cpp               |  2 +-
+ Code/GraphMol/catch_sgroups.cpp               |  2 +-
+ Code/Numerics/testConrec.cpp                  |  2 +-
+ Code/RDGeneral/CMakeLists.txt                 |  3 +-
+ Code/RDGeneral/catch_dict.cpp                 |  2 +-
+ Code/RDGeneral/catch_logs.cpp                 |  2 +-
+ Code/RDGeneral/catch_main.cpp                 |  2 +-
+ Code/SimDivPickers/catch_tests.cpp            |  2 +-
+ Code/cmake/Modules/RDKitUtils.cmake           |  5 +--
+ External/YAeHMOP/test1.cpp                    | 40 +++++++++----------
+ External/catch/CMakeLists.txt                 | 32 +++++----------
+ 58 files changed, 160 insertions(+), 169 deletions(-)
+
+Index: rdkit/CMakeLists.txt
+===================================================================
+--- rdkit.orig/CMakeLists.txt
++++ rdkit/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.7)
++cmake_minimum_required(VERSION 3.11)
+ 
+ project (RDKit)
+ 
+@@ -149,8 +149,18 @@ set(RDKit_ExternalDir "${CMAKE_CURRENT_S
+ set(RDKit_DataDir "${CMAKE_CURRENT_SOURCE_DIR}/Data")
+ 
+ #include catch
+-add_subdirectory(${RDKit_ExternalDir}/catch)
+-message("CATCH: ${CATCH_INCLUDE_DIR}")
++find_package(Catch2 3)
++if(NOT Catch2_FOUND)
++  Include(FetchContent)
++
++  FetchContent_Declare(
++    Catch2
++    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
++    GIT_TAG        v3.4.0 # or a later release
++  )
++
++  FetchContent_MakeAvailable(Catch2)
++endif()
+ 
+ if(RDK_INSTALL_INTREE)
+   set(RDKit_BinDir "${CMAKE_SOURCE_DIR}/bin")
+Index: rdkit/Code/Geometry/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/Geometry/catch_tests.cpp
++++ rdkit/Code/Geometry/catch_tests.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <Geometry/point.h>
+ #include <Geometry/UniformGrid3D.h>
+ 
+Index: rdkit/Code/GraphMol/Abbreviations/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/Abbreviations/catch_tests.cpp
++++ rdkit/Code/GraphMol/Abbreviations/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include "RDGeneral/test.h"
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/Abbreviations/Abbreviations.h>
+Index: rdkit/Code/GraphMol/CIPLabeler/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/CIPLabeler/catch_tests.cpp
++++ rdkit/Code/GraphMol/CIPLabeler/catch_tests.cpp
+@@ -13,7 +13,7 @@
+ #include <string>
+ #include <vector>
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/MolOps.h>
+ #include <GraphMol/SmilesParse/SmilesParse.h>
+Index: rdkit/Code/GraphMol/ChemReactions/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/ChemReactions/catch_tests.cpp
++++ rdkit/Code/GraphMol/ChemReactions/catch_tests.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ ///
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/QueryOps.h>
+Index: rdkit/Code/GraphMol/ChemTransforms/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/ChemTransforms/catch_tests.cpp
++++ rdkit/Code/GraphMol/ChemTransforms/catch_tests.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ ///
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/SmilesParse/SmilesParse.h>
+@@ -23,7 +23,7 @@
+ using namespace RDKit;
+ using std::unique_ptr;
+ 
+-TEST_CASE("Github #1039", "[]") {
++TEST_CASE("Github #1039") {
+   SECTION("double bond") {
+     auto m1 = "C/C=C/C=C/C"_smiles;
+     REQUIRE(m1);
+@@ -125,7 +125,7 @@ TEST_CASE("Github #1039", "[]") {
+   }
+ }
+ 
+-TEST_CASE("molzip", "[]") {
++TEST_CASE("molzip") {
+   SECTION("basic tests") {
+     auto a = "C[*:1]"_smiles;
+     auto b = "N[*:1]"_smiles;
+@@ -506,8 +506,7 @@ TEST_CASE(
+ }
+ 
+ TEST_CASE(
+-    "ReplaceCore handles chiral center with multiple bonds from core to chiral center",
+-    "[]") {
++    "ReplaceCore handles chiral center with multiple bonds from core to chiral center") {
+   auto structure = "C1CSCN[C@@]12(NCCCO2)"_smiles;
+   auto core = "NCSCC"_smarts;
+   std::unique_ptr<ROMol> res{replaceCore(*structure, *core, true, true)};
+Index: rdkit/Code/GraphMol/Depictor/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/Depictor/catch_tests.cpp
++++ rdkit/Code/GraphMol/Depictor/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/Chirality.h>
+Index: rdkit/Code/GraphMol/Deprotect/deprotectTest.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/Deprotect/deprotectTest.cpp
++++ rdkit/Code/GraphMol/Deprotect/deprotectTest.cpp
+@@ -8,7 +8,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/ROMol.h>
+Index: rdkit/Code/GraphMol/Descriptors/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/Descriptors/catch_tests.cpp
++++ rdkit/Code/GraphMol/Descriptors/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/FileParsers/FileParsers.h>
+@@ -49,7 +49,7 @@ TEST_CASE("Kier kappa2", "[2D]") {
+       std::unique_ptr<ROMol> m(SmilesToMol(pr.first));
+       REQUIRE(m);
+       auto k2 = Descriptors::calcKappa2(*m);
+-      CHECK(k2 == Approx(pr.second).epsilon(0.01));
++      CHECK(k2 == Catch::Approx(pr.second).epsilon(0.01));
+     }
+   }
+ }
+@@ -110,7 +110,7 @@ TEST_CASE("Kier Phi", "[2D]") {
+       std::unique_ptr<ROMol> m(SmilesToMol(pr.first));
+       REQUIRE(m);
+       auto val = Descriptors::calcPhi(*m);
+-      CHECK(val == Approx(pr.second).epsilon(0.01));
++      CHECK(val == Catch::Approx(pr.second).epsilon(0.01));
+     }
+   }
+ }
+Index: rdkit/Code/GraphMol/DetermineBonds/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/DetermineBonds/catch_tests.cpp
++++ rdkit/Code/GraphMol/DetermineBonds/catch_tests.cpp
+@@ -1,5 +1,5 @@
+ #include "RDGeneral/test.h"
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/Invariant.h>
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/FileParsers/FileParsers.h>
+Index: rdkit/Code/GraphMol/DistGeomHelpers/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/DistGeomHelpers/catch_tests.cpp
++++ rdkit/Code/GraphMol/DistGeomHelpers/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //
+ 
+ #include <RDGeneral/test.h>
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <RDGeneral/RDLog.h>
+ #include <GraphMol/RDKitBase.h>
+@@ -173,7 +173,7 @@ TEST_CASE("update parameters from JSON")
+       auto conf = mol->getConformer();
+       auto v1 = conf.getAtomPos(0) - conf.getAtomPos(1);
+       auto v2 = conf.getAtomPos(2) - conf.getAtomPos(1);
+-      CHECK(v1.angleTo(v2) == Approx(M_PI / 2).margin(0.15));
++      CHECK(v1.angleTo(v2) == Catch::Approx(M_PI / 2).margin(0.15));
+     }
+   }
+ }
+Index: rdkit/Code/GraphMol/FileParsers/XYZFileParserCatchTest.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/FileParsers/XYZFileParserCatchTest.cpp
++++ rdkit/Code/GraphMol/FileParsers/XYZFileParserCatchTest.cpp
+@@ -1,5 +1,5 @@
+ #include "RDGeneral/test.h"
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/Invariant.h>
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/QueryAtom.h>
+@@ -47,9 +47,9 @@ TEST_CASE("xyz file parser") {
+ 
+     ind = 0;
+     for (auto p : positions) {
+-      CHECK(conf->getAtomPos(ind).x == Approx(p.x).margin(1e-6));
+-      CHECK(conf->getAtomPos(ind).y == Approx(p.y).margin(1e-6));
+-      CHECK(conf->getAtomPos(ind).z == Approx(p.z).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).x == Catch::Approx(p.x).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).y == Catch::Approx(p.y).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).z == Catch::Approx(p.z).margin(1e-6));
+       ind++;
+     }
+   }
+@@ -87,9 +87,9 @@ TEST_CASE("xyz file parser") {
+ 
+     ind = 0;
+     for (auto p : positions) {
+-      CHECK(conf->getAtomPos(ind).x == Approx(p.x).margin(1e-6));
+-      CHECK(conf->getAtomPos(ind).y == Approx(p.y).margin(1e-6));
+-      CHECK(conf->getAtomPos(ind).z == Approx(p.z).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).x == Catch::Approx(p.x).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).y == Catch::Approx(p.y).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).z == Catch::Approx(p.z).margin(1e-6));
+       ind++;
+     }
+   }
+@@ -150,9 +150,9 @@ TEST_CASE("xyz block parser") {
+ 
+     ind = 0;
+     for (auto p : positions) {
+-      CHECK(conf->getAtomPos(ind).x == Approx(p.x).margin(1e-6));
+-      CHECK(conf->getAtomPos(ind).y == Approx(p.y).margin(1e-6));
+-      CHECK(conf->getAtomPos(ind).z == Approx(p.z).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).x == Catch::Approx(p.x).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).y == Catch::Approx(p.y).margin(1e-6));
++      CHECK(conf->getAtomPos(ind).z == Catch::Approx(p.z).margin(1e-6));
+       ind++;
+     }
+   }
+Index: rdkit/Code/GraphMol/FileParsers/cdxml_parser_catch.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/FileParsers/cdxml_parser_catch.cpp
++++ rdkit/Code/GraphMol/FileParsers/cdxml_parser_catch.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ #include "RDGeneral/test.h"
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/Invariant.h>
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/FileParsers/FileParsers.h>
+Index: rdkit/Code/GraphMol/FileParsers/connectTheDots_catch.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/FileParsers/connectTheDots_catch.cpp
++++ rdkit/Code/GraphMol/FileParsers/connectTheDots_catch.cpp
+@@ -15,7 +15,7 @@
+ #include <streambuf>
+ 
+ #include "RDGeneral/test.h"
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/Invariant.h>
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/FileParsers/FileParsers.h>
+Index: rdkit/Code/GraphMol/FileParsers/file_parsers_catch.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/FileParsers/file_parsers_catch.cpp
++++ rdkit/Code/GraphMol/FileParsers/file_parsers_catch.cpp
+@@ -15,7 +15,7 @@
+ #include <streambuf>
+ 
+ #include "RDGeneral/test.h"
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/Invariant.h>
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/QueryAtom.h>
+Index: rdkit/Code/GraphMol/FileParsers/molfile_stereo_catch.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/FileParsers/molfile_stereo_catch.cpp
++++ rdkit/Code/GraphMol/FileParsers/molfile_stereo_catch.cpp
+@@ -8,7 +8,7 @@
+ //
+ 
+ #include "RDGeneral/test.h"
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/Invariant.h>
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/Chirality.h>
+Index: rdkit/Code/GraphMol/FileParsers/testPropertyLists.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/FileParsers/testPropertyLists.cpp
++++ rdkit/Code/GraphMol/FileParsers/testPropertyLists.cpp
+@@ -8,7 +8,7 @@
+ //
+ 
+ #include "RDGeneral/test.h"
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/FileParsers/FileParsers.h>
+Index: rdkit/Code/GraphMol/Fingerprints/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/Fingerprints/catch_tests.cpp
++++ rdkit/Code/GraphMol/Fingerprints/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <memory>
+ #include <RDGeneral/test.h>
+Index: rdkit/Code/GraphMol/Fingerprints/fpgen_catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/Fingerprints/fpgen_catch_tests.cpp
++++ rdkit/Code/GraphMol/Fingerprints/fpgen_catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <RDGeneral/RDLog.h>
+ #include <GraphMol/RDKitBase.h>
+Index: rdkit/Code/GraphMol/GeneralizedSubstruct/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/GeneralizedSubstruct/catch_tests.cpp
++++ rdkit/Code/GraphMol/GeneralizedSubstruct/catch_tests.cpp
+@@ -10,7 +10,7 @@
+ // Tests of the generalized substructure searching code
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <tuple>
+ #include <utility>
+Index: rdkit/Code/GraphMol/GenericGroups/generic_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/GenericGroups/generic_tests.cpp
++++ rdkit/Code/GraphMol/GenericGroups/generic_tests.cpp
+@@ -10,7 +10,7 @@
+ // Tests of handling generics in substructure searching
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <tuple>
+ #include <utility>
+@@ -24,7 +24,7 @@
+ 
+ using namespace RDKit;
+ 
+-class _IsSubstructOf : public Catch::MatcherBase<const ROMol &> {
++class _IsSubstructOf : public Catch::Matchers::MatcherBase<const ROMol &> {
+   ROMol const *m_mol;
+   SubstructMatchParameters m_ps;
+   unsigned m_count;
+@@ -746,7 +746,6 @@ TEST_CASE("group with ring or H", "[subs
+   }
+ }
+ 
+-
+ TEST_CASE("from mol blocks using atom labels") {
+   SECTION("basics") {
+     auto qry = R"CTAB(
+Index: rdkit/Code/GraphMol/MolAlign/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/MolAlign/catch_tests.cpp
++++ rdkit/Code/GraphMol/MolAlign/catch_tests.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include "AlignMolecules.h"
+ #include <GraphMol/FileParsers/FileParsers.h>
+ #include <GraphMol/ROMol.h>
+@@ -33,7 +33,7 @@ TEST_CASE("symmetric functional groups")
+ 
+     {
+       auto rmsd = MolAlign::getBestRMS(m2, *m1);
+-      CHECK(rmsd == Approx(0.0).margin(1e-3));
++      CHECK(rmsd == Catch::Approx(0.0).margin(1e-3));
+     }
+     {
+       // previous behavior
+@@ -44,7 +44,7 @@ TEST_CASE("symmetric functional groups")
+       bool symmetrize = false;
+       auto rmsd = MolAlign::getBestRMS(m2, *m1, probeId, refId, mp, maxMatches,
+                                        symmetrize);
+-      CHECK(rmsd == Approx(0.747).margin(1e-3));
++      CHECK(rmsd == Catch::Approx(0.747).margin(1e-3));
+     }
+   }
+   SECTION("terminal sulfate1") {
+@@ -61,7 +61,7 @@ TEST_CASE("symmetric functional groups")
+ 
+     {
+       auto rmsd = MolAlign::getBestRMS(m2, *m1);
+-      CHECK(rmsd == Approx(0.0).margin(1e-3));
++      CHECK(rmsd == Catch::Approx(0.0).margin(1e-3));
+     }
+     {
+       // previous behavior
+@@ -72,7 +72,7 @@ TEST_CASE("symmetric functional groups")
+       bool symmetrize = false;
+       auto rmsd = MolAlign::getBestRMS(m2, *m1, probeId, refId, mp, maxMatches,
+                                        symmetrize);
+-      CHECK(rmsd == Approx(0.097).margin(1e-3));
++      CHECK(rmsd == Catch::Approx(0.097).margin(1e-3));
+     }
+   }
+   SECTION("terminal sulfate2") {
+@@ -89,7 +89,7 @@ TEST_CASE("symmetric functional groups")
+ 
+     {
+       auto rmsd = MolAlign::getBestRMS(m2, *m1);
+-      CHECK(rmsd == Approx(0.0).margin(1e-3));
++      CHECK(rmsd == Catch::Approx(0.0).margin(1e-3));
+     }
+     {
+       // previous behavior
+@@ -100,7 +100,7 @@ TEST_CASE("symmetric functional groups")
+       bool symmetrize = false;
+       auto rmsd = MolAlign::getBestRMS(m2, *m1, probeId, refId, mp, maxMatches,
+                                        symmetrize);
+-      CHECK(rmsd == Approx(0.097).margin(1e-3));
++      CHECK(rmsd == Catch::Approx(0.097).margin(1e-3));
+     }
+   }
+ }
+\ No newline at end of file
+Index: rdkit/Code/GraphMol/MolDraw2D/Qt/catch_qt.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/MolDraw2D/Qt/catch_qt.cpp
++++ rdkit/Code/GraphMol/MolDraw2D/Qt/catch_qt.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ #define CATCH_CONFIG_RUNNER
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ 
+Index: rdkit/Code/GraphMol/MolDraw2D/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/MolDraw2D/catch_tests.cpp
++++ rdkit/Code/GraphMol/MolDraw2D/catch_tests.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ 
+@@ -4062,7 +4062,7 @@ TEST_CASE("changing baseFontSize") {
+     MolDraw2DSVG drawer(350, 300, -1, -1, 1);
+     drawer.drawMolecule(*mol1);
+     drawer.finishDrawing();
+-    CHECK(drawer.fontSize() == Approx(6.0).margin(0.1));
++    CHECK(drawer.fontSize() == Catch::Approx(6.0).margin(0.1));
+     auto text = drawer.getDrawingText();
+     std::ofstream outs("testBaseFontSize.1a.svg");
+     outs << text;
+@@ -4076,7 +4076,7 @@ TEST_CASE("changing baseFontSize") {
+     drawer.drawOptions().baseFontSize = 0.9;
+     drawer.drawMolecule(*mol1);
+     drawer.finishDrawing();
+-    CHECK(drawer.fontSize() == Approx(5.5).margin(.1));
++    CHECK(drawer.fontSize() == Catch::Approx(5.5).margin(.1));
+     auto text = drawer.getDrawingText();
+     std::ofstream outs("testBaseFontSize.1b.svg");
+     outs << text;
+@@ -4087,7 +4087,7 @@ TEST_CASE("changing baseFontSize") {
+     MolDraw2DSVG drawer(350, 300, -1, -1, 1);
+     drawer.drawMolecule(*mol2);
+     drawer.finishDrawing();
+-    CHECK(drawer.fontSize() == Approx(14.0).margin(0.1));
++    CHECK(drawer.fontSize() == Catch::Approx(14.0).margin(0.1));
+     auto text = drawer.getDrawingText();
+     std::ofstream outs("testBaseFontSize.2a.svg");
+     outs << text;
+@@ -4099,7 +4099,7 @@ TEST_CASE("changing baseFontSize") {
+     drawer.drawOptions().baseFontSize = 0.9;
+     drawer.drawMolecule(*mol2);
+     drawer.finishDrawing();
+-    CHECK(drawer.fontSize() == Approx(20.25).margin(0.1));
++    CHECK(drawer.fontSize() == Catch::Approx(20.25).margin(0.1));
+     auto text = drawer.getDrawingText();
+     std::ofstream outs("testBaseFontSize.2b.svg");
+     outs << text;
+@@ -4177,7 +4177,7 @@ M  END
+     drawer.drawOptions().fixedFontSize = 32;
+     drawer.drawMolecule(*mol1);
+     drawer.finishDrawing();
+-    CHECK(drawer.fontSize() == Approx(32).margin(0.1));
++    CHECK(drawer.fontSize() == Catch::Approx(32).margin(0.1));
+     auto text = drawer.getDrawingText();
+     std::ofstream outs("testFlexiCanvas.1d.svg");
+     outs << text;
+@@ -5624,11 +5624,11 @@ M  END
+       double dbl = drawnBondLength(regex, text);
+       // the bonds should all be 14.4 long, but the SVG is only written
+       // to 1 decimal place, so rounding errors are largish.
+-      REQUIRE(dbl == Approx(14.4253));
++      REQUIRE(dbl == Catch::Approx(14.4253));
+       regex =
+           R"(class='bond-1 atom-1 atom-2' d='M ([\d.]*),([\d.]*) L ([\d.]*),([\d.]*)')";
+       dbl = drawnBondLength(regex, text);
+-      REQUIRE(dbl == Approx(14.4));
++      REQUIRE(dbl == Catch::Approx(14.4));
+       check_file_hash(nameBase + "12.svg");
+     }
+ #endif
+@@ -5672,7 +5672,7 @@ TEST_CASE("Unspecified stereochemistry m
+   Point2D point3{stod((*cross1Match)[1]), stod((*cross1Match)[2])};
+   Point2D point4{stod((*cross1Match)[3]), stod((*cross1Match)[4])};
+   auto vec2 = point3.directionVector(point4);
+-  REQUIRE(vec1.dotProduct(vec2) != Approx(1.0).margin(1.0e-4));
++  REQUIRE(vec1.dotProduct(vec2) != Catch::Approx(1.0).margin(1.0e-4));
+ 
+   check_file_hash("test_unspec_stereo.svg");
+ }
+@@ -7417,7 +7417,7 @@ TEST_CASE("Bad double bond - Github 6160
+     }
+     auto vec1 = points[0].directionVector(points[1]);
+     auto vec2 = points[2].directionVector(points[3]);
+-    CHECK(vec1.dotProduct(vec2) == Approx(1.0).margin(1.0e-4));
++    CHECK(vec1.dotProduct(vec2) == Catch::Approx(1.0).margin(1.0e-4));
+     check_file_hash(svgName);
+   }
+ }
+Index: rdkit/Code/GraphMol/MolEnumerator/enumerator_catch.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/MolEnumerator/enumerator_catch.cpp
++++ rdkit/Code/GraphMol/MolEnumerator/enumerator_catch.cpp
+@@ -8,7 +8,7 @@
+ //
+ 
+ #include <RDGeneral/test.h>
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/FileParsers/FileParsers.h>
+Index: rdkit/Code/GraphMol/MolHash/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/MolHash/catch_tests.cpp
++++ rdkit/Code/GraphMol/MolHash/catch_tests.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/SmilesParse/SmilesParse.h>
+Index: rdkit/Code/GraphMol/MolInterchange/molinterchange_catch.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/MolInterchange/molinterchange_catch.cpp
++++ rdkit/Code/GraphMol/MolInterchange/molinterchange_catch.cpp
+@@ -8,7 +8,7 @@
+ //
+ 
+ #include <RDGeneral/test.h>
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/MolPickler.h>
+@@ -307,10 +307,10 @@ M  END)CTAB"_ctab;
+     CHECK(sgs[0].getBonds() == std::vector<unsigned>{8});
+     REQUIRE(sgs[0].getBrackets().size() == 1);
+     REQUIRE(sgs[0].getBrackets()[0].size() == 3);
+-    CHECK(sgs[0].getBrackets()[0][0].x == Approx(6.24).margin(0.01));
++    CHECK(sgs[0].getBrackets()[0][0].x == Catch::Approx(6.24).margin(0.01));
+     REQUIRE(sgs[0].getCStates().size() == 1);
+     CHECK(sgs[0].getCStates()[0].bondIdx == 8);
+-    CHECK(sgs[0].getCStates()[0].vector.y == Approx(0.82).margin(0.01));
++    CHECK(sgs[0].getCStates()[0].vector.y == Catch::Approx(0.82).margin(0.01));
+     REQUIRE(sgs[0].getAttachPoints().size() == 1);
+     CHECK(sgs[0].getAttachPoints()[0].aIdx == 12);
+     CHECK(sgs[0].getAttachPoints()[0].lvIdx == 5);
+Index: rdkit/Code/GraphMol/MolStandardize/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/MolStandardize/catch_tests.cpp
++++ rdkit/Code/GraphMol/MolStandardize/catch_tests.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/ROMol.h>
+Index: rdkit/Code/GraphMol/RGroupDecomposition/catch_rgd.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/RGroupDecomposition/catch_rgd.cpp
++++ rdkit/Code/GraphMol/RGroupDecomposition/catch_rgd.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ 
+Index: rdkit/Code/GraphMol/RascalMCES/mces_catch.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/RascalMCES/mces_catch.cpp
++++ rdkit/Code/GraphMol/RascalMCES/mces_catch.cpp
+@@ -17,7 +17,7 @@
+ #include <GraphMol/SmilesParse/SmilesWrite.h>
+ #include <GraphMol/Substruct/SubstructMatch.h>
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RascalMCES/RascalMCES.h>
+ #include <GraphMol/RascalMCES/RascalOptions.h>
+Index: rdkit/Code/GraphMol/RascalMCES/mces_cluster_catch.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/RascalMCES/mces_cluster_catch.cpp
++++ rdkit/Code/GraphMol/RascalMCES/mces_cluster_catch.cpp
+@@ -17,7 +17,7 @@
+ #include <GraphMol/SmilesParse/SmilesWrite.h>
+ #include <GraphMol/Substruct/SubstructMatch.h>
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RascalMCES/RascalMCES.h>
+ #include <GraphMol/RascalMCES/RascalClusterOptions.h>
+Index: rdkit/Code/GraphMol/ScaffoldNetwork/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/ScaffoldNetwork/catch_tests.cpp
++++ rdkit/Code/GraphMol/ScaffoldNetwork/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include "GraphMol/ScaffoldNetwork/detail.h"
+ #include "RDGeneral/test.h"
+ #include <sstream>
+Index: rdkit/Code/GraphMol/SmilesParse/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/SmilesParse/catch_tests.cpp
++++ rdkit/Code/GraphMol/SmilesParse/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #ifdef RDK_BUILD_THREADSAFE_SSS
+ #include <future>
+ #include <thread>
+@@ -2058,7 +2058,7 @@ TEST_CASE("wiggly and wedged bonds in CX
+   SECTION("basic reading/writing") {
+     auto m = "CC(O)F |w:1.2|"_smiles;
+     REQUIRE(m);
+-    unsigned int bondcfg;
++    unsigned int bondcfg = 0;
+     CHECK(m->getBondWithIdx(2)->getPropIfPresent("_MolFileBondCfg", bondcfg));
+     CHECK(bondcfg == 2);
+     // make sure we end up with a wiggly bond in output mol blocks:
+@@ -2078,7 +2078,7 @@ TEST_CASE("wiggly and wedged bonds in CX
+   SECTION("CXSMILES wiggly bond over-rides atomic stereo") {
+     auto m = "C[C@H](O)F |w:1.2|"_smiles;
+     REQUIRE(m);
+-    unsigned int bondcfg;
++    unsigned int bondcfg = 0;
+     CHECK(m->getBondWithIdx(2)->getPropIfPresent("_MolFileBondCfg", bondcfg));
+     CHECK(bondcfg == 2);
+     CHECK(m->getAtomWithIdx(1)->getChiralTag() ==
+@@ -2096,7 +2096,7 @@ TEST_CASE("wiggly and wedged bonds in CX
+     auto m = "CC(O)Cl |w:1.0|"_smiles;
+     REQUIRE(m);
+     CHECK(m->getBondWithIdx(0)->getBeginAtomIdx() == 1);
+-    unsigned int bondcfg;
++    unsigned int bondcfg = 0;
+     CHECK(m->getBondWithIdx(0)->getPropIfPresent("_MolFileBondCfg", bondcfg));
+     CHECK(bondcfg == 2);
+   }
+@@ -2105,7 +2105,7 @@ TEST_CASE("wiggly and wedged bonds in CX
+     auto m =
+         "CC(O)Cl |(-3.9163,5.4767,;-3.9163,3.9367,;-2.5826,3.1667,;-5.25,3.1667,),wU:1.0|"_smiles;
+     REQUIRE(m);
+-    unsigned int bondcfg;
++    unsigned int bondcfg = 0;
+     CHECK(m->getBondWithIdx(0)->getPropIfPresent("_MolFileBondCfg", bondcfg));
+     CHECK(bondcfg == 1);
+     CHECK(m->getAtomWithIdx(1)->getChiralTag() ==
+@@ -2225,7 +2225,7 @@ M  END
+     REQUIRE(m_from_ctab);
+     auto m = "CC=CC |w:2.2|"_smiles;
+     REQUIRE(m);
+-    unsigned int bondcfg;
++    unsigned int bondcfg = 0;
+     CHECK(m->getBondWithIdx(2)->getPropIfPresent("_MolFileBondCfg", bondcfg));
+     CHECK(bondcfg == 2);
+   }
+Index: rdkit/Code/GraphMol/SmilesParse/cxsmiles_test.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/SmilesParse/cxsmiles_test.cpp
++++ rdkit/Code/GraphMol/SmilesParse/cxsmiles_test.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/test.h>
+ #include <string>
+ #include <vector>
+Index: rdkit/Code/GraphMol/SmilesParse/nontetrahedral_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/SmilesParse/nontetrahedral_tests.cpp
++++ rdkit/Code/GraphMol/SmilesParse/nontetrahedral_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <iostream>
+ #include <fstream>
+Index: rdkit/Code/GraphMol/Subgraphs/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/Subgraphs/catch_tests.cpp
++++ rdkit/Code/GraphMol/Subgraphs/catch_tests.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/test.h>
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/SmilesParse/SmilesParse.h>
+Index: rdkit/Code/GraphMol/Substruct/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/Substruct/catch_tests.cpp
++++ rdkit/Code/GraphMol/Substruct/catch_tests.cpp
+@@ -10,7 +10,7 @@
+ // Tests of substructure searching
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <tuple>
+ #include <utility>
+@@ -23,7 +23,7 @@
+ using namespace RDKit;
+ typedef std::tuple<std::string, std::string, size_t> matchCase;
+ 
+-class _IsSubstructOf : public Catch::MatcherBase<const ROMol &> {
++class _IsSubstructOf : public Catch::Matchers::MatcherBase<const ROMol &> {
+   ROMol const *m_mol;
+   SubstructMatchParameters m_ps;
+ 
+Index: rdkit/Code/GraphMol/SubstructLibrary/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/SubstructLibrary/catch_tests.cpp
++++ rdkit/Code/GraphMol/SubstructLibrary/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/MolBundle.h>
+Index: rdkit/Code/GraphMol/TautomerQuery/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/TautomerQuery/catch_tests.cpp
++++ rdkit/Code/GraphMol/TautomerQuery/catch_tests.cpp
+@@ -6,7 +6,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/TautomerQuery/TautomerQuery.h>
+Index: rdkit/Code/GraphMol/catch_adjustquery.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_adjustquery.cpp
++++ rdkit/Code/GraphMol/catch_adjustquery.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <utility>
+ 
+@@ -24,7 +24,8 @@ using namespace RDKit;
+ 
+ using matchCase = std::tuple<std::string, std::string, bool, bool>;
+ 
+-class _IsSubstructOf : public Catch::MatcherBase<const std::string &> {
++class _IsSubstructOf
++    : public Catch::Matchers::MatcherBase<const std::string &> {
+   ROMol const *m_query;
+   std::string m_description;
+   SubstructMatchParameters m_ps;
+Index: rdkit/Code/GraphMol/catch_canon.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_canon.cpp
++++ rdkit/Code/GraphMol/catch_canon.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/StereoGroup.h>
+Index: rdkit/Code/GraphMol/catch_chirality.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_chirality.cpp
++++ rdkit/Code/GraphMol/catch_chirality.cpp
+@@ -10,7 +10,7 @@
+ 
+ #include <cstdlib>
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <boost/noncopyable.hpp>
+ 
+@@ -3577,7 +3577,7 @@ TEST_CASE(
+     "[bug][stereo]") {
+   // Parametrize test to run under legacy and new stereo perception
+   const auto legacy_stereo = GENERATE(true, false);
+-  INFO("Legacy stereo perception == " << legacy_stereo)
++  INFO("Legacy stereo perception == " << legacy_stereo);
+ 
+   UseLegacyStereoPerceptionFixture reset_stereo_perception;
+   Chirality::setUseLegacyStereoPerception(legacy_stereo);
+@@ -3609,7 +3609,7 @@ TEST_CASE("double bonded N with H should
+   SECTION("assign stereo") {
+     // Parametrize test to run under legacy and new stereo perception
+     const auto legacy_stereo = GENERATE(true, false);
+-    INFO("Legacy stereo perception == " << legacy_stereo)
++    INFO("Legacy stereo perception == " << legacy_stereo);
+ 
+     UseLegacyStereoPerceptionFixture reset_stereo_perception;
+     Chirality::setUseLegacyStereoPerception(legacy_stereo);
+Index: rdkit/Code/GraphMol/catch_graphmol.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_graphmol.cpp
++++ rdkit/Code/GraphMol/catch_graphmol.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <algorithm>
+ #include <limits>
+@@ -1875,7 +1875,7 @@ TEST_CASE("batch edits", "[editing]") {
+   }
+ }
+ 
+-TEST_CASE("github #4122: segfaults in commitBatchEdit()", "[editing]][bug]") {
++TEST_CASE("github #4122: segfaults in commitBatchEdit()", "[editing][bug]") {
+   SECTION("as reported, no atoms") {
+     RWMol m;
+     m.beginBatchEdit();
+@@ -2960,15 +2960,15 @@ TEST_CASE("molecules with single bond to
+   for (size_t i = 0; i < test_vals.size(); ++i) {
+     INFO(test_vals[i].first);
+     RWMOL_SPTR m(RDKit::SmilesToMol(test_vals[i].first));
+-    TEST_ASSERT(MolToSmiles(*m) == test_vals[i].second);
++    CHECK(MolToSmiles(*m) == test_vals[i].second);
+   }
+   // make sure we can call cleanupOrganometallics() on non-sanitized molecules
+   for (size_t i = 0; i < test_vals.size(); ++i) {
+     INFO(test_vals[i].first);
+-    bool sanitize=false;
+-    RWMOL_SPTR m(RDKit::SmilesToMol(test_vals[i].first,0,sanitize));
++    bool sanitize = false;
++    RWMOL_SPTR m(RDKit::SmilesToMol(test_vals[i].first, 0, sanitize));
+     MolOps::cleanUpOrganometallics(*m);
+-    TEST_ASSERT(MolToSmiles(*m) == test_vals[i].second);
++    CHECK(MolToSmiles(*m) == test_vals[i].second);
+   }
+ }
+ 
+@@ -2983,7 +2983,7 @@ TEST_CASE(
+     std::string &smi = test_vals[j].first;
+     std::string &canon_smi = test_vals[j].second;
+     RWMOL_SPTR m(RDKit::SmilesToMol(smi));
+-    TEST_ASSERT(MolToSmiles(*m) == canon_smi);
++    CHECK(MolToSmiles(*m) == canon_smi);
+ 
+     // scramble the order and check
+     std::vector<unsigned int> atomInds(m->getNumAtoms(), 0);
+@@ -2998,7 +2998,7 @@ TEST_CASE(
+       std::unique_ptr<ROMol> randmol(MolOps::renumberAtoms(*mol, atomInds));
+       std::unique_ptr<RWMol> rwrandmol(new RWMol(*randmol));
+       MolOps::sanitizeMol(*rwrandmol);
+-      TEST_ASSERT(MolToSmiles(*rwrandmol) == canon_smi);
++      CHECK(MolToSmiles(*rwrandmol) == canon_smi);
+     }
+   }
+ }
+@@ -3053,7 +3053,7 @@ TEST_CASE(
+     rdWarningLog->SetTee(ss);
+     MolOps::mergeQueryHs(*m);
+     rdWarningLog->ClearTee();
+-    TEST_ASSERT(
++    CHECK(
+         ss.str().find(
+             "WARNING: merging explicit H queries involved in ORs is not supported. "
+             "This query will not be merged") != std::string::npos);
+@@ -3065,7 +3065,7 @@ TEST_CASE(
+     rdWarningLog->SetTee(ss);
+     MolOps::mergeQueryHs(*m);
+     rdWarningLog->ClearTee();
+-    TEST_ASSERT(
++    CHECK(
+         ss.str().find(
+             "WARNING: merging explicit H queries involved in ORs is not supported. "
+             "This query will not be merged") != std::string::npos);
+@@ -3077,7 +3077,7 @@ TEST_CASE(
+     rdWarningLog->SetTee(ss);
+     MolOps::mergeQueryHs(*m);
+     rdWarningLog->ClearTee();
+-    TEST_ASSERT(
++    CHECK(
+         ss.str().find(
+             "WARNING: merging explicit H queries involved in ORs is not supported. "
+             "This query will not be merged") == std::string::npos);
+@@ -3420,8 +3420,7 @@ TEST_CASE(
+   }
+ }
+ 
+-TEST_CASE(
+-    "ROMol hasQuery") {
++TEST_CASE("ROMol hasQuery") {
+   SECTION("check false Mol.hasQuery") {
+     std::unique_ptr<ROMol> mol{SmilesToMol("CCO")};
+ 
+Index: rdkit/Code/GraphMol/catch_molbundle.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_molbundle.cpp
++++ rdkit/Code/GraphMol/catch_molbundle.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/MolBundle.h>
+Index: rdkit/Code/GraphMol/catch_moliterators.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_moliterators.cpp
++++ rdkit/Code/GraphMol/catch_moliterators.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/SmilesParse/SmilesParse.h>
+Index: rdkit/Code/GraphMol/catch_organometallics.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_organometallics.cpp
++++ rdkit/Code/GraphMol/catch_organometallics.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RWMol.h>
+ #include <GraphMol/FileParsers/FileParsers.h>
+@@ -86,11 +86,11 @@ TEST_CASE("convert explicit dative bonds
+       // Check the dummy atoms are in the right place.
+       auto [d1, d2, d1x, d1y, d2x, d2y] = exp_res[i];
+       auto dummy1pos = mol->getConformer().getAtomPos(d1);
+-      REQUIRE_THAT(dummy1pos.x, Catch::WithinAbs(d1x, 0.1));
+-      REQUIRE_THAT(dummy1pos.y, Catch::WithinAbs(d1y, 0.1));
++      REQUIRE_THAT(dummy1pos.x, Catch::Matchers::WithinAbs(d1x, 0.1));
++      REQUIRE_THAT(dummy1pos.y, Catch::Matchers::WithinAbs(d1y, 0.1));
+       auto dummy2pos = mol->getConformer().getAtomPos(d2);
+-      REQUIRE_THAT(dummy2pos.x, Catch::WithinAbs(d2x, 0.1));
+-      REQUIRE_THAT(dummy2pos.y, Catch::WithinAbs(d2y, 0.1));
++      REQUIRE_THAT(dummy2pos.x, Catch::Matchers::WithinAbs(d2x, 0.1));
++      REQUIRE_THAT(dummy2pos.y, Catch::Matchers::WithinAbs(d2y, 0.1));
+     }
+   }
+   {
+Index: rdkit/Code/GraphMol/catch_pickles.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_pickles.cpp
++++ rdkit/Code/GraphMol/catch_pickles.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <algorithm>
+ #include <limits>
+Index: rdkit/Code/GraphMol/catch_queries.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_queries.cpp
++++ rdkit/Code/GraphMol/catch_queries.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/QueryOps.h>
+Index: rdkit/Code/GraphMol/catch_sgroups.cpp
+===================================================================
+--- rdkit.orig/Code/GraphMol/catch_sgroups.cpp
++++ rdkit/Code/GraphMol/catch_sgroups.cpp
+@@ -9,7 +9,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include <GraphMol/SubstanceGroup.h>
+Index: rdkit/Code/Numerics/testConrec.cpp
+===================================================================
+--- rdkit.orig/Code/Numerics/testConrec.cpp
++++ rdkit/Code/Numerics/testConrec.cpp
+@@ -7,7 +7,7 @@
+ //  which is included in the file license.txt, found at the root
+ //  of the RDKit source tree.
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <RDGeneral/test.h>
+ #include <iostream>
+Index: rdkit/Code/RDGeneral/CMakeLists.txt
+===================================================================
+--- rdkit.orig/Code/RDGeneral/CMakeLists.txt
++++ rdkit/Code/RDGeneral/CMakeLists.txt
+@@ -59,8 +59,7 @@ endif(RDK_BUILD_THREADSAFE_SSS)
+ 
+ if(RDK_BUILD_CPP_TESTS)
+ add_library(rdkitCatch catch_main.cpp)
+-target_link_libraries(rdkitCatch PUBLIC rdkit_base)
+-target_include_directories(rdkitCatch PUBLIC ${CATCH_INCLUDE_DIR})
++target_link_libraries(rdkitCatch PUBLIC rdkit_base Catch2::Catch2)
+ endif(RDK_BUILD_CPP_TESTS)
+ 
+ 
+Index: rdkit/Code/RDGeneral/catch_dict.cpp
+===================================================================
+--- rdkit.orig/Code/RDGeneral/catch_dict.cpp
++++ rdkit/Code/RDGeneral/catch_dict.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ #include <string>
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include "Dict.h"
+ #include "RDProps.h"
+ using namespace std::string_literals;
+Index: rdkit/Code/RDGeneral/catch_logs.cpp
+===================================================================
+--- rdkit.orig/Code/RDGeneral/catch_logs.cpp
++++ rdkit/Code/RDGeneral/catch_logs.cpp
+@@ -11,7 +11,7 @@
+ #include <iostream>
+ #include <fstream>
+ #include <sstream>
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include "RDLog.h"
+ 
+ TEST_CASE("LogStateSetter") {
+Index: rdkit/Code/RDGeneral/catch_main.cpp
+===================================================================
+--- rdkit.orig/Code/RDGeneral/catch_main.cpp
++++ rdkit/Code/RDGeneral/catch_main.cpp
+@@ -8,7 +8,7 @@
+ //
+ 
+ #define CATCH_CONFIG_RUNNER
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/RDLog.h>
+ 
+ int main(int argc, char* argv[]) {
+Index: rdkit/Code/SimDivPickers/catch_tests.cpp
+===================================================================
+--- rdkit.orig/Code/SimDivPickers/catch_tests.cpp
++++ rdkit/Code/SimDivPickers/catch_tests.cpp
+@@ -8,7 +8,7 @@
+ //  of the RDKit source tree.
+ //
+ 
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ #include <RDGeneral/types.h>
+ #include <RDGeneral/test.h>
+ #include <DataStructs/ExplicitBitVect.h>
+Index: rdkit/Code/cmake/Modules/RDKitUtils.cmake
+===================================================================
+--- rdkit.orig/Code/cmake/Modules/RDKitUtils.cmake
++++ rdkit/Code/cmake/Modules/RDKitUtils.cmake
+@@ -193,11 +193,10 @@ macro(rdkit_catch_test)
+   CDR(RDKTEST_SOURCES ${RDKTEST_DEFAULT_ARGS})
+   if(RDK_BUILD_CPP_TESTS)
+     add_executable(${RDKTEST_NAME} ${RDKTEST_SOURCES})
+-    target_include_directories(${RDKTEST_NAME} PRIVATE ${CATCH_INCLUDE_DIR})
+-    target_link_libraries(${RDKTEST_NAME} rdkitCatch ${RDKTEST_LINK_LIBRARIES})
++    #target_include_directories(${RDKTEST_NAME} PRIVATE ${CATCH_INCLUDE_DIR})
++    target_link_libraries(${RDKTEST_NAME} PRIVATE rdkitCatch ${RDKTEST_LINK_LIBRARIES} Catch2::Catch2)
+     add_test(${RDKTEST_NAME} ${EXECUTABLE_OUTPUT_PATH}/${RDKTEST_NAME})
+     #ParseAndAddCatchTests(${RDKTEST_NAME})
+-    add_dependencies(${RDKTEST_NAME} catch)
+   endif(RDK_BUILD_CPP_TESTS)
+ endmacro(rdkit_catch_test)
+ 
+Index: rdkit/External/YAeHMOP/test1.cpp
+===================================================================
+--- rdkit.orig/External/YAeHMOP/test1.cpp
++++ rdkit/External/YAeHMOP/test1.cpp
+@@ -1,7 +1,7 @@
+ //
+ // Copyright (C) 2018 Greg Landrum
+ //
+-#include "catch.hpp"
++#include <catch2/catch_all.hpp>
+ 
+ #include <GraphMol/RDKitBase.h>
+ #include "EHTTools.h"
+@@ -42,46 +42,46 @@ TEST_CASE("benzene", "[basics]") {
+   CHECK(res.numOrbitals == 30);
+   CHECK(res.numAtoms == 12);
+   for (unsigned int i = 0; i < 6; ++i) {
+-    CHECK(res.atomicCharges[i] == Approx(-0.026).margin(0.001));
++    CHECK(res.atomicCharges[i] == Catch::Approx(-0.026).margin(0.001));
+   }
+   for (unsigned int i = 6; i < 12; ++i) {
+-    CHECK(res.atomicCharges[i] == Approx(0.026).margin(0.001));
++    CHECK(res.atomicCharges[i] == Catch::Approx(0.026).margin(0.001));
+   }
+   for (unsigned int i = 0; i < 6; ++i) {
+     CHECK(res.reducedChargeMatrix[i * res.numOrbitals] ==
+-          Approx(0.1615).margin(0.001));
++          Catch::Approx(0.1615).margin(0.001));
+     CHECK(res.reducedChargeMatrix[i * res.numOrbitals + 6] ==
+-          Approx(0.1066).margin(0.001));
++          Catch::Approx(0.1066).margin(0.001));
+     CHECK(res.reducedChargeMatrix[i * res.numOrbitals + 9] ==
+-          Approx(0.1667).margin(0.001));
++          Catch::Approx(0.1667).margin(0.001));
+   }
+   for (unsigned int i = 6; i < 12; ++i) {
+     CHECK(res.reducedChargeMatrix[i * res.numOrbitals] ==
+-          Approx(0.0052).margin(0.001));
++          Catch::Approx(0.0052).margin(0.001));
+     CHECK(res.reducedChargeMatrix[i * res.numOrbitals + 6] ==
+-          Approx(0.0600).margin(0.001));
++          Catch::Approx(0.0600).margin(0.001));
+     CHECK(res.reducedChargeMatrix[i * res.numOrbitals + 9] ==
+-          Approx(0.0000).margin(0.001));
++          Catch::Approx(0.0000).margin(0.001));
+   }
+-  CHECK(res.orbitalEnergies[0] == Approx(-29.6302).margin(0.001));
+-  CHECK(res.orbitalEnergies[14] == Approx(-12.804).margin(0.001));
+-  CHECK(res.orbitalEnergies[29] == Approx(67.0404).margin(0.001));
++  CHECK(res.orbitalEnergies[0] == Catch::Approx(-29.6302).margin(0.001));
++  CHECK(res.orbitalEnergies[14] == Catch::Approx(-12.804).margin(0.001));
++  CHECK(res.orbitalEnergies[29] == Catch::Approx(67.0404).margin(0.001));
+ 
+-  CHECK(res.totalEnergy == Approx(-535.026).margin(0.001));
+-  CHECK(res.fermiEnergy == Approx(-12.804).margin(0.001));
++  CHECK(res.totalEnergy == Catch::Approx(-535.026).margin(0.001));
++  CHECK(res.fermiEnergy == Catch::Approx(-12.804).margin(0.001));
+ 
+   CHECK(res.hamiltonianMatrix[0 * res.numOrbitals + 0] ==
+-        Approx(-21.4000).margin(0.001));
++        Catch::Approx(-21.4000).margin(0.001));
+   CHECK(res.hamiltonianMatrix[0 * res.numOrbitals + 4] ==
+-        Approx(-15.3224).margin(0.001));
++        Catch::Approx(-15.3224).margin(0.001));
+   CHECK(res.hamiltonianMatrix[4 * res.numOrbitals + 0] ==
+-        Approx(0.0000).margin(0.001));
++        Catch::Approx(0.0000).margin(0.001));
+   CHECK(res.overlapMatrix[0 * res.numOrbitals + 0] ==
+-        Approx(1.0000).margin(0.001));
++        Catch::Approx(1.0000).margin(0.001));
+   CHECK(res.overlapMatrix[0 * res.numOrbitals + 4] ==
+-        Approx(0.4091).margin(0.001));
++        Catch::Approx(0.4091).margin(0.001));
+   CHECK(res.overlapMatrix[4 * res.numOrbitals + 0] ==
+-        Approx(0.0000).margin(0.001));
++        Catch::Approx(0.0000).margin(0.001));
+ }
+ #endif
+ #if 1
+Index: rdkit/External/catch/CMakeLists.txt
+===================================================================
+--- rdkit.orig/External/catch/CMakeLists.txt
++++ /dev/null
+@@ -1,25 +0,0 @@
+-add_custom_target(catch ALL)
+-
+-if(NOT DEFINED CATCH_DIR)
+-  set(CATCH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/catch")
+-endif()
+-if(EXISTS "${CATCH_DIR}/catch.hpp")
+-  message("-- Found Catch2: ${CATCH_DIR}")
+-  set(CATCH_INCLUDE_DIR "${CATCH_DIR}" PARENT_SCOPE)
+-elseif(EXISTS "${CATCH_DIR}/single_include/catch2/catch.hpp")
+-  message("-- Found Catch2 source in ${CATCH_DIR}")
+-  set(CATCH_INCLUDE_DIR "${CATCH_DIR}/single_include/catch2" PARENT_SCOPE)
+-else()
+-  message("-- Catch not found in ${CATCH_DIR}")
+-  include(RDKitUtils)
+-  set(RELEASE_NO "2.13.8")
+-  downloadAndCheckMD5("https://github.com/catchorg/Catch2/archive/v${RELEASE_NO}.tar.gz"
+-        "${CMAKE_CURRENT_SOURCE_DIR}/v${RELEASE_NO}.tar.gz"
+-        "3639fb4cb8020de0dcf1fd5addb39418")
+-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar zxf
+-    ${CMAKE_CURRENT_SOURCE_DIR}/v${RELEASE_NO}.tar.gz
+-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+-  file(RENAME "Catch2-${RELEASE_NO}" "${CATCH_DIR}")
+-  set(CATCH_INCLUDE_DIR "${CATCH_DIR}/single_include/catch2" PARENT_SCOPE)
+-endif()
+-
