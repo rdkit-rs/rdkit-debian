@@ -1,16 +1,15 @@
-Index: rdkit/Code/PgSQL/rdkit/rdkit_gist.c
-===================================================================
---- rdkit.orig/Code/PgSQL/rdkit/rdkit_gist.c
-+++ rdkit/Code/PgSQL/rdkit/rdkit_gist.c
-@@ -119,7 +119,7 @@ PGDLLEXPORT Datum gmol_decompress(PG_FUN
- PG_FUNCTION_INFO_V1(gmol_decompress);
- Datum gmol_decompress(PG_FUNCTION_ARGS) {
-   GISTENTRY *entry = (GISTENTRY *)PG_GETARG_POINTER(0);
--  bytea *key = (bytea *)DatumGetPointer(PG_DETOAST_DATUM(entry->key));
-+  bytea *key = (bytea *)PG_DETOAST_DATUM(entry->key);
- 
-   if (key != (bytea *)DatumGetPointer(entry->key)) {
-     GISTENTRY *retval = (GISTENTRY *)palloc(sizeof(GISTENTRY));
+From da5d972a93abc9cfb223a971431a945bfd70a14f Mon Sep 17 00:00:00 2001
+From: Christoph Berg <myon@debian.org>
+Date: Wed, 20 Sep 2023 18:11:10 +0200
+Subject: [PATCH] Code/PgSQL: Fix Pointer vs Datum
+
+PostgreSQL 16 got stricter wrt proper Pointer and Datum handling.
+---
+ Code/PgSQL/rdkit/bfp_gist.c   | 8 ++++----
+ Code/PgSQL/rdkit/low_gist.c   | 2 +-
+ Code/PgSQL/rdkit/rdkit_gist.c | 6 +++---
+ 3 files changed, 8 insertions(+), 8 deletions(-)
+
 Index: rdkit/Code/PgSQL/rdkit/bfp_gist.c
 ===================================================================
 --- rdkit.orig/Code/PgSQL/rdkit/bfp_gist.c
@@ -33,6 +32,18 @@ Index: rdkit/Code/PgSQL/rdkit/bfp_gist.c
  
    GBfpLeafData *data;
  
+@@ -654,9 +654,9 @@ static int
+ gbfp_cmp(Datum x, Datum y, SortSupport ssup)
+ {
+   /* establish order between x and y */
+-  GBfp *gbfp1 = (GBfp *)DatumGetPointer(PG_DETOAST_DATUM(x));
++  GBfp *gbfp1 = (GBfp *)PG_DETOAST_DATUM(x);
+   Assert(IS_LEAF_KEY(gbfp1));
+-  GBfp *gbfp2 = (GBfp *)DatumGetPointer(PG_DETOAST_DATUM(y));
++  GBfp *gbfp2 = (GBfp *)PG_DETOAST_DATUM(y);
+   Assert(IS_LEAF_KEY(gbfp2));
+ 
+   int siglen = GBFP_LEAF_SIGLEN(gbfp1);
 Index: rdkit/Code/PgSQL/rdkit/low_gist.c
 ===================================================================
 --- rdkit.orig/Code/PgSQL/rdkit/low_gist.c
@@ -46,3 +57,27 @@ Index: rdkit/Code/PgSQL/rdkit/low_gist.c
  
    if (key != (bytea *)DatumGetPointer(entry->key)) {
      GISTENTRY *retval = (GISTENTRY *)palloc(sizeof(GISTENTRY));
+Index: rdkit/Code/PgSQL/rdkit/rdkit_gist.c
+===================================================================
+--- rdkit.orig/Code/PgSQL/rdkit/rdkit_gist.c
++++ rdkit/Code/PgSQL/rdkit/rdkit_gist.c
+@@ -119,7 +119,7 @@ PGDLLEXPORT Datum gmol_decompress(PG_FUN
+ PG_FUNCTION_INFO_V1(gmol_decompress);
+ Datum gmol_decompress(PG_FUNCTION_ARGS) {
+   GISTENTRY *entry = (GISTENTRY *)PG_GETARG_POINTER(0);
+-  bytea *key = (bytea *)DatumGetPointer(PG_DETOAST_DATUM(entry->key));
++  bytea *key = (bytea *)PG_DETOAST_DATUM(entry->key);
+ 
+   if (key != (bytea *)DatumGetPointer(entry->key)) {
+     GISTENTRY *retval = (GISTENTRY *)palloc(sizeof(GISTENTRY));
+@@ -546,8 +546,8 @@ static int
+ gmol_cmp(Datum x, Datum y, SortSupport ssup)
+ {
+   /* establish order between x and y */
+-  bytea *a = (bytea*)DatumGetPointer(PG_DETOAST_DATUM(x));
+-  bytea *b = (bytea*)DatumGetPointer(PG_DETOAST_DATUM(y));
++  bytea *a = (bytea*)PG_DETOAST_DATUM(x);
++  bytea *b = (bytea*)PG_DETOAST_DATUM(y);
+ 
+   Assert(!ISALLTRUE(a));
+   Assert(!ISALLTRUE(b));
