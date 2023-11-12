@@ -23,7 +23,8 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
    THREADLIBS=-L${BOOSTHOME}/lib -lboost_thread -lboost_system
  endif
  
- RDKLIBS       = ${AVALONLIBS} ${INCHILIBS} -lRDKitMolDraw2D -lRDKitMolTransforms -lRDKitMolHash -lRDKitFMCS -lRDKitChemReactions -lRDKitChemTransforms -lRDKitFileParsers -lRDKitSmilesParse -lRDKitFingerprints -lRDKitSubgraphs -lRDKitDescriptors -lRDKitPartialCharges -lRDKitSubstructMatch  -lRDKitGraphMol -lRDKitEigenSolvers -lRDKitDataStructs -lRDKitDepictor -lRDKitRDGeometryLib -lRDKitRDGeneral
+-RDKLIBS       = ${AVALONLIBS} ${INCHILIBS} -lRDKitMolDraw2D -lRDKitMolTransforms -lRDKitMolHash -lRDKitFMCS -lRDKitChemReactions -lRDKitChemTransforms -lRDKitFileParsers -lRDKitSmilesParse -lRDKitFingerprints -lRDKitSubgraphs -lRDKitDescriptors -lRDKitPartialCharges -lRDKitSubstructMatch  -lRDKitGraphMol -lRDKitEigenSolvers -lRDKitDataStructs -lRDKitDepictor -lRDKitRDGeometryLib -lRDKitRDGeneral
++RDKLIBS       = ${AVALONLIBS} ${INCHILIBS} -lRDKitGeneralizedSubstruct -lRDKitMolEnumerator -lRDKitTautomerQuery -lRDKitMolDraw2D -lRDKitMolTransforms -lRDKitMolHash -lRDKitFMCS -lRDKitChemReactions -lRDKitChemTransforms -lRDKitFileParsers -lRDKitSmilesParse -lRDKitFingerprints -lRDKitSubgraphs -lRDKitDescriptors -lRDKitPartialCharges -lRDKitSubstructMatch  -lRDKitGraphMol -lRDKitEigenSolvers -lRDKitDataStructs -lRDKitDepictor -lRDKitRDGeometryLib -lRDKitRDGeneral
 +RDKIT_LIBDIR ?= ${RDKIT}/lib
  
  ifeq ($(STATIC_LINK),0)
@@ -58,6 +59,8 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
  
  all: $(EXTENSION)--$(EXTVERSION).sql
  
+-REGRESS    = rdkit-91 props btree molgist bfpgist-91 bfpgin sfpgist slfpgist fps reaction ${INCHIREGRESS} ${AVALONREGRESS}
+-DATA = $(EXTENSION)--$(EXTVERSION).sql
 +ifeq ($(shell test $(PGVER) -gt 13; echo $$?),0)
 +$(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
 +	sed -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@/FUNCTION    11   gmol_sortsupport (internal),/' \
@@ -72,8 +75,7 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
 + $< > $@
 +endif
 +
- REGRESS    = rdkit-91 props btree molgist bfpgist-91 bfpgin sfpgist slfpgist fps reaction ${INCHIREGRESS} ${AVALONREGRESS}
--DATA = $(EXTENSION)--$(EXTVERSION).sql
++REGRESS    = rdkit-91 props btree molgist bfpgist-91 bfpgin sfpgist slfpgist fps reaction ${INCHIREGRESS} fmcs query xqm ${AVALONREGRESS}
 +DATA_built = $(EXTENSION)--$(EXTVERSION).sql
  EXTRA_CLEAN = $(EXTENSION)--$(EXTVERSION).sql
  include $(PGXS)
