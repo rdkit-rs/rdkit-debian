@@ -28,6 +28,7 @@
 #include <RDGeneral/RDLog.h>
 #include <GraphMol/GenericGroups/GenericGroups.h>
 #include <GraphMol/QueryOps.h>
+#include <GraphMol/Chirality.h>
 
 #include <fstream>
 #include <RDGeneral/FileParseException.h>
@@ -1369,6 +1370,7 @@ void ParseAtomValue(RWMol *mol, std::string text, unsigned int line) {
               text.substr(7, text.length() - 7));
 }
 
+namespace {
 void setRGPProps(const std::string_view symb, Atom *res) {
   PRECONDITION(res, "bad atom pointer");
   // set the dummy label so that this is shown correctly
@@ -1390,6 +1392,8 @@ void lookupAtomicNumber(Atom *res, const std::string &symb,
     }
   }
 }
+
+}  // namespace
 
 Atom *ParseMolFileAtomLine(const std::string_view text, RDGeom::Point3D &pos,
                            unsigned int line, bool strictParsing) {
@@ -1544,7 +1548,6 @@ Atom *ParseMolFileAtomLine(const std::string_view text, RDGeom::Point3D &pos,
           << " has a negative isotope offset. line:  " << line << std::endl;
     }
     res->setIsotope(dIso);
-    res->setProp(common_properties::_hasMassQuery, true);
   }
 
   if (text.size() >= 42 && text.substr(39, 3) != "  0") {

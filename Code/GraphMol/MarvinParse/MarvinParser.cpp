@@ -25,6 +25,8 @@
 #include "MarvinParser.h"
 #include "MarvinDefs.h"
 #include <GraphMol/Conformer.h>
+#include <GraphMol/MolOps.h>
+#include <GraphMol/Chirality.h>
 
 #include <GraphMol/RDKitQueries.h>
 #include <GraphMol/StereoGroup.h>
@@ -190,7 +192,6 @@ class MarvinCMLReader {
 
       if (marvinAtom->isotope != 0) {
         res->setIsotope(marvinAtom->isotope);
-        res->setProp(common_properties::_hasMassQuery, true);
       }
 
       // mrvValence and hydrogenCount both set the number of explicit hydrogens
@@ -599,11 +600,11 @@ class MarvinCMLReader {
       // perceive chirality, then remove the Hs and sanitize.
       //
 
-      if (mol->getNumConformers() > 0) {
-        const Conformer &conf2 = mol->getConformer();
-        if (chiralityPossible) {
-          DetectAtomStereoChemistry(*mol, &conf2);
-        }
+      if (chiralityPossible && conf != nullptr) {
+        DetectAtomStereoChemistry(*mol, conf);
+      } else if (conf3d != nullptr) {
+        mol->updatePropertyCache(false);
+        MolOps::assignChiralTypesFrom3D(*mol, conf3d->getId(), true);
       }
 
       // now that atom stereochem has been perceived, the wedging

@@ -38,13 +38,15 @@ python::object BundleToBinary(const RDKit::MolBundle &self) {
 
 #else
 struct molbundle_pickle_suite : rdkit_pickle_suite {
-  static python::tuple getinitargs(const RDKit::MolBundle &self) {
+  static python::tuple getinitargs(const RDKit::MolBundle &) {
     throw_runtime_error("Pickling of MolBundle instances is not enabled");
+    return python::tuple();  // warning suppression, we never get here
   };
 };
 
-python::object BundleToBinary(const RDKit::MolBundle &self) {
+python::object BundleToBinary(const RDKit::MolBundle &) {
   throw_runtime_error("Pickling of MolBundle instances is not enabled");
+  return python::object();  // warning suppression, we never get here
 }
 #endif
 
@@ -56,8 +58,9 @@ std::string molBundleClassDoc =
 struct molbundle_wrap {
   static void wrap() {
     python::class_<MolBundle, boost::noncopyable>(
-        "MolBundle", molBundleClassDoc.c_str(), python::init<>())
-        .def(python::init<const std::string &>(python::args("pklString")))
+        "MolBundle", molBundleClassDoc.c_str(),
+        python::init<>(python::args("self")))
+        .def(python::init<const std::string &>(python::args("self", "pkl")))
         .def_pickle(molbundle_pickle_suite())
         .def("ToBinary", BundleToBinary,
              "Returns a binary string representation of the MolBundle.\n")
