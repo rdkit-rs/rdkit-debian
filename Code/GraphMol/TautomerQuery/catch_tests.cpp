@@ -6,7 +6,7 @@
 //  which is included in the file license.txt, found at the root
 //  of the RDKit source tree.
 
-#include "catch.hpp"
+#include <catch2/catch_all.hpp>
 
 #include <GraphMol/RDKitBase.h>
 #include <GraphMol/TautomerQuery/TautomerQuery.h>
@@ -375,10 +375,12 @@ TEST_CASE("Tautomer queries should propagate atom properties") {
   CHECK(tq->getTautomers()[0]->getAtomWithIdx(6)->hasProp("_foo"));
   CHECK(tq->getTautomers()[1]->getAtomWithIdx(6)->hasProp("_foo"));
   CHECK(tq->getTemplateMolecule().getAtomWithIdx(6)->hasProp("_foo"));
+#ifdef RDK_USE_BOOST_SERIALIZATION
   SECTION("serialization") {
     TautomerQuery tq2(tq->serialize());
     CHECK(tq2.getTautomers()[0]->getAtomWithIdx(6)->hasProp("_foo"));
     CHECK(tq2.getTautomers()[1]->getAtomWithIdx(6)->hasProp("_foo"));
     CHECK(tq2.getTemplateMolecule().getAtomWithIdx(6)->hasProp("_foo"));
   }
+#endif
 }

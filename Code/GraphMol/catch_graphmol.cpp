@@ -8,7 +8,7 @@
 //  of the RDKit source tree.
 //
 
-#include "catch.hpp"
+#include <catch2/catch_all.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -28,6 +28,7 @@
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/SmilesParse/SmilesWrite.h>
 #include <GraphMol/SmilesParse/SmartsWrite.h>
+#include <GraphMol/test_fixtures.h>
 
 using namespace RDKit;
 #if 1
@@ -1875,7 +1876,7 @@ TEST_CASE("batch edits", "[editing]") {
   }
 }
 
-TEST_CASE("github #4122: segfaults in commitBatchEdit()", "[editing]][bug]") {
+TEST_CASE("github #4122: segfaults in commitBatchEdit()", "[editing][bug]") {
   SECTION("as reported, no atoms") {
     RWMol m;
     m.beginBatchEdit();
@@ -2960,15 +2961,15 @@ TEST_CASE("molecules with single bond to metal atom use dative instead") {
   for (size_t i = 0; i < test_vals.size(); ++i) {
     INFO(test_vals[i].first);
     RWMOL_SPTR m(RDKit::SmilesToMol(test_vals[i].first));
-    TEST_ASSERT(MolToSmiles(*m) == test_vals[i].second);
+    CHECK(MolToSmiles(*m) == test_vals[i].second);
   }
   // make sure we can call cleanupOrganometallics() on non-sanitized molecules
   for (size_t i = 0; i < test_vals.size(); ++i) {
     INFO(test_vals[i].first);
-    bool sanitize=false;
-    RWMOL_SPTR m(RDKit::SmilesToMol(test_vals[i].first,0,sanitize));
+    bool sanitize = false;
+    RWMOL_SPTR m(RDKit::SmilesToMol(test_vals[i].first, 0, sanitize));
     MolOps::cleanUpOrganometallics(*m);
-    TEST_ASSERT(MolToSmiles(*m) == test_vals[i].second);
+    CHECK(MolToSmiles(*m) == test_vals[i].second);
   }
 }
 
@@ -2983,7 +2984,7 @@ TEST_CASE(
     std::string &smi = test_vals[j].first;
     std::string &canon_smi = test_vals[j].second;
     RWMOL_SPTR m(RDKit::SmilesToMol(smi));
-    TEST_ASSERT(MolToSmiles(*m) == canon_smi);
+    CHECK(MolToSmiles(*m) == canon_smi);
 
     // scramble the order and check
     std::vector<unsigned int> atomInds(m->getNumAtoms(), 0);
@@ -2998,7 +2999,7 @@ TEST_CASE(
       std::unique_ptr<ROMol> randmol(MolOps::renumberAtoms(*mol, atomInds));
       std::unique_ptr<RWMol> rwrandmol(new RWMol(*randmol));
       MolOps::sanitizeMol(*rwrandmol);
-      TEST_ASSERT(MolToSmiles(*rwrandmol) == canon_smi);
+      CHECK(MolToSmiles(*rwrandmol) == canon_smi);
     }
   }
 }
@@ -3053,7 +3054,7 @@ TEST_CASE(
     rdWarningLog->SetTee(ss);
     MolOps::mergeQueryHs(*m);
     rdWarningLog->ClearTee();
-    TEST_ASSERT(
+    CHECK(
         ss.str().find(
             "WARNING: merging explicit H queries involved in ORs is not supported. "
             "This query will not be merged") != std::string::npos);
@@ -3065,7 +3066,7 @@ TEST_CASE(
     rdWarningLog->SetTee(ss);
     MolOps::mergeQueryHs(*m);
     rdWarningLog->ClearTee();
-    TEST_ASSERT(
+    CHECK(
         ss.str().find(
             "WARNING: merging explicit H queries involved in ORs is not supported. "
             "This query will not be merged") != std::string::npos);
@@ -3077,7 +3078,7 @@ TEST_CASE(
     rdWarningLog->SetTee(ss);
     MolOps::mergeQueryHs(*m);
     rdWarningLog->ClearTee();
-    TEST_ASSERT(
+    CHECK(
         ss.str().find(
             "WARNING: merging explicit H queries involved in ORs is not supported. "
             "This query will not be merged") == std::string::npos);
@@ -3420,8 +3421,7 @@ TEST_CASE(
   }
 }
 
-TEST_CASE(
-    "ROMol hasQuery") {
+TEST_CASE("ROMol hasQuery") {
   SECTION("check false Mol.hasQuery") {
     std::unique_ptr<ROMol> mol{SmilesToMol("CCO")};
 
@@ -3437,4 +3437,29 @@ TEST_CASE(
 
     REQUIRE(mol->hasQuery());
   }
+}
+
+TEST_CASE(
+    "Github Issue #6944: With new stereo, removing H from an Imine double bond does not remove bond stereo",
+    "[bug][molops]") {
+  // This issue only happens with the new stereo perception,
+  // since the legacy one does not support stereo on imine bonds
+  UseLegacyStereoPerceptionFixture use_new_stereo_perception{false};
+
+  auto m = "[H]/N=C(/C)O"_smiles;
+  REQUIRE(m);
+  REQUIRE(m->getNumAtoms() == 5);
+
+  auto bnd = m->getBondWithIdx(1);
+  REQUIRE(bnd->getBondType() == Bond::BondType::DOUBLE);
+  REQUIRE(bnd->getStereo() == Bond::BondStereo::STEREOTRANS);
+  REQUIRE(bnd->getStereoAtoms().size() == 2);
+
+  MolOps::removeAllHs(*m);
+  REQUIRE(m->getNumAtoms() == 4);
+
+  bnd = m->getBondWithIdx(0);
+  REQUIRE(bnd->getBondType() == Bond::BondType::DOUBLE);
+  CHECK(bnd->getStereo() == Bond::BondStereo::STEREONONE);
+  CHECK(bnd->getStereoAtoms().empty());
 }
