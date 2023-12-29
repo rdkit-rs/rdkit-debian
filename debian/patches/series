@@ -5,4 +5,3 @@ postgres_alternative_test_outputs.patch
 sphinx_compile_fixes.patch
 extra_float_digits
 pg16
-catch2_v3_support.patch
