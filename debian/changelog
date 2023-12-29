@@ -1,12 +1,9 @@
-rdkit (202309.3-1) UNRELEASED; urgency=medium
+rdkit (202309.3-1) unstable; urgency=medium
 
-  [ Debichem Team ]
   * New upstream point release.
-
-  [ Michael Banck ]
   * debian/patches/catch2_v3_support.patch: Removed, no longer needed.
 
- -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sun, 12 Nov 2023 20:23:06 +0100
+ -- Michael Banck <mbanck@debian.org>  Fri, 29 Dec 2023 16:59:15 +0100
 
 rdkit (202309.2-1) unstable; urgency=medium
 
