@@ -1,7 +1,5 @@
-Index: rdkit/Code/PgSQL/rdkit/Makefile
-===================================================================
---- rdkit.orig/Code/PgSQL/rdkit/Makefile
-+++ rdkit/Code/PgSQL/rdkit/Makefile
+--- a/Code/PgSQL/rdkit/Makefile
++++ b/Code/PgSQL/rdkit/Makefile
 @@ -10,9 +10,8 @@
  #STATIC_LINK=1
  # -------------------------
@@ -71,7 +69,7 @@ Index: rdkit/Code/PgSQL/rdkit/Makefile
 +$(EXTENSION)--$(EXTVERSION).sql: $(EXTENSION).sql.in
 +	sed -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@//' \
 + -e's/@RDKIT_PG_QMOL_GIST_SORTSUPPORT@//' \
-+ -e's/@RDKIT_PG_MOL_GIST_SORTSUPPORT@//' \
++ -e's/@RDKIT_PG_BFP_GIST_SORTSUPPORT@//' \
 + $< > $@
 +endif
 +
