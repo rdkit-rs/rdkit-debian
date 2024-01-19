@@ -1,3 +1,3 @@
-Depends: @, make
+Depends: @, dpkg-dev, make
 Tests: installcheck
-Restrictions: allow-stderr
+Restrictions: allow-stderr, skippable

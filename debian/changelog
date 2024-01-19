@@ -1,6 +1,8 @@
 rdkit (202309.3-2) unstable; urgency=medium
 
+  * Team upload.
   * Fix postgres_Makefile_fixes.patch for PG <= 13.
+  * Ignore test failures on i386 and s390x.
 
  -- Christoph Berg <myon@debian.org>  Wed, 17 Jan 2024 13:03:19 +0000
 
