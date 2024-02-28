@@ -1,3 +1,10 @@
+rdkit (202309.3-3) unstable; urgency=medium
+
+  * Team upload.
+  * Include CMake files in librdkit-dev (Closes: #1064953)
+
+ -- Andrius Merkys <merkys@debian.org>  Wed, 28 Feb 2024 04:43:17 -0500
+
 rdkit (202309.3-2) unstable; urgency=medium
 
   * Team upload.
