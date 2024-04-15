@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Clean up repositories
-        run: rm /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/ubuntu-toolchain-r-ubuntu-test-jammy.list
+        run: sudo rm /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/ubuntu-toolchain-r-ubuntu-test-jammy.list
 
       - name: Install build tools
         run: ls /etc/apt/sources.list.d/; cat /etc/apt/sources.list; sudo apt-get update; sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python postgresql-common=238 postgresql-server-dev-all
