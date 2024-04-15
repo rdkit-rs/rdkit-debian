@@ -1,3 +1,9 @@
+rdkit (202403.1-1) UNRELEASED; urgency=medium
+
+ * Update against upstream tag Release_2024_03_1
+
+ -- Debichem Team <debichem-devel@lists.alioth.debian.org>  Sat, 14 Jan 2023 13:33:42 +0100
+
 rdkit (202209.3-2) UNRELEASED; urgency=medium
 
   * New upstream point release

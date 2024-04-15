@@ -19,6 +19,7 @@
 #include <iostream>
 #include <map>
 #include <regex>
+#include <set>
 #include <stdexcept>
 #include <unordered_set>
 #include <vector>
@@ -116,14 +117,11 @@ void sortedDegreeSeqs(
 }
 
 // Make labels for the atoms - by default the atomic symbol.
-void getAtomLabels(const ROMol &mol, const RascalOptions &opts,
+void getAtomLabels(const ROMol &mol, const RascalOptions & /* opts */,
                    std::vector<std::string> &atomLabels) {
   atomLabels.resize(mol.getNumAtoms());
   for (const auto &a : mol.atoms()) {
     std::string label = a->getSymbol();
-    if (opts.exactConnectionsMatch) {
-      label += "X" + std::to_string(a->getDegree());
-    }
     atomLabels[a->getIdx()] = label;
   }
 }
@@ -1065,7 +1063,7 @@ std::vector<RascalResult> findMCES(RascalStartPoint &starter,
                      starter.d_adjMatrix2, c, starter.d_vtxPairs, timedOut,
                      starter.d_swapped, starter.d_tier1Sim, starter.d_tier2Sim,
                      opts.ringMatchesRingOnly, opts.singleLargestFrag,
-                     opts.maxFragSeparation, opts.exactConnectionsMatch));
+                     opts.maxFragSeparation));
   }
   std::sort(results.begin(), results.end(), details::resultCompare);
   return results;

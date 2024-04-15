@@ -1,31 +1,3 @@
-# Release_2024.09.1
-(Changes relative to Release_2024.03.1)
-
-## Acknowledgements
-(Note: I'm no longer attempting to manually curate names. If you would like to
-see your contribution acknowledged with your name, please set your name in
-GitHub)
-
-
-## Highlights
-
-## Backwards incompatible changes
-- The SMARTS for the unbranched alkanes in the fragment descriptors has been corrected. This descriptor will now frequently return different results.
-
-
-## New Features and Enhancements:
-
-## Bug Fixes:
-  
-## Cleanup work:
- 
-## Code removed in this release:
-
-## Deprecated code (to be removed in a future release):
-
-- AtomPairs.Utils.NumPiElectrons is deprecated in favor of Chem.GetNumPiElectrons.
-AtomPairs.Utils.NumPiElectrons failed if the atom had outgoing dative bonds (see Issue #7318).
-
 # Release_2024.03.1
 (Changes relative to Release_2023.09.1)
 
