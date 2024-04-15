@@ -1,13 +1,12 @@
-# $Id$
-#
-
-from rdkit import Chem
-from rdkit.Chem import rdMolDescriptors as rdMD, Descriptors
-from rdkit.Chem import AllChem
-from rdkit import DataStructs
-from rdkit import RDConfig
-from rdkit.Geometry import rdGeometry as rdG
 import unittest
+from os import environ
+from pathlib import Path
+import re
+
+from rdkit import Chem, DataStructs, RDConfig
+from rdkit.Chem import AllChem, Descriptors
+from rdkit.Chem import rdMolDescriptors as rdMD
+from rdkit.Geometry import rdGeometry as rdG
 
 haveBCUT = hasattr(rdMD, 'BCUT2D')
 
@@ -24,24 +23,32 @@ class TestCase(unittest.TestCase):
   def testAtomPairTypes(self):
     params = rdMD.AtomPairsParameters
     mol = Chem.MolFromSmiles("C=C")
-    self.assertTrue(rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(0))==
-                    rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(1)))
-    self.assertTrue(rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(0))==
-                    1 | (1 | 1<<params.numPiBits)<<params.numBranchBits)
+    self.assertTrue(
+      rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(0)) == rdMD.GetAtomPairAtomCode(
+        mol.GetAtomWithIdx(1)))
+    self.assertTrue(
+      rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(0)) == 1
+      | (1 | 1 << params.numPiBits) << params.numBranchBits)
 
     mol = Chem.MolFromSmiles("C#CO")
-    self.assertTrue(rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(0))!=
-                    rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(1)))
-    self.assertTrue(rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(0))==
-                    1 | (2 | 1<<params.numPiBits)<<params.numBranchBits)
-    self.assertTrue(rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(1))==
-                    2 | (2 | 1<<params.numPiBits)<<params.numBranchBits)
-    self.assertTrue(rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(2))==
-                    1 | (0 | 3<<params.numPiBits)<<params.numBranchBits)
-    self.assertTrue(rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(1),1)==
-                    1 | (2 | 1<<params.numPiBits)<<params.numBranchBits)
-    self.assertTrue(rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(1),2)==
-                    0 | (2 | 1<<params.numPiBits)<<params.numBranchBits)
+    self.assertTrue(
+      rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(0)) != rdMD.GetAtomPairAtomCode(
+        mol.GetAtomWithIdx(1)))
+    self.assertTrue(
+      rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(0)) == 1
+      | (2 | 1 << params.numPiBits) << params.numBranchBits)
+    self.assertTrue(
+      rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(1)) == 2
+      | (2 | 1 << params.numPiBits) << params.numBranchBits)
+    self.assertTrue(
+      rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(2)) == 1
+      | (0 | 3 << params.numPiBits) << params.numBranchBits)
+    self.assertTrue(
+      rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(1), 1) == 1
+      | (2 | 1 << params.numPiBits) << params.numBranchBits)
+    self.assertTrue(
+      rdMD.GetAtomPairAtomCode(mol.GetAtomWithIdx(1), 2) == 0
+      | (2 | 1 << params.numPiBits) << params.numBranchBits)
 
   def testAtomPairTypesChirality(self):
     mols = [Chem.MolFromSmiles(x) for x in ("CC(F)Cl", "C[C@@H](F)Cl", "C[C@H](F)Cl")]
@@ -471,7 +478,6 @@ class TestCase(unittest.TestCase):
         'Cc1cccc(C)c1c1c(C)cccc1',
         'CCO',
     ]:
-
       m = Chem.MolFromSmiles(s)
 
       v1 = rdMD.CalcNumRotatableBonds(m)
@@ -660,8 +666,8 @@ class TestCase(unittest.TestCase):
       mol = Chem.MolFromSmiles(smi)
       res = rdMD.BCUT2D(mol)
       self.assertEqual(len(res), 8)
-      for rv,ev in zip(res,expected[i]):
-        self.assertAlmostEqual(rv,ev)
+      for rv, ev in zip(res, expected[i]):
+        self.assertAlmostEqual(rv, ev)
       # print(list(res))  # - expected[i])
       # self.assertAlmostEqual(list(res), expected[i])
 
@@ -703,8 +709,66 @@ class TestCase(unittest.TestCase):
       bcut2 = rdMD.BCUT2D(m, "bad_prop")
       self.assertTrue(0, "Failed to handle bad prop (not a double)")
     except RuntimeError as e:
-      self.assertTrue("boost::bad_any_cast" in str(e))
+      self.assertTrue(re.search(r"[B,b]ad any[\ ,_]cast",str(e)))
 
+  def testOxidationNumbers(self):
+    # majority of tests are in the C++ layer.  These are just to make
+    # sure the wrappers are working.
+    m = Chem.MolFromSmiles("CO")
+    rdMD.CalcOxidationNumbers(m)
+    self.assertEqual(m.GetAtomWithIdx(0).GetIntProp('OxidationNumber'), -2)
+    self.assertEqual(m.GetAtomWithIdx(1).GetIntProp('OxidationNumber'), -2)
+
+    rdbase = environ["RDBASE"]
+    ffile = Path(rdbase) / 'Code' / 'GraphMol' / 'MolStandardize' / 'test_data' / 'ferrocene.mol'
+    ferrocene = Chem.MolFromMolFile(str(ffile))
+    Chem.Kekulize(ferrocene)
+    rdMD.CalcOxidationNumbers(ferrocene)
+    self.assertEqual(ferrocene.GetAtomWithIdx(10).GetProp('OxidationNumber'), '2')
+
+  def testDCLV(self):
+    rdbase = environ["RDBASE"]
+    fname1 = str(Path(rdbase) / 'Code' / 'GraphMol' / 'Descriptors' / 'test_data' / '1mup.pdb')
+    mol1 = Chem.MolFromPDBFile(fname1, sanitize=False, removeHs=False)
+
+    # test default params
+    default = rdMD.DoubleCubicLatticeVolume(mol1)
+
+    self.assertTrue(abs(default.GetSurfaceArea() - 8330.59) < 0.05)
+    self.assertTrue(abs(default.GetVolume() - 31789.6) < 0.05)
+    self.assertTrue(abs(default.GetVDWVolume() - 15355.3) < 0.05)
+    self.assertTrue(abs(default.GetCompactness() - 1.7166) < 0.05)
+    self.assertTrue(abs(default.GetPackingDensity() - 0.48303) < 0.05)
+
+    # test set depth and radius
+    depthrad = rdMD.DoubleCubicLatticeVolume(mol1, probeRadius=1.6, depth=6)
+
+    self.assertTrue(abs(depthrad.GetSurfaceArea() - 8186.06) < 0.05)
+    self.assertTrue(abs(depthrad.GetVolume() - 33464.5) < 0.05)
+    self.assertTrue(abs(depthrad.GetVDWVolume() - 15350.7) < 0.05)
+    self.assertTrue(abs(depthrad.GetCompactness() - 1.63005) < 0.05)
+    self.assertTrue(abs(depthrad.GetPackingDensity() - 0.458717) < 0.05)
+
+    # test include ligand
+    withlig = rdMD.DoubleCubicLatticeVolume(mol1, includeLigand=True)
+
+    self.assertTrue(abs(withlig.GetSurfaceArea() - 8010.56) < 0.05)
+    self.assertTrue(abs(withlig.GetVolume() - 31228.4) < 0.05)
+    self.assertTrue(abs(withlig.GetVDWVolume() - 15155.7) < 0.05)
+    self.assertTrue(abs(withlig.GetCompactness() - 1.67037) < 0.05)
+    self.assertTrue(abs(withlig.GetPackingDensity() - 0.48532) < 0.05)
+    
+    fname2 = str(Path(rdbase) / 'Code' / 'GraphMol' / 'Descriptors' / 'test_data' / 'TZL_model.sdf')
+    suppl = Chem.SDMolSupplier(fname2)
+    for mol in suppl:
+        mol2 = mol
+
+    # test from SDF file with defaults
+    sdf = rdMD.DoubleCubicLatticeVolume(mol2, isProtein=False)
+
+    self.assertTrue(abs(sdf.GetVolume() - 1048.53) < 0.05)
+    self.assertTrue(abs(sdf.GetVDWVolume() - 231.971) < 0.05)
+    self.assertTrue(abs(sdf.GetPackingDensity() - 0.221234) < 0.05)
 
 if __name__ == '__main__':
   unittest.main()

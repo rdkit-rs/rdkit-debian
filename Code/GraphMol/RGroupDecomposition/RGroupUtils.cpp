@@ -110,13 +110,10 @@ bool isDummyRGroupAttachment(const Atom &atom) {
   if (isUserRLabel(atom)) {
     return true;
   }
-  int rlabel_type = 0;
-  bool unlabelled_core_attachment = false;
-  if (atom.hasProp(RLABEL) && atom.getPropIfPresent(RLABEL_TYPE, rlabel_type) &&
-      static_cast<Labelling>(rlabel_type) == Labelling::INDEX_LABELS &&
-      atom.getPropIfPresent(UNLABELLED_CORE_ATTACHMENT,
-                            unlabelled_core_attachment) &&
-      unlabelled_core_attachment) {
+  bool unlabeled_core_attachment = false;
+  if (atom.getPropIfPresent(UNLABELED_CORE_ATTACHMENT,
+                            unlabeled_core_attachment) &&
+      unlabeled_core_attachment) {
     return true;
   }
   return false;
@@ -209,6 +206,46 @@ std::string toJSON(const RGroupColumns &cols, const std::string &prefix) {
   res.erase(res.end() - 2, res.end());
   res += "\n" + prefix + "]";
   return res;
+}
+
+void relabelMappedDummies(ROMol &mol, unsigned int inputLabels,
+                          unsigned int outputLabels) {
+  for (auto &atom : mol.atoms()) {
+    if (atom->getAtomicNum()) {
+      continue;
+    }
+    unsigned int atomMapNum = 0;
+    if (inputLabels & AtomMap) {
+      atomMapNum = static_cast<unsigned int>(abs(atom->getAtomMapNum()));
+    }
+    if (!atomMapNum && (inputLabels & Isotope)) {
+      atomMapNum = atom->getIsotope();
+    }
+    if (!atomMapNum && (inputLabels & MDLRGroup)) {
+      atom->getPropIfPresent(common_properties::_MolFileRLabel, atomMapNum);
+    }
+    if (!atomMapNum) {
+      continue;
+    }
+    auto rLabel = "R" + std::to_string(atomMapNum);
+    if (outputLabels & AtomMap) {
+      atom->setAtomMapNum(atomMapNum);
+    } else {
+      atom->setAtomMapNum(0);
+    }
+    if (outputLabels & Isotope) {
+      atom->setIsotope(atomMapNum);
+    } else {
+      atom->setIsotope(0);
+    }
+    if (outputLabels & MDLRGroup) {
+      atom->setProp(common_properties::_MolFileRLabel, atomMapNum);
+      atom->setProp(common_properties::dummyLabel, rLabel);
+    } else {
+      atom->clearProp(common_properties::_MolFileRLabel);
+      atom->clearProp(common_properties::dummyLabel);
+    }
+  }
 }
 
 }  // namespace RDKit

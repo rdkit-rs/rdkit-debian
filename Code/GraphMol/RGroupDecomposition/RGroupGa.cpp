@@ -110,7 +110,8 @@ RGroupGa::RGroupGa(const RGroupDecompData& rGroupData,
     }
     chromosomePolicy.setMax(pos, m.size());
     unsigned long count = numPermutations * m.size();
-    numPermutations = std::min(count, static_cast<unsigned long>(numeric_limits<unsigned int>::max()));
+    numPermutations = std::min(
+        count, static_cast<unsigned long>(numeric_limits<unsigned int>::max()));
     pos++;
   }
   chromLength = pos;
@@ -326,7 +327,7 @@ vector<GaResult> RGroupGa::runBatch() {
     tasks.reserve(numberRuns);
     for (int n = 0; n < numberRuns; n++) {
       auto future = async(launch::async, &RDKit::RGroupGa::run, this, n + 1);
-      tasks.push_back(move(future));
+      tasks.push_back(std::move(future));
     }
 
     std::transform(tasks.begin(), tasks.end(), back_inserter(results),

@@ -13,7 +13,7 @@
 #define MOLDRAW2DUTILS_H
 #include <GraphMol/RWMol.h>
 
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 // ****************************************************************************
 
@@ -70,7 +70,8 @@ RDKIT_MOLDRAW2D_EXPORT void prepareAndDrawMolecule(
     const std::map<int, DrawColour> *highlight_atom_map = nullptr,
     const std::map<int, DrawColour> *highlight_bond_map = nullptr,
     const std::map<int, double> *highlight_radii = nullptr, int confId = -1,
-    bool kekulize = true);
+    bool kekulize = true, bool addChiralHs = true, bool wedgeBonds = true,
+    bool forceCoords = false, bool wavyBonds = false);
 
 RDKIT_MOLDRAW2D_EXPORT void updateDrawerParamsFromJSON(MolDraw2D &drawer,
                                                        const char *json);
@@ -94,6 +95,14 @@ struct ContourParams {
       {0.557, 0.004, 0.322, 0.5},
       {1, 1, 1, 0.5},
       {0.153, 0.392, 0.098, 0.5}};  // similarity map color scheme
+  bool drawAsLines =
+      true;  // draws the contours as continuous lines instead of line segments.
+  double coordScaleForQuantization =
+      1000.;  // caling factor used to convert coordinates to ints when forming
+              // the continuous lines
+  double isovalScaleForQuantization =
+      1e6;  // scaling factor used to convert isovalues to ints when forming the
+            // continuous lines
 };
 
 //! Generates and draws contours for data on a grid

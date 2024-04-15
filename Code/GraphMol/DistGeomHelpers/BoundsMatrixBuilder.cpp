@@ -525,6 +525,11 @@ void set13Bounds(const ROMol &mol, DistGeom::BoundsMatPtr mmat,
               angle = 2 * M_PI / 3;
             } else if (ahyb == Atom::SP3) {
               angle = 109.5 * M_PI / 180;
+            } else if (Chirality::hasNonTetrahedralStereo(atom)) {
+              angle = Chirality::getIdealAngleBetweenLigands(
+                          atom, mol.getAtomWithIdx(aid1),
+                          mol.getAtomWithIdx(aid3)) *
+                      M_PI / 180;
             } else if (ahyb == Atom::SP3D) {
               // FIX: this and the remaining two hybridization states below
               // should probably be special cased. These defaults below are
@@ -537,7 +542,18 @@ void set13Bounds(const ROMol &mol, DistGeom::BoundsMatPtr mmat,
               angle = 120.0 * M_PI / 180;
             }
           }
-          _set13BoundsHelper(aid1, aid2, aid3, angle, accumData, mmat, mol);
+          if (atom->getDegree() <= 4 ||
+              (Chirality::hasNonTetrahedralStereo(atom) &&
+               atom->hasProp(common_properties::_chiralPermutation))) {
+            _set13BoundsHelper(aid1, aid2, aid3, angle, accumData, mmat, mol);
+          } else {
+            // just use 180 as the max angle and an arbitrary min angle
+            auto dmax =
+                accumData.bondLengths[bid1] + accumData.bondLengths[bid2];
+            auto dl = 1.0;
+            auto du = dmax * 1.2;
+            _checkAndSetBounds(aid1, aid3, dl, du, mmat);
+          }
           accumData.bondAngles->setVal(bid1, bid2, angle);
           accumData.bondAdj->setVal(bid1, bid2, aid2);
           angleTaken[aid2] += angle;
@@ -1060,8 +1076,8 @@ void _setChain14Bounds(const ROMol &mol, const Bond *bnd1, const Bond *bnd2,
           dl -= GEN_DIST_TOL;
           du += GEN_DIST_TOL;
           path14.type = Path14Configuration::TRANS;
-          transPaths[static_cast<unsigned long>(bid1)*nb*nb + bid2*nb + bid3] = 1;
-          transPaths[static_cast<unsigned long>(bid3)*nb*nb + bid2*nb + bid1] = 1;
+          accumData.transPaths[static_cast<unsigned long>(bid1)*nb*nb + bid2*nb + bid3] = 1;
+          accumData.transPaths[static_cast<unsigned long>(bid3)*nb*nb + bid2*nb + bid1] = 1;
         } else
 #endif
       if ((atm2->getAtomicNum() == 16) && (atm3->getAtomicNum() == 16)) {
@@ -1288,9 +1304,6 @@ void _setMacrocycleTwoInSameRing14Bounds(const ROMol &mol, const Bond *bnd1,
     return;
   }
 
-  Atom::HybridizationType ahyb3 = atm3->getHybridization();
-  Atom::HybridizationType ahyb2 = atm2->getHybridization();
-
   double bl1 = accumData.bondLengths[bid1];
   double bl2 = accumData.bondLengths[bid2];
   double bl3 = accumData.bondLengths[bid3];
@@ -1317,18 +1330,6 @@ void _setMacrocycleTwoInSameRing14Bounds(const ROMol &mol, const Bond *bnd1,
     du = dl;
     dl -= GEN_DIST_TOL;
     du += GEN_DIST_TOL;
-  } else if ((ahyb2 == Atom::SP2) &&
-             (ahyb3 == Atom::SP2)) {  // FIX: check for trans
-    // here we will assume 180 degrees: basically flat ring with an external
-    // substituent
-    dl = RDGeom::compute14DistTrans(bl1, bl2, bl3, ba12, ba23);
-    du = dl;
-    dl -= GEN_DIST_TOL;
-    du += GEN_DIST_TOL;
-    path14.type = Path14Configuration::TRANS;
-    accumData.transPaths[bid1 * nb * nb + bid2 * nb + bid3] = 1;
-    accumData.transPaths[bid3 * nb * nb + bid2 * nb + bid1] = 1;
-
   } else {
     // here we will assume anything is possible
     dl = RDGeom::compute14DistCis(bl1, bl2, bl3, ba12, ba23);
@@ -1463,8 +1464,8 @@ void _setMacrocycleAllInSameRing14Bounds(const ROMol &mol, const Bond *bnd1,
           dl -= GEN_DIST_TOL;
           du += GEN_DIST_TOL;
           path14.type = Path14Configuration::TRANS;
-          transPaths[static_cast<unsigned long>(bid1)*nb*nb + bid2*nb + bid3] = 1;
-          transPaths[static_cast<unsigned long>(bid3)*nb*nb + bid2*nb + bid1] = 1;
+          accumData.transPaths[static_cast<unsigned long>(bid1)*nb*nb + bid2*nb + bid3] = 1;
+          accumData.transPaths[static_cast<unsigned long>(bid3)*nb*nb + bid2*nb + bid1] = 1;
         } else
 #endif
 

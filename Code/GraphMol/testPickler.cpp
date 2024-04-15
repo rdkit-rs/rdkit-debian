@@ -90,7 +90,6 @@ void _createPickleFile() {
 
   SmilesMolSupplier suppl(smiName, "\t", 0, 1, false);
   std::ofstream outStream(pklName.c_str(), std::ios_base::binary);
-  int count = 0;
   while (!suppl.atEnd()) {
     ROMol *m = suppl.next();
     TEST_ASSERT(m);
@@ -98,7 +97,6 @@ void _createPickleFile() {
     std::string pickle;
     MolPickler::pickleMol(*m, outStream);
     delete m;
-    count++;
   }
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
@@ -844,6 +842,22 @@ void testIssue3316407() {
   BOOST_LOG(rdErrorLog) << "\tdone" << std::endl;
 }
 
+void testGithubIssue6036() {
+  BOOST_LOG(rdErrorLog) << "-------------------------------------" << std::endl;
+  BOOST_LOG(rdErrorLog) << "Testing github issue 6036" << std::endl;
+  // Root cause
+  //  MurckoDecompose sets a boost::any as a distance matrix as well as
+  //  setting an explicit bit vector.  This checks to ensure that
+  //  rdvalue_is correctly works for ExplicitBitVectors and doesn't return
+  //  true when a boost::any has been set that isn't an explicit bit vector
+  auto m = "C"_smiles;
+  boost::shared_array<double> sptr;
+  m->setProp("shared_array", sptr);
+  std::string pkl;
+  MolPickler::pickleMol(*m, pkl, PicklerOps::AllProps);
+  std::unique_ptr<RWMol> roundTripped(new RWMol(pkl));
+}
+
 void testIssue3496759() {
   BOOST_LOG(rdErrorLog) << "-------------------------------------" << std::endl;
   BOOST_LOG(rdErrorLog) << "Testing sf.net issue 3496759." << std::endl;
@@ -1361,12 +1375,19 @@ void testEnhancedStereoChemistry() {
   {
     std::vector<StereoGroup> groups;
     std::vector<Atom *> atoms0 = {{m.getAtomWithIdx(0), m.getAtomWithIdx(1)}};
+    std::vector<Bond *> bonds0;
     groups.emplace_back(RDKit::StereoGroupType::STEREO_ABSOLUTE,
-                        std::move(atoms0));
+                        std::move(atoms0), std::move(bonds0));
     std::vector<Atom *> atoms1 = {{m.getAtomWithIdx(2), m.getAtomWithIdx(3)}};
-    groups.emplace_back(RDKit::StereoGroupType::STEREO_OR, std::move(atoms1));
+    std::vector<Bond *> bonds1;
+
+    groups.emplace_back(RDKit::StereoGroupType::STEREO_OR, std::move(atoms1),
+                        std::move(bonds1));
     std::vector<Atom *> atoms2 = {{m.getAtomWithIdx(4), m.getAtomWithIdx(5)}};
-    groups.emplace_back(RDKit::StereoGroupType::STEREO_AND, std::move(atoms2));
+    std::vector<Bond *> bonds2;
+
+    groups.emplace_back(RDKit::StereoGroupType::STEREO_AND, std::move(atoms2),
+                        std::move(bonds2));
     m.setStereoGroups(std::move(groups));
   }
 
@@ -1866,4 +1887,5 @@ int main(int argc, char *argv[]) {
   testPropertyOptions();
   testAdditionalQueryPickling();
   testBoostSerialization();
+  testGithubIssue6036();
 }

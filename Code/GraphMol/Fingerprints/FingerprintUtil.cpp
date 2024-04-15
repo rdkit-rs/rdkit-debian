@@ -18,8 +18,6 @@
 #include <GraphMol/SmilesParse/SmilesParse.h>
 #include <GraphMol/Substruct/SubstructMatch.h>
 #include <boost/dynamic_bitset.hpp>
-#include <boost/tuple/tuple.hpp>
-#include <boost/tuple/tuple_comparison.hpp>
 #include <algorithm>
 #include <RDGeneral/BoostStartInclude.h>
 #include <boost/flyweight.hpp>
@@ -41,27 +39,6 @@
 
 namespace RDKit {
 namespace AtomPairs {
-unsigned int numPiElectrons(const Atom *atom) {
-  PRECONDITION(atom, "no atom");
-  unsigned int res = 0;
-  if (atom->getIsAromatic()) {
-    res = 1;
-  } else if (atom->getHybridization() != Atom::SP3) {
-    auto val = static_cast<unsigned int>(atom->getExplicitValence());
-    unsigned int physical_bonds = atom->getNumExplicitHs();
-    const auto &mol = atom->getOwningMol();
-    for (const auto &bndi :
-         boost::make_iterator_range(mol.getAtomBonds(atom))) {
-      if (mol[bndi]->getValenceContrib(atom) != 0.0) {
-        ++physical_bonds;
-      }
-    }
-    CHECK_INVARIANT(val >= physical_bonds,
-                    "explicit valence exceeds atom degree");
-    res = val - physical_bonds;
-  }
-  return res;
-}
 
 std::uint32_t getAtomCode(const Atom *atom, unsigned int branchSubtract,
                           bool includeChirality) {
@@ -74,7 +51,7 @@ std::uint32_t getAtomCode(const Atom *atom, unsigned int branchSubtract,
   }
 
   code = numBranches % maxNumBranches;
-  unsigned int nPi = numPiElectrons(atom) % maxNumPi;
+  unsigned int nPi = numPiElectrons(*atom) % maxNumPi;
   code |= nPi << numBranchBits;
 
   unsigned int typeIdx = 0;

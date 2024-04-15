@@ -29,6 +29,7 @@ const std::string _2DConf = "_2DConf";
 const std::string _3DConf = "_3DConf";
 const std::string _AtomID = "_AtomID";
 const std::string _BondsPotentialStereo = "_BondsPotentialStereo";
+const std::string _ChiralAtomRank = "_chiralAtomRank";
 const std::string _CIPCode = "_CIPCode";
 const std::string _CIPRank = "_CIPRank";
 const std::string _ChiralityPossible = "_ChiralityPossible";
@@ -48,6 +49,7 @@ const std::string _MolFileBondCfg = "_MolFileBondCfg";
 
 const std::string _Name = "_Name";
 const std::string _NeedsQueryScan = "_NeedsQueryScan";
+const std::string _NonExplicit3DChirality = "_NonExplicit3DChirality";
 const std::string _QueryFormalCharge = "_QueryFormalCharge";
 const std::string _QueryHCount = "_QueryHCount";
 const std::string _QueryIsotope = "_QueryIsotope";
@@ -111,10 +113,10 @@ const std::string molRxnRole = "molRxnRole";
 const std::string molTotValence = "molTotValence";
 const std::string molFileLinkNodes = "_molLinkNodes";
 const std::string numArom = "numArom";
-const std::string origNoImplicit = "origNoImplicit";
 const std::string ringMembership = "ringMembership";
 const std::string smilesSymbol = "smilesSymbol";
 const std::string atomLabel = "atomLabel";
+const std::string OxidationNumber = "OxidationNumber";
 const std::string internalRgroupSmiles = "internalRgroupSmiles";
 
 const std::string molSubstCount = "molSubstCount";
@@ -124,6 +126,7 @@ const std::string molAtomClass = "molClass";
 const std::string molAtomSeqId = "molSeqid";
 const std::string molRxnExactChange = "molRxnExachg";
 const std::string molReactStatus = "molReactStatus";
+const std::string _fromAttachPoint = "_fromAttchpt";
 
 const std::string molNote = "molNote";
 const std::string atomNote = "atomNote";

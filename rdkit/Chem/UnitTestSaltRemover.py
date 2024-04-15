@@ -1,10 +1,9 @@
 import doctest
+import os
 import unittest
 
-import os
 from rdkit import Chem
-
-from rdkit.Chem.SaltRemover import SaltRemover, InputFormat
+from rdkit.Chem.SaltRemover import InputFormat, SaltRemover
 
 
 def load_tests(loader, tests, ignore):
@@ -76,6 +75,22 @@ class TestCase(unittest.TestCase):
     saltstrip = SaltRemover()
     res = saltstrip.StripMol(m, sanitize=False)
     self.assertEqual(Chem.MolToSmiles(res), 'CN1=CC=CC=C1')
+
+  def test_github_7327(self):
+    m = Chem.MolFromSmiles('C=CC=O')
+    assert m
+
+    saltstrip = SaltRemover()
+    m = saltstrip.StripMol(m)
+
+    # No atoms removed
+    assert m.GetNumAtoms() == 4
+
+    # Rotatable bond definition from mmpdb
+    q = Chem.MolFromSmarts('[!$([NH]!@C(=O))&!D1&!$(*#*)]-&!@[!$([NH]!@C(=O))&!D1&!$(*#*)]')
+    assert q
+
+    assert m.GetSubstructMatches(q) == ((1, 2), )
 
 
 if __name__ == '__main__':  # pragma: nocover

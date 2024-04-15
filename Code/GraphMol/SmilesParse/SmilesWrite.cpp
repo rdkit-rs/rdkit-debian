@@ -14,6 +14,8 @@
 #include <GraphMol/Canon.h>
 #include <GraphMol/new_canon.h>
 #include <GraphMol/Chirality.h>
+#include <GraphMol/Atropisomers.h>
+#include <GraphMol/FileParsers/MolFileStereochem.h>
 #include <RDGeneral/BoostStartInclude.h>
 #include <boost/dynamic_bitset.hpp>
 #include <RDGeneral/utils.h>
@@ -24,7 +26,7 @@
 #include <map>
 #include <list>
 
-//#define VERBOSE_CANON 1
+// #define VERBOSE_CANON 1
 
 namespace RDKit {
 
@@ -366,6 +368,9 @@ std::string FragmentSmilesConstruct(
   }
   std::list<unsigned int> ringClosuresToErase;
 
+  if (params.canonical && params.doIsomericSmiles) {
+    Canon::canonicalizeEnhancedStereo(mol, &ranks);
+  }
   Canon::canonicalizeFragment(mol, atomIdx, colors, ranks, molStack,
                               bondsInPlay, bondSymbols, params.doIsomericSmiles,
                               params.doRandom);
@@ -456,7 +461,10 @@ static bool SortBasedOnFirstElement(
   return a.first < b.first;
 }
 
-std::string MolToSmiles(const ROMol &mol, const SmilesWriteParams &params) {
+namespace SmilesWrite {
+namespace detail {
+std::string MolToSmiles(const ROMol &mol, const SmilesWriteParams &params,
+                        bool doingCXSmiles) {
   if (!mol.getNumAtoms()) {
     return "";
   }
@@ -512,9 +520,28 @@ std::string MolToSmiles(const ROMol &mol, const SmilesWriteParams &params) {
     // but that should not be:
     if (params.doIsomericSmiles) {
       tmol->setProp(common_properties::_doIsoSmiles, 1);
-      if (!mol.hasProp(common_properties::_StereochemDone)) {
+      if (!tmol->hasProp(common_properties::_StereochemDone)) {
         MolOps::assignStereochemistry(*tmol, true);
       }
+    }
+    if (!doingCXSmiles) {
+      // remove any stereo groups that may be present. Otherwise they will be
+      // used in the canonicalization
+      std::vector<StereoGroup> noStereoGroups;
+      tmol->setStereoGroups(noStereoGroups);
+      // remove any wiggle bonds or unspecified double bond stereochemistry
+      for (auto bond : tmol->bonds()) {
+        if (bond->getBondDir() == Bond::BondDir::UNKNOWN ||
+            bond->getBondDir() == Bond::BondDir::EITHERDOUBLE) {
+          bond->setBondDir(Bond::BondDir::NONE);
+        }
+        if (bond->getStereo() == Bond::BondStereo::STEREOANY) {
+          bond->setStereo(Bond::BondStereo::STEREONONE);
+        }
+      }
+
+      // if other CXSMILES features are added to the canonicalization code
+      // in the future, they should be removed here.
     }
 #if 0
       std::cout << "----------------------------" << std::endl;
@@ -627,6 +654,8 @@ std::string MolToSmiles(const ROMol &mol, const SmilesWriteParams &params) {
     for (auto &i : allAtomOrdering) {
       flattenedAtomOrdering.insert(flattenedAtomOrdering.end(), i.begin(),
                                    i.end());
+    }
+    for (auto &i : allBondOrdering) {
       flattenedBondOrdering.insert(flattenedBondOrdering.end(), i.begin(),
                                    i.end());
     }
@@ -643,15 +672,50 @@ std::string MolToSmiles(const ROMol &mol, const SmilesWriteParams &params) {
               true);
   return result;
 }
+}  // namespace detail
+}  // namespace SmilesWrite
+std::string MolToSmiles(const ROMol &mol, const SmilesWriteParams &params) {
+  bool doingCXSmiles = false;
+  return SmilesWrite::detail::MolToSmiles(mol, params, doingCXSmiles);
+}
 
-std::string MolToCXSmiles(const ROMol &mol, const SmilesWriteParams &params,
-                          std::uint32_t flags) {
-  auto res = MolToSmiles(mol, params);
-  if (!res.empty()) {
-    auto cxext = SmilesWrite::getCXExtensions(mol, flags);
-    if (!cxext.empty()) {
-      res += " " + cxext;
+std::string MolToCXSmiles(const ROMol &romol, const SmilesWriteParams &params,
+                          std::uint32_t flags,
+                          RestoreBondDirOption restoreBondDirs) {
+  RWMol trwmol(romol);
+
+  bool doingCXSmiles = true;
+
+  auto res = SmilesWrite::detail::MolToSmiles(trwmol, params, doingCXSmiles);
+  if (res.empty()) {
+    return res;
+  }
+  if (restoreBondDirs == RestoreBondDirOptionTrue) {
+    RDKit::Chirality::reapplyMolBlockWedging(trwmol);
+  } else if (restoreBondDirs == RestoreBondDirOptionClear) {
+    for (auto bond : trwmol.bonds()) {
+      if (!canHaveDirection(*bond)) {
+        continue;
+      }
+      if (bond->getBondDir() != Bond::BondDir::NONE) {
+        bond->setBondDir(Bond::BondDir::NONE);
+      }
+      unsigned int cfg;
+      if (bond->getPropIfPresent<unsigned int>(
+              common_properties::_MolFileBondCfg, cfg)) {
+        bond->clearProp(common_properties::_MolFileBondCfg);
+      }
     }
+  }
+
+  if (!params.doIsomericSmiles) {
+    flags &= ~(SmilesWrite::CXSmilesFields::CX_ENHANCEDSTEREO |
+               SmilesWrite::CXSmilesFields::CX_BOND_CFG);
+  }
+
+  auto cxext = SmilesWrite::getCXExtensions(trwmol, flags);
+  if (!cxext.empty()) {
+    res += " " + cxext;
   }
   return res;
 }
