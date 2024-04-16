@@ -81,7 +81,7 @@ jobs:
           sudo apt policy postgresql-common
           sudo apt policy postgresql-server-dev-all
           sudo apt policy postgresql-server-dev-14
-          sudo apt-get install -y postgresql-common=238 postgresql-client-common=238 -y
+          sudo apt-get install -y postgresql-common=238 postgresql-client-common=238 -y --allow-downgrades
           sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python postgresql-server-dev-all
 
       - name: Create base image
