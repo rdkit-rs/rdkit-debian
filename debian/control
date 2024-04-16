@@ -10,6 +10,7 @@ Build-Depends: bison,
                dh-python,
                doxygen,
                flex,
+               gsfonts,
                imagemagick,
                latexmk,
                libboost-dev,
@@ -167,7 +168,7 @@ Description: Collection of cheminformatics and machine-learning software (develo
  .
  This package contains the header files.
 
-Package: postgresql-16-rdkit
+Package: postgresql-14-rdkit
 Architecture: any
 Section: database
 Depends: ${misc:Depends}, ${shlibs:Depends}, ${postgresql:Depends}
