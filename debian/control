@@ -58,7 +58,6 @@ Depends: fonts-freefont-ttf,
          ${shlibs:Depends}
 Suggests: rdkit-doc
 Provides: ${python3:Provides}
-XB-Python-Version: ${python3:Versions}
 Description: Collection of cheminformatics and machine-learning software
  RDKit is a Python/C++ based cheminformatics and machine-learning software
  environment.  Features Include:
