@@ -22,7 +22,10 @@ jobs:
           fetch-depth: 0
 
       - name: Install build tools
-        run: sudo apt-get update; sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python postgresql-server-dev-all
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common=238 postgresql-client-common=238 postgresql-server-dev-all -y --allow-downgrades
+          sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python
 
       - name: Create base image
         run: git-pbuilder create
