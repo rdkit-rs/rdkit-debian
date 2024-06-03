@@ -1,7 +1,7 @@
 name: Build and publish Debian packages
 
 on:
-  push: {}
+  push: { }
 
 permissions:
   id-token: write   # This is required for requesting the JWT
@@ -11,7 +11,7 @@ jobs:
   build_amd64:
     runs-on: buildjet-16vcpu-ubuntu-2204
     env:
-      DIST: jammy
+      DIST: noble
       ARCH: amd64
       DEB_BUILD_OPTIONS: nocheck
 
@@ -34,8 +34,8 @@ jobs:
       - name: Remove github stuff
         run: rm -rf .github/
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      #      - name: Setup tmate session
+      #        uses: mxschmitt/action-tmate@v3
 
       - name: Build package
         run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
@@ -50,7 +50,7 @@ jobs:
           role-session-name: samplerolesession
           aws-region: eu-central-1
       # Upload a file to AWS s3
-      - name:  Copy index.html to s3
+      - name: Copy index.html to s3
         run: |
           sudo apt-get install ruby awscli
           sudo gem install deb-s3
