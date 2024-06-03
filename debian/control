@@ -168,7 +168,7 @@ Description: Collection of cheminformatics and machine-learning software (develo
  .
  This package contains the header files.
 
-Package: postgresql-14-rdkit
+Package: postgresql-16-rdkit
 Architecture: any
 Section: database
 Depends: ${misc:Depends}, ${shlibs:Depends}, ${postgresql:Depends}
