@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build_amd64:
-    runs-on: buildjet-16vcpu-ubuntu-2204
+    runs-on: buildjet-16vcpu-ubuntu-2404
     env:
       DIST: noble
       ARCH: amd64
