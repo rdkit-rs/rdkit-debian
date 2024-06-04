@@ -36,7 +36,8 @@ jobs:
           git branch -a
           sudo apt-get update
           sudo apt-get install -y postgresql-common postgresql-client-common postgresql-server-dev-16 -y --allow-downgrades
-          sudo echo "MIRRORSITE=http://ports.ubuntu.com/ubuntu-ports/" > /etc/pbuilderrc
+          # sudo echo "MIRRORSITE=http://ports.ubuntu.com/ubuntu-ports/" > /etc/pbuilderrc
+          sudo echo "MIRRORSITE=http://archive.ubuntu.com/ubuntu/" > /etc/pbuilderrc
           sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python
 
       - name: Create base image
