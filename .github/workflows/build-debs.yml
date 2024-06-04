@@ -25,7 +25,7 @@ jobs:
         run: |
           git branch -a
           sudo apt-get update
-          sudo apt-get install -y postgresql-common postgresql-client-common postgresql-server-dev-all -y --allow-downgrades
+          sudo apt-get install -y postgresql-common=238 postgresql-client-common=238 postgresql-server-dev-all -y --allow-downgrades
           sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python
 
       - name: Create base image
@@ -34,8 +34,8 @@ jobs:
       - name: Remove github stuff
         run: rm -rf .github/
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      #      - name: Setup tmate session
+      #        uses: mxschmitt/action-tmate@v3
 
       - name: Build package
         run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
