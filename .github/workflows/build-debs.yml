@@ -21,7 +21,8 @@ jobs:
       - name: Install build tools
         run: |
           apt-get update > /dev/null
-          apt-get install -y git nodejs
+          apt-get install -y git nodejs sudo
+          echo 'username ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers
           git config --global --add safe.directory /__w/rdkit-debian/rdkit-debian
 
       - name: Check out the repo
