@@ -17,6 +17,7 @@ jobs:
       DIST: noble
       ARCH: amd64
       DEB_BUILD_OPTIONS: nocheck
+      DEBIAN_FRONTEND: noninteractive
     steps:
       - name: Reinstall tools missing from base docker image
         run: |
@@ -41,7 +42,7 @@ jobs:
           sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python
 
       - name: Create base image
-        run: sudo git-pbuilder create
+        run: sudo git-pbuilder create --architecture=$ARCH --dist=$DIST
 
       - name: Remove github stuff
         run: rm -rf .github/
