@@ -18,12 +18,13 @@ jobs:
       ARCH: amd64
       DEB_BUILD_OPTIONS: nocheck
     steps:
-      - name: Install build tools
+      - name: Reinstall tools missing from base docker image
         run: |
           apt-get update > /dev/null
           apt-get install -y git nodejs sudo
           echo 'username ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers
           git config --global --add safe.directory /__w/rdkit-debian/rdkit-debian
+          sudo echo "hi"
 
       - name: Check out the repo
         uses: actions/checkout@v3
