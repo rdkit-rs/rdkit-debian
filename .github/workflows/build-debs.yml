@@ -17,6 +17,11 @@ jobs:
       ARCH: amd64
       DEB_BUILD_OPTIONS: nocheck
     steps:
+      - name: Install build tools
+        run: |
+          apt-get update > /dev/null
+          apt-get install -y git nodejs
+          
       - name: Check out the repo
         uses: actions/checkout@v3
         with:
