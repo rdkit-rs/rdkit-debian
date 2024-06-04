@@ -12,6 +12,7 @@ jobs:
     runs-on: buildjet-16vcpu-ubuntu-2204
     container:
       image: ubuntu:24.04
+      options: --user 1001 # https://github.com/actions/runner/issues/2033#issuecomment-1598547465
     env:
       DIST: noble
       ARCH: amd64
@@ -21,7 +22,7 @@ jobs:
         run: |
           apt-get update > /dev/null
           apt-get install -y git nodejs
-          
+
       - name: Check out the repo
         uses: actions/checkout@v3
         with:
