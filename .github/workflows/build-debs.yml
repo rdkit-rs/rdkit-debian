@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build_amd64:
-    runs-on: buildjet-16vcpu-ubuntu-
+    runs-on: buildjet-16vcpu-ubuntu-2204
     container:
       image: ubuntu:24.04
     env:
