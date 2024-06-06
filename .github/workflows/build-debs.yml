@@ -19,6 +19,7 @@ jobs:
       ARCH: amd64
       DEB_BUILD_OPTIONS: nocheck
       DEBIAN_FRONTEND: noninteractive
+      DEBCONF_NONINTERACTIVE_SEEN: "true"
     steps:
       - name: Reinstall tools missing from base docker image
         run: |
@@ -38,7 +39,9 @@ jobs:
           git branch -a
           sudo apt-get update
           echo $DEBIAN_FRONTEND
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y postgresql-common postgresql-client-common postgresql-server-dev-14 -y --allow-downgrades
+          echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+          echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+          sudo apt-get install -y postgresql-common postgresql-client-common postgresql-server-dev-14 -y --allow-downgrades
           # sudo echo "MIRRORSITE=http://ports.ubuntu.com/ubuntu-ports/" > /etc/pbuilderrc
           sudo echo "MIRRORSITE=http://archive.ubuntu.com/ubuntu/" > /etc/pbuilderrc
           sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python
