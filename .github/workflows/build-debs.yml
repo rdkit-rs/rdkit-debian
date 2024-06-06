@@ -51,7 +51,7 @@ jobs:
       #        uses: mxschmitt/action-tmate@v3
 
       - name: Build package
-        run: gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
+        run: sudo gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
 
       - name: Check for debs
         run: ls -alh .; ls -alh ..
