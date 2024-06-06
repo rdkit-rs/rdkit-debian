@@ -33,6 +33,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Huh
+        run: |
+          ls -alh
+          ls -alh /
+          ls -alh /__w/__temp/
+
       - name: Install build tools
         run: |
           git branch -a
