@@ -33,13 +33,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Huh
-        run: |
-          pwd
-          ls -alh
-          ls -alh /
-          ls -alh /__w/__temp/
-
       - name: Install build tools
         run: |
           git branch -a
@@ -53,7 +46,7 @@ jobs:
         run: sudo git-pbuilder create --architecture=$ARCH --dist=$DIST
 
       - name: Remove github stuff
-        run: rm -rf .github/
+        run: rm -r .github/
 
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
