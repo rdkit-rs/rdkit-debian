@@ -48,8 +48,8 @@ jobs:
       - name: Remove github stuff
         run: rm -rf .github/
 
-      #      - name: Setup tmate session
-      #        uses: mxschmitt/action-tmate@v3
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
 
       - name: Build package
         run: sudo gbp buildpackage --git-ignore-new --git-pbuilder --git-no-pristine-tar --git-arch=$ARCH --git-dist=$DIST -us -uc
