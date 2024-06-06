@@ -41,7 +41,7 @@ jobs:
           echo $DEBIAN_FRONTEND
           echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
           echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
-          sudo apt-get install -y postgresql-common postgresql-client-common postgresql-server-dev-14 -y --allow-downgrades
+          sudo apt-get install -y postgresql-common postgresql-client-common postgresql-server-dev-14 -y --allow-downgrades > /dev/null
           # sudo echo "MIRRORSITE=http://ports.ubuntu.com/ubuntu-ports/" > /etc/pbuilderrc
           sudo echo "MIRRORSITE=http://archive.ubuntu.com/ubuntu/" > /etc/pbuilderrc
           sudo apt-get install -y git build-essential git-buildpackage debhelper dh-python
