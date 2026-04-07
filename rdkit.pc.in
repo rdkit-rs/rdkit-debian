@@ -1,0 +1,10 @@
+prefix=/usr
+libdir=${prefix}/lib/@MULTIARCH@
+includedir=${prefix}/include
+
+Name: RDKit
+Description: RDKit C++ cheminformatics library (rdkit-rs build)
+Version: @RDKIT_VERSION@
+Libs: -L${libdir} -lRDKitDataStructs -lRDKitDescriptors -lRDKitFileParsers -lRDKitFingerprints -lRDKitGraphMol -lRDKitMolStandardize -lRDKitRDGeneral -lRDKitScaffoldNetwork -lRDKitSmilesParse -lRDKitSubstructMatch
+Cflags: -I${includedir} -I${includedir}/rdkit
+Requires: boost_serialization

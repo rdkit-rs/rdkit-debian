@@ -1,0 +1,74 @@
+name: Build RDKit Debian Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      rdkit_tag:
+        description: "RDKit release tag (e.g. Release_2024_09_1)"
+        required: true
+        default: "Release_2024_09_1"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: buildjet-8vcpu-ubuntu-2204
+          - arch: arm64
+            runner: buildjet-8vcpu-ubuntu-2204-arm
+    runs-on: ${{ matrix.runner }}
+    container: debian:bookworm
+    steps:
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            curl \
+            libeigen3-dev \
+            libboost-all-dev \
+            rapidjson-dev
+
+      - name: Install nfpm
+        run: |
+          curl -sfL https://github.com/goreleaser/nfpm/releases/download/v2.41.1/nfpm_2.41.1_linux_$(dpkg --print-architecture).deb -o /tmp/nfpm.deb
+          dpkg -i /tmp/nfpm.deb
+          rm /tmp/nfpm.deb
+
+      - name: Build RDKit and package
+        run: ./build.sh ${{ inputs.rdkit_tag }}
+
+      - name: Verify packages
+        run: |
+          dpkg -i librdkit-rs_*.deb librdkit-rs-dev_*.deb
+          dpkg -l librdkit-rs librdkit-rs-dev
+          pkg-config --cflags --libs rdkit
+          ls /usr/include/rdkit/GraphMol/ROMol.h
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: debs-${{ matrix.arch }}
+          path: "*.deb"
+
+      - name: Upload to S3
+        if: github.ref == 'refs/heads/main'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
+        run: |
+          apt-get install -y --no-install-recommends python3-pip
+          pip3 install awscli --break-system-packages
+          for deb in *.deb; do
+            aws s3 cp "$deb" s3://rdkit-rs-debian/pool/
+          done

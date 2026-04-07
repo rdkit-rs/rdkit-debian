@@ -1,0 +1,23 @@
+name: librdkit-rs
+arch: "${ARCH}"
+platform: linux
+version: "${RDKIT_VERSION}"
+version_schema: none
+release: "1"
+section: libs
+priority: optional
+maintainer: "rdkit-rs <xrlange@gmail.com>"
+description: |
+  RDKit C++ shared libraries built for rdkit-rs.
+  Pinned build of RDKit for use with the rdkit and rdkit-sys Rust crates.
+vendor: rdkit-rs
+homepage: https://rdkit-rs.github.io
+license: BSD-3-Clause
+depends:
+  - libboost-serialization1.74.0
+  - libstdc++6
+contents:
+  - src: staging/usr/lib/libRDKit*.so*
+    dst: /usr/lib/${MULTIARCH}/
+  - src: staging/usr/lib/pkgconfig/rdkit.pc
+    dst: /usr/lib/${MULTIARCH}/pkgconfig/rdkit.pc

@@ -1,0 +1,20 @@
+name: librdkit-rs-dev
+arch: "${ARCH}"
+platform: linux
+version: "${RDKIT_VERSION}"
+version_schema: none
+release: "1"
+section: libdevel
+priority: optional
+maintainer: "rdkit-rs <xrlange@gmail.com>"
+description: |
+  RDKit C++ development headers for rdkit-rs.
+  Includes headers and pkg-config file for building rdkit-sys.
+vendor: rdkit-rs
+homepage: https://rdkit-rs.github.io
+license: BSD-3-Clause
+depends:
+  - librdkit-rs (= ${RDKIT_VERSION})
+contents:
+  - src: staging/usr/include/rdkit/
+    dst: /usr/include/rdkit/
