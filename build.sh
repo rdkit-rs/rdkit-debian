@@ -55,8 +55,14 @@ mkdir -p "$STAGING/usr/lib/pkgconfig" "$STAGING/usr/include"
 # Stage shared libraries
 cp -P "$BUILDDIR"/lib/libRDKit*.so* "$STAGING/usr/lib/"
 
-# Stage headers (the Code/ directory contains all public headers)
-cp -r "$SRCDIR/Code" "$STAGING/usr/include/rdkit"
+# Stage headers only (skip CMakeLists.txt, .cpp, .o, and other non-header files)
+cd "$SRCDIR"
+find Code -name '*.h' -o -name '*.hpp' | while read -r hdr; do
+  dir="$STAGING/usr/include/rdkit/$(dirname "$hdr")"
+  mkdir -p "$dir"
+  cp "$hdr" "$dir/"
+done
+cd /tmp
 
 # Generate pkg-config file
 sed "s|@MULTIARCH@|${MULTIARCH}|g; s|@RDKIT_VERSION@|${RDKIT_VERSION}|g" \
