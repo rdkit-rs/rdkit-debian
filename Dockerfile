@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install nfpm
-RUN curl -sfL https://github.com/goreleaser/nfpm/releases/download/v2.41.1/nfpm_2.41.1_linux_$(dpkg --print-architecture).deb -o /tmp/nfpm.deb \
+RUN curl -sfL https://github.com/goreleaser/nfpm/releases/download/v2.46.0/nfpm_2.46.0_$(dpkg --print-architecture).deb -o /tmp/nfpm.deb \
     && dpkg -i /tmp/nfpm.deb \
     && rm /tmp/nfpm.deb
 
