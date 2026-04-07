@@ -3,7 +3,7 @@ arch: "${ARCH}"
 platform: linux
 version: "${RDKIT_VERSION}"
 version_schema: none
-release: "1"
+release: "${BUILD_NUMBER}"
 section: libdevel
 priority: optional
 maintainer: "rdkit-rs <xrlange@gmail.com>"
@@ -14,7 +14,7 @@ vendor: rdkit-rs
 homepage: https://rdkit-rs.github.io
 license: BSD-3-Clause
 depends:
-  - librdkit-rs (= ${RDKIT_VERSION})
+  - librdkit-rs (= ${RDKIT_VERSION}-${BUILD_NUMBER})
 contents:
   - src: staging/usr/include/rdkit/
     dst: /usr/include/rdkit/

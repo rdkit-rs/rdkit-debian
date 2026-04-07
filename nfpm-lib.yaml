@@ -3,7 +3,7 @@ arch: "${ARCH}"
 platform: linux
 version: "${RDKIT_VERSION}"
 version_schema: none
-release: "1"
+release: "${BUILD_NUMBER}"
 section: libs
 priority: optional
 maintainer: "rdkit-rs <xrlange@gmail.com>"

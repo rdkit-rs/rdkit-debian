@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RDKIT_TAG="${1:?Usage: build.sh <rdkit-release-tag> (e.g. Release_2024_09_1)}"
+RDKIT_TAG="${1:?Usage: build.sh <rdkit-release-tag> [build-number] (e.g. Release_2026_03_1 1)}"
+BUILD_NUMBER="${2:-1}"
 
-# Derive version string: Release_2024_09_1 -> 2024.09.1
+# Derive version string: Release_2026_03_1 -> 2026.03.1
 RDKIT_VERSION=$(echo "$RDKIT_TAG" | sed 's/^Release_//; s/_/./g')
 
 # Detect architecture
@@ -14,7 +15,7 @@ case "$DPKG_ARCH" in
   *) echo "Unsupported architecture: $DPKG_ARCH"; exit 1 ;;
 esac
 
-echo "Building RDKit $RDKIT_VERSION ($RDKIT_TAG) for $DPKG_ARCH ($MULTIARCH)"
+echo "Building RDKit $RDKIT_VERSION-$BUILD_NUMBER ($RDKIT_TAG) for $DPKG_ARCH ($MULTIARCH)"
 
 # Download and extract source
 cd /tmp
@@ -60,7 +61,7 @@ sed "s|@MULTIARCH@|${MULTIARCH}|g; s|@RDKIT_VERSION@|${RDKIT_VERSION}|g" \
   "$WORKDIR/rdkit.pc.in" > "$STAGING/usr/lib/pkgconfig/rdkit.pc"
 
 # Export variables for nfpm
-export RDKIT_VERSION ARCH="$DPKG_ARCH" MULTIARCH
+export RDKIT_VERSION BUILD_NUMBER ARCH="$DPKG_ARCH" MULTIARCH
 
 # Package with nfpm
 cd "$WORKDIR"

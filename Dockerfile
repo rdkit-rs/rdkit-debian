@@ -1,6 +1,7 @@
 FROM debian:bookworm
 
-ARG RDKIT_TAG=Release_2024_09_1
+ARG RDKIT_TAG=Release_2026_03_1
+ARG BUILD_NUMBER=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -20,4 +21,4 @@ RUN curl -sfL https://github.com/goreleaser/nfpm/releases/download/v2.41.1/nfpm_
 WORKDIR /work
 COPY nfpm-lib.yaml nfpm-dev.yaml rdkit.pc.in build.sh ./
 
-RUN ./build.sh "$RDKIT_TAG"
+RUN ./build.sh "$RDKIT_TAG" "$BUILD_NUMBER"
