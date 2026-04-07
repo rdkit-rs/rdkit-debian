@@ -9,11 +9,9 @@ on:
       rdkit_tag:
         description: "RDKit release tag (e.g. Release_2026_03_1)"
         required: true
-        default: "Release_2026_03_1"
       build_number:
         description: "Build number (increment when rebuilding same RDKit version)"
         required: true
-        default: "1"
 
 jobs:
   parse-tag:

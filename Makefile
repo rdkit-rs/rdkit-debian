@@ -1,7 +1,10 @@
-RDKIT_TAG ?= Release_2026_03_1
-BUILD_NUMBER ?= 1
-
 build:
+ifndef RDKIT_TAG
+	$(error RDKIT_TAG is required (e.g. make build RDKIT_TAG=Release_2026_03_1 BUILD_NUMBER=1))
+endif
+ifndef BUILD_NUMBER
+	$(error BUILD_NUMBER is required (e.g. make build RDKIT_TAG=Release_2026_03_1 BUILD_NUMBER=1))
+endif
 	docker build --build-arg RDKIT_TAG=$(RDKIT_TAG) --build-arg BUILD_NUMBER=$(BUILD_NUMBER) -t rdkit-debian-build .
 
 extract: build
