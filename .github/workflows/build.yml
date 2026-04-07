@@ -25,20 +25,20 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             TAG="${GITHUB_REF#refs/tags/}"
-            # Tag format: Release_YYYY_MM_P-B (e.g. Release_2026_03_1-1)
-            # Split on last hyphen to get rdkit_tag and build_number
-            RDKIT_TAG="${TAG%-*}"
-            BUILD_NUMBER="${TAG##*-}"
+            # Tag format: Release_YYYY_MM_P+B (e.g. Release_2024_09_1+1)
+            # Split on + to get rdkit_tag and build_number
+            RDKIT_TAG="${TAG%+*}"
+            BUILD_NUMBER="${TAG##*+}"
 
             # Validate rdkit_tag looks like Release_YYYY_MM_P
             if ! echo "$RDKIT_TAG" | grep -qE '^Release_[0-9]{4}_[0-9]{2}_[0-9]+$'; then
-              echo "::error::Invalid tag format: '$TAG'. Expected Release_YYYY_MM_P-BUILD (e.g. Release_2026_03_1-1)"
+              echo "::error::Invalid tag format: '$TAG'. Expected Release_YYYY_MM_P+BUILD (e.g. Release_2024_09_1+1)"
               exit 1
             fi
 
             # Validate build_number is a positive integer
             if ! echo "$BUILD_NUMBER" | grep -qE '^[0-9]+$'; then
-              echo "::error::Invalid build number: '$BUILD_NUMBER'. Tag must end with -N where N is a number."
+              echo "::error::Invalid build number: '$BUILD_NUMBER'. Tag must end with +N where N is a number."
               exit 1
             fi
 
