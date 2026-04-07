@@ -58,9 +58,9 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: buildjet-8vcpu-ubuntu-2204
+            runner: ubuntu-latest-8-cores
           - arch: arm64
-            runner: buildjet-8vcpu-ubuntu-2204-arm
+            runner: ubuntu-24.04-arm-8-cores
     runs-on: ${{ matrix.runner }}
     container: debian:bookworm
     steps:
