@@ -18,3 +18,4 @@ depends:
 contents:
   - src: staging/usr/include/rdkit/
     dst: /usr/include/rdkit/
+    type: tree
