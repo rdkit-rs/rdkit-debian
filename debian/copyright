@@ -1,6 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: rdkit
 Source: https://github.com/rdkit/rdkit/releases
+Files-Excluded: Data/Fonts/Amadeus.ttf
 
 Files: *
 Copyright: 2006-2023 Rational Discovery LLC, Novartis Institutes for

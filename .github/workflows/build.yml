@@ -35,7 +35,9 @@ jobs:
           persist-credentials: false
       - name: Prepare Ubuntu 26.04 builder
         run: |
-          docker build --tag rdkit-reference-builder .
+          image=$(bash scripts/prepare-image.sh)
+          printf 'TEST_IMAGE=%s\n' "$image" >> "$GITHUB_ENV"
+          docker build --build-arg UBUNTU_IMAGE="$image" --tag rdkit-reference-builder .
           mkdir -p dist
           docker run --rm -v rdkit-build:/build -v "$PWD/dist:/out" rdkit-reference-builder ./build.sh prepare
       - name: Compile and package without network
@@ -55,9 +57,8 @@ jobs:
       - name: Install and test on a clean Ubuntu 26.04 image
         run: |
           set -o pipefail
-          source sources.lock
           docker run --rm -v "$PWD:/packaging:ro" -v "$PWD/dist:/out:ro" \
-            "$UBUNTU_IMAGE" bash /packaging/scripts/test-install.sh 2>&1 | tee install-test.log
+            "$TEST_IMAGE" bash /packaging/scripts/test-install.sh 2>&1 | tee install-test.log
       - name: Record verification evidence
         run: |
           sudo cp build.log lint.log install-test.log dist/
@@ -181,8 +182,8 @@ jobs:
       - name: Install the published packages through APT
         run: |
           set -o pipefail
-          source sources.lock
-          docker run --rm -v "$PWD:/packaging:ro" "$UBUNTU_IMAGE" \
+          image=$(bash scripts/prepare-image.sh)
+          docker run --rm -v "$PWD:/packaging:ro" "$image" \
             bash /packaging/scripts/test-apt.sh 2>&1 | tee apt-install.log
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

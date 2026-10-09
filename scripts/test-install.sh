@@ -19,6 +19,7 @@ apt-get install -y --no-install-recommends librdkit1t64 /out/librdkit-rs-dev_*.d
 [[ $(pkg-config --modversion rdkit) == 2026.09.1 ]]
 export RDBASE=$(pkg-config --variable=rdbase rdkit)
 test -f "$RDBASE/Data/BaseFeatures.fdef"
+test ! -d "$RDBASE/Data/Fonts"
 test -f /usr/include/rdkit/GraphMol/ROMol.h
 test -f /usr/include/rdkit/RDGeneral/RDConfig.h
 for lib in /usr/lib/"$triplet"/libRDKit*.so.2026.09; do

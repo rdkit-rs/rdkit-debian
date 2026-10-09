@@ -7,7 +7,7 @@ source /etc/os-release
 mode=${1:-all}
 work=${BUILD_ROOT:-/build}
 out=${OUTPUT_DIR:-/out}
-source_dir="$work/rdkit-rs-$RDKIT_VERSION"
+source_dir="$work/rdkit-rs-$SOURCE_VERSION"
 mkdir -p "$work" "$out"
 fetch() {
     local url=$1 file=$2 checksum=$3
@@ -18,13 +18,17 @@ fetch() {
 }
 if [[ "$mode" == all || "$mode" == prepare ]]; then
     [[ ! -e "$source_dir" ]]
-    fetch "https://codeload.github.com/rdkit/rdkit/tar.gz/refs/tags/$RDKIT_TAG" "rdkit-rs_$RDKIT_VERSION.orig.tar.gz" "$RDKIT_SHA256"
-    fetch "https://codeload.github.com/rareylab/RingDecomposerLib/tar.gz/refs/tags/$RING_TAG" "rdkit-rs_$RDKIT_VERSION.orig-ringdecomposer.tar.gz" "$RING_SHA256"
-    fetch "https://codeload.github.com/aantron/better-enums/tar.gz/$ENUMS_COMMIT" "rdkit-rs_$RDKIT_VERSION.orig-better-enums.tar.gz" "$ENUMS_SHA256"
+    fetch "https://codeload.github.com/rdkit/rdkit/tar.gz/refs/tags/$RDKIT_TAG" "upstream-$RDKIT_VERSION.tar.gz" "$RDKIT_SHA256"
+    gzip -dc "$work/upstream-$RDKIT_VERSION.tar.gz" > "$work/rdkit-rs_$SOURCE_VERSION.orig.tar"
+    tar --delete --file="$work/rdkit-rs_$SOURCE_VERSION.orig.tar" "rdkit-$RDKIT_TAG/Data/Fonts/Amadeus.ttf"
+    gzip -n "$work/rdkit-rs_$SOURCE_VERSION.orig.tar"
+    printf '%s  %s\n' "$SOURCE_SHA256" "$work/rdkit-rs_$SOURCE_VERSION.orig.tar.gz" | sha256sum --check --strict
+    fetch "https://codeload.github.com/rareylab/RingDecomposerLib/tar.gz/refs/tags/$RING_TAG" "rdkit-rs_$SOURCE_VERSION.orig-ringdecomposer.tar.gz" "$RING_SHA256"
+    fetch "https://codeload.github.com/aantron/better-enums/tar.gz/$ENUMS_COMMIT" "rdkit-rs_$SOURCE_VERSION.orig-better-enums.tar.gz" "$ENUMS_SHA256"
     mkdir -p "$source_dir" "$source_dir/ringdecomposer" "$source_dir/better-enums"
-    tar xf "$work/rdkit-rs_$RDKIT_VERSION.orig.tar.gz" --strip-components=1 -C "$source_dir"
-    tar xf "$work/rdkit-rs_$RDKIT_VERSION.orig-ringdecomposer.tar.gz" --strip-components=1 -C "$source_dir/ringdecomposer"
-    tar xf "$work/rdkit-rs_$RDKIT_VERSION.orig-better-enums.tar.gz" --strip-components=1 -C "$source_dir/better-enums"
+    tar xf "$work/rdkit-rs_$SOURCE_VERSION.orig.tar.gz" --strip-components=1 -C "$source_dir"
+    tar xf "$work/rdkit-rs_$SOURCE_VERSION.orig-ringdecomposer.tar.gz" --strip-components=1 -C "$source_dir/ringdecomposer"
+    tar xf "$work/rdkit-rs_$SOURCE_VERSION.orig-better-enums.tar.gz" --strip-components=1 -C "$source_dir/better-enums"
     cp -a "$root/debian" "$source_dir/debian"
     cp "$root/sources.lock" "$source_dir/debian/sources.lock"
     mkdir -p "$source_dir/debian/licenses"
@@ -39,13 +43,13 @@ fi
 if [[ "$mode" == all || "$mode" == build ]]; then
     cd "$source_dir"
     dpkg-buildpackage --no-sign -sa -j"${BUILD_JOBS:-4}"
-    cp "$work"/*.deb "$work"/*.dsc "$work"/*.tar.* "$work"/*.buildinfo "$work"/*.changes "$out/"
+    cp "$work"/*.deb "$work"/*.dsc "$work"/rdkit-rs_*.tar.* "$work"/*.buildinfo "$work"/*.changes "$out/"
     dpkg-query -W -f='${binary:Package}\t${Version}\n' > "$out/build-packages.tsv"
     cp "$root/sources.lock" "$out/sources.lock"
     cp debian/copyright "$out/COPYRIGHT"
     cp "$root/README.md" "$out/README.md"
     packaging_commit=${PACKAGING_COMMIT:-$(git -C "$root" rev-parse HEAD)}
-    export packaging_commit RDKIT_COMMIT RDKIT_TAG RDKIT_SHA256 UBUNTU_IMAGE
+    export packaging_commit RDKIT_COMMIT RDKIT_TAG RDKIT_SHA256 SOURCE_SHA256 SOURCE_VERSION UBUNTU_IMAGE
     python3 "$root/scripts/provenance.py" "$out/provenance.json"
     python3 "$root/scripts/checksums.py" "$out"
 fi

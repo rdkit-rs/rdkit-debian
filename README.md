@@ -11,7 +11,7 @@ reference builds, not Ubuntu archive packages.
 | `librdkit-rs-dev` | Installed C++ headers, linker symlinks, CMake targets and `rdkit.pc` |
 | `rdkit-rs-data` | Data under `/usr/share/rdkit-rs/2026.09/Data` |
 
-The package version is `2026.09.1-1~ubuntu26.04`. Development packages depend on
+The package version is `2026.09.1+ds1-1~ubuntu26.04`. Development packages depend on
 exactly matching runtime packages; runtime dependencies are calculated from ELF
 objects by `dpkg-shlibdeps`, including Ubuntu's Boost and InChI libraries.
 The development package conflicts with Ubuntu's `librdkit-dev` and the old
@@ -30,9 +30,9 @@ all files needed for the checksum command below.
 ```bash
 sha256sum --check SHA256SUMS
 sudo apt-get update
-sudo apt-get install ./rdkit-rs-data_2026.09.1-1~ubuntu26.04_all.deb \
-  ./librdkit-rs202609_2026.09.1-1~ubuntu26.04_$(dpkg --print-architecture).deb \
-  ./librdkit-rs-dev_2026.09.1-1~ubuntu26.04_$(dpkg --print-architecture).deb
+sudo apt-get install ./rdkit-rs-data_2026.09.1+ds1-1~ubuntu26.04_all.deb \
+  ./librdkit-rs202609_2026.09.1+ds1-1~ubuntu26.04_$(dpkg --print-architecture).deb \
+  ./librdkit-rs-dev_2026.09.1+ds1-1~ubuntu26.04_$(dpkg --print-architecture).deb
 pkg-config --modversion rdkit
 export RDBASE=$(pkg-config --variable=rdbase rdkit)
 c++ consumer.cpp $(pkg-config --cflags --libs rdkit) -o consumer
@@ -59,6 +59,9 @@ and tests C++ pkg-config/CMake linkage, molecular operations, data loading and
 Rust linkage. The local container host architecture determines the build;
 ARM64 CI uses `ubuntu-24.04-arm`, and AMD64 CI uses `ubuntu-24.04`. Host runner
 versions do not determine the package's target OS.
+The base image is pulled before compilation and reused for the clean install.
+Docker's official ECR mirror provides the same pinned digest if Docker Hub's
+anonymous pull limit is reached; this does not require registry credentials.
 
 CI builds from the checked-out commit, pins action revisions, checks packages
 with Lintian and metadata/ELF assertions, then installs in a separate clean
@@ -118,8 +121,12 @@ Better Enums (BSD-2-Clause). Original license texts accompany each binary packag
 upstream data retains its own notices. RDKit is predominantly BSD-3-Clause but
 contains other permissively licensed code and generated parsers with Bison's
 exception. Do not describe the entire source archive as one license.
-All three original source archives and the packaging/patch archive accompany
-binaries, alongside their `.dsc` and hashes. System dependencies retain their
+The `+ds1` source repack removes `Data/Fonts/Amadeus.ttf`: its accompanying
+upstream notice states that the font arrived without an explicit license.
+The upstream download and repacked source each have a pinned SHA-256. No fonts
+are installed in this C++ reference's binary data package; FreeType is disabled.
+The repacked RDKit source, both dependency source archives and the packaging/patch
+archive accompany binaries, alongside their `.dsc` and hashes. System dependencies retain their
 Ubuntu package licensing; they are not silently bundled into the RDKit package.
 
 Maintenance consists of checking upstream C++/ABI changes, refreshing source and
@@ -148,7 +155,7 @@ No new signing key is created. To use that existing trust model after publicatio
 ```bash
 echo "deb [arch=$(dpkg --print-architecture) trusted=yes] https://rdkit-rs-debian.s3.eu-central-1.amazonaws.com resolute main" | sudo tee /etc/apt/sources.list.d/rdkit-rs.list
 sudo apt-get update
-sudo apt-get install librdkit-rs-dev=2026.09.1-1~ubuntu26.04
+sudo apt-get install librdkit-rs-dev=2026.09.1+ds1-1~ubuntu26.04
 ```
 
 A single CI publication job serializes updates to this suite, uses pinned

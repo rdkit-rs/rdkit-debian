@@ -11,7 +11,7 @@ for architecture in ('amd64', 'arm64'):
     records = {}
     for paragraph in index.strip().split('\n\n'):
         fields = dict(line.split(': ', 1) for line in paragraph.splitlines() if ': ' in line and not line.startswith(' '))
-        if fields.get('Version') == '2026.09.1-1~ubuntu26.04':
+        if fields.get('Version') == '2026.09.1+ds1-1~ubuntu26.04':
             records[fields['Package']] = fields
     for name in ('librdkit-rs202609', 'librdkit-rs-dev', 'rdkit-rs-data'):
         fields = records[name]

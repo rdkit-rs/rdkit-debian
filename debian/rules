@@ -39,6 +39,7 @@ override_dh_auto_install:
 	DESTDIR=$(CURDIR)/debian/tmp cmake --install build --component runtime
 	DESTDIR=$(CURDIR)/debian/tmp cmake --install build --component dev
 	DESTDIR=$(CURDIR)/debian/tmp cmake --install build --component data
+	rm -rf debian/tmp/usr/share/rdkit-rs/2026.09/Data/Fonts
 	install -d debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig
 	sed 's|@MULTIARCH@|$(DEB_HOST_MULTIARCH)|g' debian/rdkit.pc.in > debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/rdkit.pc
 
