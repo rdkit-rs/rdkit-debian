@@ -1,0 +1,41 @@
+Source: rdkit-rs
+Section: science
+Priority: optional
+Maintainer: rdkit-rs <xrlange@gmail.com>
+Build-Depends: debhelper-compat (= 13), cmake, ninja-build, pkg-config,
+ libboost-dev, libboost-serialization-dev, libboost-iostreams-dev,
+ libboost-program-options-dev, libeigen3-dev, libinchi-dev, catch2 (>= 3),
+ python3
+Standards-Version: 4.7.2
+Rules-Requires-Root: no
+Homepage: https://www.rdkit.org
+Vcs-Git: https://github.com/rdkit-rs/rdkit-debian.git
+Vcs-Browser: https://github.com/rdkit-rs/rdkit-debian
+
+Package: librdkit-rs202609
+Section: libs
+Architecture: amd64 arm64
+Depends: ${shlibs:Depends}, ${misc:Depends}, rdkit-rs-data (= ${source:Version})
+Description: RDKit 2026.09 C++ shared libraries for rdkit-rs
+ Cheminformatics runtime with thread-safe substructure searching, fingerprints,
+ descriptors, molecular standardization and InChI support. Libraries use a
+ release-specific SONAME to coexist with Ubuntu's RDKit runtime.
+
+Package: librdkit-rs-dev
+Section: libdevel
+Architecture: amd64 arm64
+Depends: librdkit-rs202609 (= ${binary:Version}), ${misc:Depends},
+ libboost-dev, libboost-serialization-dev, libboost-iostreams-dev,
+ libeigen3-dev, libinchi-dev
+Conflicts: librdkit-dev, librdkit-rs
+Replaces: librdkit-dev, librdkit-rs
+Description: RDKit 2026.09 C++ headers and build metadata for rdkit-rs
+ Development headers, shared-library linker symlinks, CMake targets and
+ pkg-config metadata for C++20 and Rust consumers of the reference package.
+
+Package: rdkit-rs-data
+Architecture: all
+Depends: ${misc:Depends}
+Description: RDKit 2026.09 data for the rdkit-rs reference package
+ Versioned chemical feature definitions, normalization and other RDKit data.
+ The data lives separately from Ubuntu's rdkit-data package.

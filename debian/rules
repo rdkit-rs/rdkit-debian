@@ -1,0 +1,55 @@
+#!/usr/bin/make -f
+
+include /usr/share/dpkg/architecture.mk
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all optimize=-lto
+
+%:
+	dh $@ --buildsystem=cmake+ninja --builddirectory=build
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-DCMAKE_BUILD_TYPE=None \
+		-DCMAKE_SKIP_RPATH=ON \
+		-DLIB_SUFFIX=/$(DEB_HOST_MULTIARCH) \
+		-DRDK_INSTALL_INTREE=OFF \
+		-DRDK_INSTALL_STATIC_LIBS=OFF \
+		-DRDK_BUILD_PYTHON_WRAPPERS=OFF \
+		-DRDK_BUILD_SWIG_WRAPPERS=OFF \
+		-DRDK_BUILD_CPP_TESTS=OFF \
+		-DRDK_BUILD_PGSQL=OFF \
+		-DRDK_BUILD_THREADSAFE_SSS=ON \
+		-DRDK_OPTIMIZE_POPCNT=OFF \
+		-DRDK_USE_BOOST_STACKTRACE=OFF \
+		-DRDK_BUILD_INCHI_SUPPORT=ON \
+		-DRDK_BUILD_CAIRO_SUPPORT=OFF \
+		-DRDK_BUILD_FREETYPE_SUPPORT=OFF \
+		-DRDK_INSTALL_COMIC_FONTS=OFF \
+		-DRDK_BUILD_COORDGEN_SUPPORT=OFF \
+		-DRDK_BUILD_MAEPARSER_SUPPORT=OFF \
+		-DRDK_BUILD_FREESASA_SUPPORT=OFF \
+		-DRDK_BUILD_CHEMDRAW_SUPPORT=OFF \
+		-DRDK_BUILD_PUBCHEMSHAPE_SUPPORT=OFF \
+		-DURFLIB_DIR=$(CURDIR)/ringdecomposer/src/RingDecomposerLib \
+		-DFETCHCONTENT_SOURCE_DIR_BETTER_ENUMS=$(CURDIR)/better-enums \
+		-DFETCHCONTENT_FULLY_DISCONNECTED=ON
+
+override_dh_auto_test:
+
+override_dh_auto_install:
+	DESTDIR=$(CURDIR)/debian/tmp cmake --install build --component runtime
+	DESTDIR=$(CURDIR)/debian/tmp cmake --install build --component dev
+	DESTDIR=$(CURDIR)/debian/tmp cmake --install build --component data
+	install -d debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig
+	sed 's|@MULTIARCH@|$(DEB_HOST_MULTIARCH)|g' debian/rdkit.pc.in > debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/rdkit.pc
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+
+override_dh_makeshlibs:
+	dh_makeshlibs -V 'librdkit-rs202609 (>= 2026.09.1)'
+
+override_dh_shlibdeps:
+	dh_shlibdeps -l$(CURDIR)/debian/librdkit-rs202609/usr/lib/$(DEB_HOST_MULTIARCH)
+
+override_dh_missing:
+	dh_missing --fail-missing

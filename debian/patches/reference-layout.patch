@@ -1,0 +1,64 @@
+Description: Isolate the reference ABI and data, fix multiarch CMake paths and system dependency headers
+Author: rdkit-rs <xrlange@gmail.com>
+Forwarded: not-needed
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -252,7 +252,7 @@
+   set(RDKit_BinDir "bin")
+   set(RDKit_LibDir "lib${LIB_SUFFIX}")
+   set(RDKit_HdrDir "include/rdkit")
+-  set(RDKit_ShareDir "share/RDKit")
++  set(RDKit_ShareDir "share/rdkit-rs/2026.09")
+ endif(RDK_INSTALL_INTREE)
+ 
+ if(RDK_BUILD_RPATH_SUPPORT)
+@@ -299,7 +299,7 @@
+ if((MSVC AND (NOT RDK_INSTALL_DLLS_MSVC)) OR ((NOT MSVC) AND WIN32 AND RDK_INSTALL_STATIC_LIBS))
+     add_definitions(-DRDL_WIN_STATIC)
+ endif()
+-include_directories(${RDKit_ExternalDir}/RingFamilies/RingDecomposerLib/src/RingDecomposerLib)
++include_directories(${URFLIB_DIR})
+ 
+ if(RDK_BUILD_XYZ2MOL_SUPPORT)
+     add_definitions(-DRDK_BUILD_XYZ2MOL_SUPPORT)
+--- a/Code/cmake/Modules/RDKitUtils.cmake
++++ b/Code/cmake/Modules/RDKitUtils.cmake
+@@ -158,9 +158,8 @@
+   if((NOT MSVC) OR RDK_INSTALL_DLLS_MSVC)
+     set_target_properties(${RDKLIB_NAME} PROPERTIES
+                           OUTPUT_NAME "RDKit${RDKLIB_NAME}"
+-                          VERSION "${RDKit_ABI}.${RDKit_Year}.${RDKit_Month}.${RDKit_Revision}"
+-                          VERSION ${RDKit_VERSION}
+-                          SOVERSION ${RDKit_ABI} )
++                          VERSION "${RDKit_Year}.${RDKit_Month}.${RDKit_Revision}"
++                          SOVERSION "${RDKit_Year}.${RDKit_Month}" )
+   endif()
+   set_target_properties(${RDKLIB_NAME} PROPERTIES
+                         ARCHIVE_OUTPUT_DIRECTORY ${RDK_ARCHIVE_OUTPUT_DIRECTORY}
+--- a/rdkit-config.cmake.in
++++ b/rdkit-config.cmake.in
+@@ -1,5 +1,5 @@
+ # Compute installation prefix relative to this file
+-get_filename_component(_prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
++get_filename_component(_prefix "${CMAKE_CURRENT_LIST_DIR}/../../../.." ABSOLUTE)
+ 
+ # Report other info
+ set(RDKit_INCLUDE_DIRS "${_prefix}/@RDKit_HdrDir@")
+--- a/External/INCHI-API/inchi.cpp
++++ b/External/INCHI-API/inchi.cpp
+@@ -62,7 +62,6 @@
+ #include <GraphMol/Substruct/SubstructMatch.h>
+ #include <GraphMol/SmilesParse/SmilesParse.h>
+ #include <inchi_api.h>
+-#include <bcf_s.h>
+ #include <cstring>
+ #include <vector>
+ #include <stack>
+@@ -2206,5 +2205,5 @@
+   return std::string();
+ }
+ 
+-std::string getInchiVersion() { return CURRENT_VER; }
++std::string getInchiVersion() { return "InChI (Ubuntu system library)"; }
+ }  // namespace RDKit

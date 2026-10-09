@@ -1,3 +1,5 @@
 *.deb
 staging/
+dist/
 *.iml
+__pycache__/
