@@ -13,7 +13,7 @@ Copyright: 2016 University of Hamburg, ZBH - Center for Bioinformatics,
  Niek Andresen, Florian Flachsenberg, Matthias Rarey
 License: BSD-3-clause
 
-Files: better-enums/* Code/RDGeneral/enum.h
+Files: better-enums/*
 Copyright: 2012-2020 Anton Bachin
 License: BSD-2-clause
 
@@ -84,6 +84,12 @@ Files: Code/GraphMol/Deprotect/Deprotect.*
 Copyright: 2020-2021 Brian P. Kelley, Joann Prescott-Roy
 License: BSD-3-clause
 
+Files: Code/GraphMol/MolDraw2D/*
+ Code/GraphMol/RascalMCES/*
+ Code/GraphMol/catch_organometallics.cpp
+Copyright: 2023 David Cosgrove
+License: BSD-3-clause
+
 Files: Code/GraphMol/Abbreviations/*
  Code/GraphMol/FileParsers/MolSGroupParsing.cpp
  Code/GraphMol/FileParsers/MolSGroupParsing.h
@@ -111,7 +117,6 @@ License: BSD-3-clause
 Files: Code/GraphMol/CIPLabeler/*
  Code/GraphMol/FileParsers/MaeWriter.cpp
  Code/GraphMol/FileParsers/MaestroProperties.h
- Code/GraphMol/Depictor/TemplateSmiles.h
  Code/GraphMol/Depictor/Templates.cpp
  Code/GraphMol/Depictor/Templates.h
  Code/GraphMol/TautomerQuery/TautomerQuery.cpp
@@ -167,12 +172,6 @@ Files: Code/GraphMol/Atropisomers.*
  Code/GraphMol/MarvinParse/MarvinWriter.cpp
  Code/GraphMol/MarvinParse/testMrvToMol.cpp
 Copyright: 2022-2025 Tad Hurst/CDD
-License: BSD-3-clause
-
-Files: Code/GraphMol/MolDraw2D/*
- Code/GraphMol/RascalMCES/*
- Code/GraphMol/catch_organometallics.cpp
-Copyright: 2023 David Cosgrove
 License: BSD-3-clause
 
 Files: Code/GraphMol/Descriptors/OxidationNumbers.*
@@ -264,9 +263,7 @@ Files: Code/RDGeneral/ControlCHandler.h
 Copyright: 2025 David Cosgrove
 License: BSD-3-clause
 
-Files: Code/GraphMol/SmilesParse/main.cpp
- Code/GraphMol/SmilesParse/smamain.cpp
- Code/GraphMol/SmilesParse/smiles.ll
+Files: Code/GraphMol/SmilesParse/smiles.ll
  Code/GraphMol/SmilesParse/smiles.yy
  Code/RDGeneral/Invariant.cpp
  Code/RDGeneral/testDict.cpp
@@ -360,10 +357,6 @@ License: OFL-1.1
 Files: Data/Salts.txt
 Copyright: 2010, Novartis Institutes for BioMedical Research Inc.
 License: BSD-3-clause
-
-Files: Docs/Code/CodingStandards.md
-Copyright: 2015 Greg Landrum
-License: CC-BY-SA-3.0
 
 Files: Docs/Book/BackwardsIncompatibleChanges.md
  Docs/Book/GettingStartedInPython.rst

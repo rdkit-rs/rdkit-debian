@@ -98,3 +98,73 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" release/* --verify-tag \
             --title "RDKit 2026.09.1 for Ubuntu 26.04" --notes-file release-notes.md
+
+  s3-access:
+    if: github.event_name != 'pull_request' && github.repository == 'rdkit-rs/rdkit-debian'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify existing S3 repository access and trust
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
+          AWS_EC2_METADATA_DISABLED: true
+        run: bash scripts/s3-preflight.sh
+
+  publish-s3:
+    if: startsWith(github.ref, 'refs/tags/ubuntu-26.04-rdkit-')
+    needs: [release, s3-access]
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: rdkit-s3-resolute
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          path: artifacts
+          pattern: rdkit-ubuntu26.04-*
+      - name: Assemble verified assets
+        run: |
+          bash scripts/release-assets.sh
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ruby
+      - name: Update existing S3 APT repository
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
+          AWS_EC2_METADATA_DISABLED: true
+        run: bash scripts/publish-s3.sh
+
+  apt-install:
+    needs: publish-s3
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Install the published packages through APT
+        run: |
+          set -o pipefail
+          source sources.lock
+          docker run --rm -v "$PWD:/packaging:ro" "$UBUNTU_IMAGE" \
+            bash /packaging/scripts/test-apt.sh 2>&1 | tee apt-install.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: apt-install-${{ matrix.arch }}
+          path: apt-install.log

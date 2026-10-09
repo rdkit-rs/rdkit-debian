@@ -42,6 +42,8 @@ override_dh_auto_install:
 	install -d debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig
 	sed 's|@MULTIARCH@|$(DEB_HOST_MULTIARCH)|g' debian/rdkit.pc.in > debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/pkgconfig/rdkit.pc
 
+override_dh_dwz:
+
 override_dh_strip:
 	dh_strip --no-automatic-dbgsym
 

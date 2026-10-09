@@ -7,5 +7,5 @@ Name: RDKit
 Description: RDKit C++20 reference libraries for rdkit-rs
 Version: 2026.09.1
 Requires: eigen3
-Libs: -L${libdir} -lRDKitDataStructs -lRDKitDescriptors -lRDKitFileParsers -lRDKitFingerprints -lRDKitGraphMol -lRDKitMolStandardize -lRDKitRDGeneral -lRDKitScaffoldNetwork -lRDKitSmilesParse -lRDKitSubstructMatch -lRDKitRDInchiLib -lboost_serialization -lboost_iostreams
+Libs: -L${libdir} -lRDKitDepictor -lRDKitRDGeometryLib -lRDKitDataStructs -lRDKitDescriptors -lRDKitFileParsers -lRDKitFingerprints -lRDKitGraphMol -lRDKitMolStandardize -lRDKitRDGeneral -lRDKitScaffoldNetwork -lRDKitSmilesParse -lRDKitSubstructMatch -lRDKitRDInchiLib -lboost_serialization -lboost_iostreams
 Cflags: -I${includedir} -std=c++20

@@ -21,10 +21,11 @@ Applications built against the older C++ ABI must be rebuilt.
 
 ## Install and use
 
-Download the files for your architecture from this repository's
+Download and extract the complete bundle for your architecture from this repository's
 [GitHub Actions](https://github.com/rdkit-rs/rdkit-debian/actions/workflows/build.yml)
 artifacts or [releases](https://github.com/rdkit-rs/rdkit-debian/releases),
-including `SHA256SUMS`. Extract an Actions artifact before using it.
+including `SHA256SUMS`. The release `tar.xz` bundles and Actions artifacts include
+all files needed for the checksum command below.
 
 ```bash
 sha256sum --check SHA256SUMS
@@ -38,8 +39,8 @@ c++ consumer.cpp $(pkg-config --cflags --libs rdkit) -o consumer
 ```
 
 Runtime-only deployments need the runtime and data packages. `apt-get install
-./file.deb` resolves dependencies, unlike `dpkg -i` alone. APT indexes, PPA
-publication, archive submission and automatic updates are outside this release.
+./file.deb` resolves dependencies, unlike `dpkg -i` alone. The existing S3 APT repository is also a publication target. PPA publication
+and Ubuntu/Debian archive submission are outside this release.
 
 CMake consumers use `find_package(rdkit CONFIG REQUIRED)` and imported targets
 such as `RDKit::SmilesParse`; compile consumers as C++20. Rust bridge builds must
@@ -107,7 +108,7 @@ file coupling, QEMU overhead and S3 repository publication. The useful principle
 remain: isolate builds, keep dependency resolution real, learn from Debichem,
 build publishable binaries in auditable CI and prefer native architectures.
 The reference follows those principles with fewer components and existing free
-native GitHub runners. It does not require the old AWS publishing credentials.
+native GitHub runners. S3 publication reuses the repository's existing AWS credential references.
 
 ## Licensing and maintenance
 
@@ -126,3 +127,31 @@ image pins, adapting the small CMake patch, reviewing bundled licenses, rerunnin
 the native CI matrix and updating Rust consumer tests when the bindings change.
 The package does not promise ABI stability across RDKit release series. A future
 series needs its own runtime package and SONAME before publication.
+
+## Existing S3 APT repository
+
+The verified repository is `rdkit-rs-debian` in `eu-central-1`, defined by the
+project's existing Terraform and historical tutorial. CI adds the `resolute/main`
+suite at <https://rdkit-rs-debian.s3.eu-central-1.amazonaws.com>. Publication uses
+the existing `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` GitHub secret
+references. It preserves existing package versions and the Jammy suite; it never
+uses bucket synchronization with deletion or changes bucket security settings.
+
+The historical repository uses unsigned Release metadata and `trusted=yes`.
+This is the existing trust model: HTTPS protects transport, but APT does not
+verify a repository signature. CI checks the authenticated bucket listing and
+stops if signed metadata exists, rather than replacing it with unsigned metadata.
+No new signing key is created. To use that existing trust model after publication:
+
+```bash
+echo "deb [arch=$(dpkg --print-architecture) trusted=yes] https://rdkit-rs-debian.s3.eu-central-1.amazonaws.com resolute main" | sudo tee /etc/apt/sources.list.d/rdkit-rs.list
+sudo apt-get update
+sudo apt-get install librdkit-rs-dev=2026.09.1-1~ubuntu26.04
+```
+
+A single CI publication job serializes updates to this suite, uses pinned
+`deb-s3` with version preservation and refuses different bytes for an existing
+package filename. Post-publication jobs download and install through APT on both
+native architectures, and independently verify downloaded package hashes against
+the tested release assets. Source/provenance bundles are retained under
+`releases/<release-tag>/` in the same bucket and on the GitHub release.

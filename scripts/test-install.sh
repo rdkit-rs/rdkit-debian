@@ -4,7 +4,7 @@ source /etc/os-release
 [[ "$ID" == ubuntu && "$VERSION_ID" == 26.04 ]]
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y --no-install-recommends librdkit1t64 /out/rdkit-rs-data_*.deb /out/librdkit-rs202609_*.deb
+apt-get install -y --no-install-recommends /out/rdkit-rs-data_*.deb /out/librdkit-rs202609_*.deb
 multiarch=$(dpkg --print-architecture)
 case "$multiarch" in
     amd64) triplet=x86_64-linux-gnu ;;
@@ -15,7 +15,7 @@ for lib in /usr/lib/"$triplet"/libRDKit*.so.2026.09; do
     ldd -r "$lib" > /tmp/rdkit-ldd.txt 2>&1
     if grep -E 'not found|undefined symbol' /tmp/rdkit-ldd.txt; then exit 1; fi
 done
-apt-get install -y --no-install-recommends /out/librdkit-rs-dev_*.deb g++ cmake pkg-config cargo
+apt-get install -y --no-install-recommends librdkit1t64 /out/librdkit-rs-dev_*.deb g++ cmake pkgconf cargo
 [[ $(pkg-config --modversion rdkit) == 2026.09.1 ]]
 export RDBASE=$(pkg-config --variable=rdbase rdkit)
 test -f "$RDBASE/Data/BaseFeatures.fdef"
