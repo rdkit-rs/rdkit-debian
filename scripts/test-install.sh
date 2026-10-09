@@ -15,7 +15,7 @@ for lib in /usr/lib/"$triplet"/libRDKit*.so.2026.09; do
     ldd -r "$lib" > /tmp/rdkit-ldd.txt 2>&1
     if grep -E 'not found|undefined symbol' /tmp/rdkit-ldd.txt; then exit 1; fi
 done
-apt-get install -y --no-install-recommends librdkit1t64 /out/librdkit-rs-dev_*.deb g++ cmake pkgconf cargo
+apt-get install -y --no-install-recommends librdkit1t64 /out/librdkit-rs-dev_*.deb g++ cmake make pkgconf cargo
 [[ $(pkg-config --modversion rdkit) == 2026.09.1 ]]
 export RDBASE=$(pkg-config --variable=rdbase rdkit)
 test -f "$RDBASE/Data/BaseFeatures.fdef"

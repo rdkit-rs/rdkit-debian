@@ -108,7 +108,7 @@ file coupling, QEMU overhead and S3 repository publication. The useful principle
 remain: isolate builds, keep dependency resolution real, learn from Debichem,
 build publishable binaries in auditable CI and prefer native architectures.
 The reference follows those principles with fewer components and existing free
-native GitHub runners. S3 publication reuses the repository's existing AWS credential references.
+native GitHub runners. S3 publication reuses the repository's existing GitHub OIDC publishing role.
 
 ## Licensing and maintenance
 
@@ -133,8 +133,10 @@ series needs its own runtime package and SONAME before publication.
 The verified repository is `rdkit-rs-debian` in `eu-central-1`, defined by the
 project's existing Terraform and historical tutorial. CI adds the `resolute/main`
 suite at <https://rdkit-rs-debian.s3.eu-central-1.amazonaws.com>. Publication uses
-the existing `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` GitHub secret
-references. It preserves existing package versions and the Jammy suite; it never
+the existing `gha-rdkit-debian` OIDC role, verified in the historical
+[`build-debs.yml`](https://github.com/rdkit-rs/rdkit-debian/blob/ca2f64008ec49831d1e62891b10745301d6efd6d/.github/workflows/build-debs.yml)
+and project Terraform. The newer Bookworm workflow's static-key references were
+empty in the live CI check; no new key or IAM policy is created. It preserves existing package versions and the Jammy suite; it never
 uses bucket synchronization with deletion or changes bucket security settings.
 
 The historical repository uses unsigned Release metadata and `trusted=yes`.

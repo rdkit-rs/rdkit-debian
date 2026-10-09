@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-: "${AWS_ACCESS_KEY_ID:?Existing repository AWS_ACCESS_KEY_ID secret is unavailable}"
-: "${AWS_SECRET_ACCESS_KEY:?Existing repository AWS_SECRET_ACCESS_KEY secret is unavailable}"
+: "${AWS_ACCESS_KEY_ID:?Existing S3 publishing role did not provide credentials}"
+: "${AWS_SECRET_ACCESS_KEY:?Existing S3 publishing role did not provide credentials}"
 [[ $(aws s3api get-bucket-location --bucket rdkit-rs-debian --query LocationConstraint --output text) == eu-central-1 ]]
 aws s3api head-object --bucket rdkit-rs-debian --key dists/jammy/Release > /tmp/jammy-head.json
 for suite in jammy resolute; do

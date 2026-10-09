@@ -103,14 +103,24 @@ jobs:
   s3-access:
     if: github.event_name != 'pull_request' && github.repository == 'rdkit-rs/rdkit-debian'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Use the existing S3 publishing role
+        uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100
+        with:
+          role-to-assume: arn:aws:iam::989722935798:role/gha-rdkit-debian
+          role-session-name: rdkit-reference-${{ github.run_id }}
+          aws-region: eu-central-1
+          allowed-account-ids: 989722935798
+          mask-aws-account-id: true
+          retry-max-attempts: 2
       - name: Verify existing S3 repository access and trust
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: eu-central-1
           AWS_EC2_METADATA_DISABLED: true
         run: bash scripts/s3-preflight.sh
@@ -119,6 +129,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/ubuntu-26.04-rdkit-')
     needs: [release, s3-access]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
     concurrency:
       group: rdkit-s3-resolute
       cancel-in-progress: false
@@ -135,10 +148,17 @@ jobs:
           bash scripts/release-assets.sh
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ruby
+      - name: Use the existing S3 publishing role
+        uses: aws-actions/configure-aws-credentials@cabfdba3510de1431bac9dba27511d97497fc100
+        with:
+          role-to-assume: arn:aws:iam::989722935798:role/gha-rdkit-debian
+          role-session-name: rdkit-reference-${{ github.run_id }}
+          aws-region: eu-central-1
+          allowed-account-ids: 989722935798
+          mask-aws-account-id: true
+          retry-max-attempts: 2
       - name: Update existing S3 APT repository
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: eu-central-1
           AWS_EC2_METADATA_DISABLED: true
         run: bash scripts/publish-s3.sh
