@@ -26,6 +26,9 @@ Download and extract the complete bundle for your architecture from this reposit
 artifacts or [releases](https://github.com/rdkit-rs/rdkit-debian/releases),
 including `SHA256SUMS`. The release `tar.xz` bundles and Actions artifacts include
 all files needed for the checksum command below.
+Prefer those bundles when checking the included manifest: GitHub changes `~`
+to `.` in standalone asset filenames, while the bundles preserve Debian's
+original filenames. The package's embedded version retains `~` in either case.
 
 ```bash
 sha256sum --check SHA256SUMS
@@ -164,3 +167,6 @@ package filename. Post-publication jobs download and install through APT on both
 native architectures, and independently verify downloaded package hashes against
 the tested release assets. Source/provenance bundles are retained under
 `releases/<release-tag>/` in the same bucket and on the GitHub release.
+The `Verify published RDKit reference` workflow can repeat download, checksum
+and native APT installation checks without writing to the release or bucket.
+Its bundle hashes and build ref identify the published baseline explicitly.

@@ -1,0 +1,68 @@
+name: Verify published RDKit reference
+
+on:
+  push:
+    paths:
+      - .github/workflows/verify-published.yml
+      - scripts/verify-s3.py
+      - scripts/test-apt.sh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            bundle_sha256: 70899595de95f2e094c4398fe0e7ff41980d6d8fb3ede9936b643fadb3235783
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            bundle_sha256: 3e4c8a47f3fd73ffc24ec380d24d8ccdc60081fb0bcbd8be1259de4c4eebd740
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    env:
+      RELEASE_TAG: ubuntu-26.04-rdkit-2026.09.1-1
+      BUILD_COMMIT: 0656aade78d3709900552193cee0506c19f96223
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify the published source and binary bundle
+        run: |
+          archive=rdkit-2026.09.1-ubuntu26.04-${{ matrix.arch }}.tar.xz
+          curl --fail --location --retry 3 \
+            "https://github.com/rdkit-rs/rdkit-debian/releases/download/$RELEASE_TAG/$archive" -o bundle.tar.xz
+          printf '%s  bundle.tar.xz\n' '${{ matrix.bundle_sha256 }}' | sha256sum --check --strict
+          mkdir release
+          tar -xJf bundle.tar.xz -C release
+          (cd release && sha256sum --check SHA256SUMS)
+          python3 - <<'PY'
+          import json
+          import os
+          with open('release/provenance.json') as handle:
+              provenance = json.load(handle)
+          assert provenance['packaging_commit'] == os.environ['BUILD_COMMIT']
+          assert provenance['architecture'] == '${{ matrix.arch }}'
+          assert provenance['version'] == '2026.09.1+ds1-1~ubuntu26.04'
+          PY
+      - name: Verify public S3 package bytes against the release
+        run: |
+          set -o pipefail
+          python3 scripts/verify-s3.py release '${{ matrix.arch }}' | tee s3-hashes.log
+      - name: Install through the published APT index
+        run: |
+          set -o pipefail
+          image=$(bash scripts/prepare-image.sh)
+          docker run --rm -v "$PWD:/packaging:ro" "$image" \
+            bash /packaging/scripts/test-apt.sh 2>&1 | tee apt-install.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: published-verification-${{ matrix.arch }}
+          path: '*.log'
+          if-no-files-found: error

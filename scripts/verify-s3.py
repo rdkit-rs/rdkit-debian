@@ -1,11 +1,12 @@
 import hashlib
 import pathlib
 import sys
+import urllib.parse
 import urllib.request
 
 base = 'https://rdkit-rs-debian.s3.eu-central-1.amazonaws.com/'
 assets = pathlib.Path(sys.argv[1])
-for architecture in ('amd64', 'arm64'):
+for architecture in sys.argv[2:] or ('amd64', 'arm64'):
     url = f'{base}dists/resolute/main/binary-{architecture}/Packages'
     index = urllib.request.urlopen(url).read().decode()
     records = {}
@@ -19,9 +20,10 @@ for architecture in ('amd64', 'arm64'):
         assert fields['Architecture'] == expected_arch
         filename = fields['Filename']
         assert filename.startswith('pool/') and '..' not in filename
-        with urllib.request.urlopen(base + filename) as response:
+        download_url = base + urllib.parse.quote(filename, safe='/')
+        with urllib.request.urlopen(download_url) as response:
             digest = hashlib.file_digest(response, 'sha256').hexdigest()
         assert digest == fields['SHA256']
         with (assets / pathlib.PurePosixPath(filename).name).open('rb') as handle:
             assert digest == hashlib.file_digest(handle, 'sha256').hexdigest()
-        print(name, fields['Version'], expected_arch, digest, base + filename)
+        print(name, fields['Version'], expected_arch, digest, download_url)
