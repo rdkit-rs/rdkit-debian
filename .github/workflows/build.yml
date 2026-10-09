@@ -3,7 +3,7 @@ name: RDKit Ubuntu 26.04 reference
 on:
   push:
     branches:
-      - codex/ubuntu-26.04-rdkit-2026.09
+      - "**"
     tags:
       - ubuntu-26.04-rdkit-2026.09.1-*
   pull_request:
@@ -14,10 +14,11 @@ permissions:
 
 concurrency:
   group: rdkit-reference-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   build-test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     strategy:
       fail-fast: false
       matrix:
