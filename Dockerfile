@@ -1,26 +1,12 @@
-FROM debian:bookworm
-
-ARG RDKIT_TAG
-ARG BUILD_NUMBER
-
+ARG UBUNTU_IMAGE=ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
+FROM ${UBUNTU_IMAGE}
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
-    curl \
-    ca-certificates \
-    libeigen3-dev \
-    libboost-all-dev \
-    rapidjson-dev \
+    build-essential cmake ninja-build debhelper pkgconf \
+    libboost-dev libboost-serialization-dev libboost-iostreams-dev \
+    libboost-program-options-dev libeigen3-dev libinchi-dev catch2 \
+    ca-certificates curl git lintian python3 file \
     && rm -rf /var/lib/apt/lists/*
-
-# Install nfpm
-RUN curl -sfL https://github.com/goreleaser/nfpm/releases/download/v2.46.0/nfpm_2.46.0_$(dpkg --print-architecture).deb -o /tmp/nfpm.deb \
-    && dpkg -i /tmp/nfpm.deb \
-    && rm /tmp/nfpm.deb
-
-WORKDIR /work
-COPY nfpm-lib.yaml nfpm-dev.yaml rdkit.pc.in build.sh ./
-
-RUN test -n "$RDKIT_TAG" || (echo "ERROR: RDKIT_TAG is required (e.g. --build-arg RDKIT_TAG=Release_2026_03_1)" && exit 1)
-RUN test -n "$BUILD_NUMBER" || (echo "ERROR: BUILD_NUMBER is required (e.g. --build-arg BUILD_NUMBER=1)" && exit 1)
-RUN ./build.sh "$RDKIT_TAG" "$BUILD_NUMBER"
+WORKDIR /packaging
+COPY . .
+CMD ["./build.sh"]

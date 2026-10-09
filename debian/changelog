@@ -1,0 +1,7 @@
+rdkit-rs (2026.09.1+ds1-1~ubuntu26.04) resolute; urgency=medium
+
+  * Package pinned RDKit 2026.09.1 for Ubuntu 26.04 on amd64 and arm64.
+  * Generate runtime dependencies and use release-specific library SONAMEs.
+  * Ship development metadata, versioned data, source and build provenance.
+
+ -- rdkit-rs <xrlange@gmail.com>  Fri, 09 Oct 2026 20:00:00 +0000

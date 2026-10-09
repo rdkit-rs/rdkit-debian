@@ -1,105 +1,172 @@
-# rdkit-debian
+# RDKit reference packages for Ubuntu 26.04
 
-Debian packages of the RDKit C++ libraries for the [rdkit-rs](https://github.com/rdkit-rs) project. Produces `.deb` packages with shared libraries, headers, and pkg-config files pinned to specific RDKit releases.
-
-## Packages
+This repository packages upstream **RDKit 2026.09.1** for Ubuntu 26.04 LTS
+(Resolute), using native AMD64 and ARM64 GitHub runners. Ubuntu's archive ships
+RDKit `202503.6-4`; these packages build newer upstream source. They are project
+reference builds, not Ubuntu archive packages.
 
 | Package | Contents |
-|---------|----------|
-| `librdkit-rs` | RDKit shared libraries (`.so` files) |
-| `librdkit-rs-dev` | C++ headers and `rdkit.pc` pkg-config file |
+| --- | --- |
+| `librdkit-rs202609` | C++ shared libraries with SONAME `2026.09` |
+| `librdkit-rs-dev` | Installed C++ headers, linker symlinks, CMake targets and `rdkit.pc` |
+| `rdkit-rs-data` | Data under `/usr/share/rdkit-rs/2026.09/Data` |
 
-## Supported Platforms
+The package version is `2026.09.1+ds1-1~ubuntu26.04`. Development packages depend on
+exactly matching runtime packages; runtime dependencies are calculated from ELF
+objects by `dpkg-shlibdeps`, including Ubuntu's Boost and InChI libraries.
+The development package conflicts with Ubuntu's `librdkit-dev` and the old
+`librdkit-rs` bundle because they own the same headers or linker symlinks.
+The versioned runtime and data can coexist with Ubuntu's runtime and data.
+Applications built against the older C++ ABI must be rebuilt.
 
-| Distro | Boost | Architectures |
-|--------|-------|---------------|
-| Debian 12 (Bookworm) | 1.74 | amd64, arm64 |
+## Install and use
 
-We standardize on Debian Bookworm to match [Quickwit's](https://quickwit.io) build and runtime images (`rust:bookworm` / `debian:bookworm-slim`).
-
-## Usage
-
-Download the `.deb` files from the [latest release](https://github.com/rdkit-rs/rdkit-debian/releases) and install:
-
-```bash
-# Runtime only (e.g. in a Docker image)
-dpkg -i librdkit-rs_*.deb
-apt-get install -f  # install missing dependencies
-
-# For building rdkit-sys (headers + pkg-config)
-dpkg -i librdkit-rs_*.deb librdkit-rs-dev_*.deb
-apt-get install -f
-```
-
-Verify pkg-config works:
+Download and extract the complete bundle for your architecture from this repository's
+[GitHub Actions](https://github.com/rdkit-rs/rdkit-debian/actions/workflows/build.yml)
+artifacts or [releases](https://github.com/rdkit-rs/rdkit-debian/releases),
+including `SHA256SUMS`. The release `tar.xz` bundles and Actions artifacts include
+all files needed for the checksum command below.
+Prefer those bundles when checking the included manifest: GitHub changes `~`
+to `.` in standalone asset filenames, while the bundles preserve Debian's
+original filenames. The package's embedded version retains `~` in either case.
 
 ```bash
-pkg-config --cflags --libs rdkit
+sha256sum --check SHA256SUMS
+sudo apt-get update
+sudo apt-get install ./rdkit-rs-data_2026.09.1+ds1-1~ubuntu26.04_all.deb \
+  ./librdkit-rs202609_2026.09.1+ds1-1~ubuntu26.04_$(dpkg --print-architecture).deb \
+  ./librdkit-rs-dev_2026.09.1+ds1-1~ubuntu26.04_$(dpkg --print-architecture).deb
+pkg-config --modversion rdkit
+export RDBASE=$(pkg-config --variable=rdbase rdkit)
+c++ consumer.cpp $(pkg-config --cflags --libs rdkit) -o consumer
 ```
 
-## Building a New Release
+Runtime-only deployments need the runtime and data packages. `apt-get install
+./file.deb` resolves dependencies, unlike `dpkg -i` alone. The existing S3 APT repository is also a publication target. PPA publication
+and Ubuntu/Debian archive submission are outside this release.
 
-Trigger the workflow manually from the Actions tab, providing the RDKit release tag:
+CMake consumers use `find_package(rdkit CONFIG REQUIRED)` and imported targets
+such as `RDKit::SmilesParse`; compile consumers as C++20. Rust bridge builds must
+also use C++20 and discover include/link flags through `pkg-config rdkit`.
+Upstream 2026.09 changes C++ interfaces, so a working package does not establish
+compatibility with every released Rust binding version. The included Rust fixture
+compiles a C++ bridge from the installed package and executes it through Cargo;
+it is not the full `rdkit-rs/rdkit` regression suite.
 
-```
-RDKit release tag: Release_2024_09_1
-```
+## Build and verify
 
-The workflow builds RDKit from source inside a `debian:bookworm` container for both amd64 and arm64, packages the results with [nfpm](https://nfpm.goreleaser.com/), and uploads `.deb` artifacts.
+`make build` builds in the digest-pinned Ubuntu 26.04 image and writes packages,
+Debian source packages, `.buildinfo`, `.changes`, dependency versions, copyright,
+provenance and checksums to `dist/`. `make check` installs them into a fresh image
+and tests C++ pkg-config/CMake linkage, molecular operations, data loading and
+Rust linkage. The local container host architecture determines the build;
+ARM64 CI uses `ubuntu-24.04-arm`, and AMD64 CI uses `ubuntu-24.04`. Host runner
+versions do not determine the package's target OS.
+The base image is pulled before compilation and reused for the clean install.
+Docker's official ECR mirror provides the same pinned digest if Docker Hub's
+anonymous pull limit is reached; this does not require registry credentials.
 
-## CMake Configuration
+CI builds from the checked-out commit, pins action revisions, checks packages
+with Lintian and metadata/ELF assertions, then installs in a separate clean
+Ubuntu 26.04 container. The compile stage runs without network after verified
+sources and dependencies have been fetched. The release job only publishes
+after both native architectures pass. Its tag identifies the explicit committed
+packaging ref. Source PRs do not need to be merged to run the branch workflow.
 
-We build RDKit with a minimal C++-only configuration:
+`sources.lock` records the upstream tag, commit, archive checksums, dependency
+sources and container digest. `build-packages.tsv` and `.buildinfo` record the
+actual APT toolchain. APT repositories can change: this is a pinned source and
+base-image build, **not a claim of measured byte reproducibility**. Rebuilding
+an upstream version requires a packaging revision bump, refreshed checksums,
+review of the patches, licenses and tested dependency versions.
+
+## Scope and packaging choices
+
+The existing project recipe targeted Debian Bookworm with nfpm. Its manually
+copied headers, hard-coded Boost dependency and unversioned RDKit ABI were
+insufficient for a newer Ubuntu reference. This recipe uses a small debhelper
+source package: CMake performs installation, Debian generates shared-library
+dependencies and `ldconfig` triggers, and `dh_missing` rejects unassigned files.
+
+RDKit's upstream `.so.1` does not distinguish these C++ releases. The packaging
+patch gives this release series `.so.2026.09`, fixes CMake's prefix calculation
+for multiarch library directories, uses versioned data, and adapts the InChI
+version helper to Ubuntu's public system headers. No chemical algorithms are
+changed by packaging. Upstream's mandatory RingDecomposerLib source performs its
+own stable-sort adaptation at configure time; the full dependency source is
+included in the source package.
+
+C++ support includes thread-safe substructure search, molecular standardization,
+fingerprints, descriptors and system InChI, which the previous recipe enabled.
+Python, Java, PostgreSQL, static libraries, graphics integrations, ChemDraw,
+PubChem shape, CoordGen, MaeParser and FreeSASA are disabled. They are not required
+by this reference's Rust use. Generic CPU flags avoid assuming the build runner's
+instruction set. The complete upstream C++ test suite is not run; focused
+installed-package tests establish this package's narrower contract.
+
+## Lessons from the original write-up
+
+The original [Forking a Debian Package article](https://github.com/rdkit-rs/rdkit-rs.github.io/blob/1d3778e6747e370bf628cbe6792b5e2dcf6945f4/content/tutorials/forking-a-debian-package.md)
+was removed from the current site during its redesign; it remains in site history.
+It describes Jammy's frozen RDKit, `gbp` and pristine-tar conventions, host versus
+chroot dependency confusion, missing universe packages, PostgreSQL 14/15 control
+file coupling, QEMU overhead and S3 repository publication. The useful principles
+remain: isolate builds, keep dependency resolution real, learn from Debichem,
+build publishable binaries in auditable CI and prefer native architectures.
+The reference follows those principles with fewer components and existing free
+native GitHub runners. S3 publication reuses the repository's existing GitHub OIDC publishing role.
+
+## Licensing and maintenance
+
+The Debian copyright inventory is adapted from Ubuntu's `202503.6-4` source
+packaging, with notices for the pinned RingDecomposerLib (BSD-3-Clause) and
+Better Enums (BSD-2-Clause). Original license texts accompany each binary package;
+upstream data retains its own notices. RDKit is predominantly BSD-3-Clause but
+contains other permissively licensed code and generated parsers with Bison's
+exception. Do not describe the entire source archive as one license.
+The `+ds1` source repack removes `Data/Fonts/Amadeus.ttf`: its accompanying
+upstream notice states that the font arrived without an explicit license.
+The upstream download and repacked source each have a pinned SHA-256. No fonts
+are installed in this C++ reference's binary data package; FreeType is disabled.
+The repacked RDKit source, both dependency source archives and the packaging/patch
+archive accompany binaries, alongside their `.dsc` and hashes. System dependencies retain their
+Ubuntu package licensing; they are not silently bundled into the RDKit package.
+
+Maintenance consists of checking upstream C++/ABI changes, refreshing source and
+image pins, adapting the small CMake patch, reviewing bundled licenses, rerunning
+the native CI matrix and updating Rust consumer tests when the bindings change.
+The package does not promise ABI stability across RDKit release series. A future
+series needs its own runtime package and SONAME before publication.
+
+## Existing S3 APT repository
+
+The verified repository is `rdkit-rs-debian` in `eu-central-1`, defined by the
+project's existing Terraform and historical tutorial. CI adds the `resolute/main`
+suite at <https://rdkit-rs-debian.s3.eu-central-1.amazonaws.com>. Publication uses
+the existing `gha-rdkit-debian` OIDC role, verified in the historical
+[`build-debs.yml`](https://github.com/rdkit-rs/rdkit-debian/blob/ca2f64008ec49831d1e62891b10745301d6efd6d/.github/workflows/build-debs.yml)
+and project Terraform. The newer Bookworm workflow's static-key references were
+empty in the live CI check; no new key or IAM policy is created. It preserves existing package versions and the Jammy suite; it never
+uses bucket synchronization with deletion or changes bucket security settings.
+
+The historical repository uses unsigned Release metadata and `trusted=yes`.
+This is the existing trust model: HTTPS protects transport, but APT does not
+verify a repository signature. CI checks the authenticated bucket listing and
+stops if signed metadata exists, rather than replacing it with unsigned metadata.
+No new signing key is created. To use that existing trust model after publication:
 
 ```bash
-cmake .. \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=/usr \
-  -DCMAKE_SKIP_RPATH=ON \
-  -DRDK_BUILD_PYTHON_WRAPPERS=OFF \
-  -DRDK_BUILD_JAVA_WRAPPERS=OFF \
-  -DRDK_BUILD_CAIRO_SUPPORT=OFF \
-  -DRDK_BUILD_PGSQL=OFF \
-  -DRDK_INSTALL_INTREE=OFF \
-  -DRDK_BUILD_INCHI_SUPPORT=ON \
-  -DRDK_BUILD_THREADSAFE_SSS=ON \
-  -DRDK_BUILD_COORDGEN_SUPPORT=OFF \
-  -DRDK_BUILD_MAEPARSER_SUPPORT=OFF \
-  -DRDK_BUILD_FREESASA_SUPPORT=OFF \
-  -DRDK_BUILD_CPP_TESTS=OFF
+echo "deb [arch=$(dpkg --print-architecture) trusted=yes] https://rdkit-rs-debian.s3.eu-central-1.amazonaws.com resolute main" | sudo tee /etc/apt/sources.list.d/rdkit-rs.list
+sudo apt-get update
+sudo apt-get install librdkit-rs-dev=2026.09.1+ds1-1~ubuntu26.04
 ```
 
-Key flags:
-- **`RDK_BUILD_THREADSAFE_SSS=ON`** — Critical for rdkit-rs, which uses rayon for parallel substructure search
-- **`CMAKE_SKIP_RPATH=ON`** — Makes libraries relocatable for packaging
-- **Coordgen/maeparser/freesasa disabled** — Avoids build-time downloads from GitHub and we don't wrap these in our CXX bindings
-
-## Prior Art: Debian's Official RDKit Packages
-
-The Debian debichem team maintains official RDKit packages at
-[salsa.debian.org/debichem-team/rdkit](https://salsa.debian.org/debichem-team/rdkit).
-They ship 6 binary packages (`python3-rdkit`, `rdkit-doc`, `rdkit-data`,
-`librdkit1t64`, `librdkit-dev`, `postgresql-18-rdkit`) and maintain 14 patches
-on top of upstream RDKit.
-
-**Why we don't use theirs:**
-
-- Debian/Ubuntu pin a single RDKit version per release (e.g. Ubuntu Jammy ships
-  RDKit 202109). Our `rdkit-sys` CXX bindings are tightly coupled to specific
-  RDKit C++ headers and we need to track upstream releases closely.
-- Their packages include Python bindings, PostgreSQL cartridge, and documentation
-  that we don't need. We only need the C++ shared libraries and headers.
-- We need builds for architectures and distro versions on our timeline, not
-  Debian's release cadence.
-
-**What we learned from their packaging:**
-
-- **Disable build-time downloads.** RDKit's CMake fetches dependencies at build
-  time (coordgen, maeparser, Better Enums, RapidJSON). Debian patches these out
-  for reproducibility. We disable the features that trigger downloads via CMake
-  flags (`-DRDK_BUILD_COORDGEN_SUPPORT=OFF`, etc.) instead of maintaining patches.
-- **Enable thread-safe substructure search.** `-DRDK_BUILD_THREADSAFE_SSS=ON` is
-  critical — our Rust code runs parallel substructure searches via rayon.
-- **Skip RPATH.** `-DCMAKE_SKIP_RPATH=ON` makes libraries relocatable for packaging.
-- **InChI linking.** Depending on RDKit version, the InChI CMake variable name
-  may need fixing (`INCHI_LIBRARIES` -> `INCHI_LIBRARY`). Test and patch if needed.
+A single CI publication job serializes updates to this suite, uses pinned
+`deb-s3` with version preservation and refuses different bytes for an existing
+package filename. Post-publication jobs download and install through APT on both
+native architectures, and independently verify downloaded package hashes against
+the tested release assets. Source/provenance bundles are retained under
+`releases/<release-tag>/` in the same bucket and on the GitHub release.
+The `Verify published RDKit reference` workflow can repeat download, checksum
+and native APT installation checks without writing to the release or bucket.
+Its bundle hashes and build ref identify the published baseline explicitly.

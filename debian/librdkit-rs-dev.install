@@ -1,0 +1,4 @@
+usr/include/rdkit
+usr/lib/*/libRDKit*.so
+usr/lib/*/cmake/rdkit
+usr/lib/*/pkgconfig/rdkit.pc

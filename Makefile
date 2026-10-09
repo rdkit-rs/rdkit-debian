@@ -1,23 +1,11 @@
+SHELL := /bin/bash
+
 build:
-ifndef RDKIT_TAG
-	$(error RDKIT_TAG is required (e.g. make build RDKIT_TAG=Release_2026_03_1 BUILD_NUMBER=1))
-endif
-ifndef BUILD_NUMBER
-	$(error BUILD_NUMBER is required (e.g. make build RDKIT_TAG=Release_2026_03_1 BUILD_NUMBER=1))
-endif
-	docker build --build-arg RDKIT_TAG=$(RDKIT_TAG) --build-arg BUILD_NUMBER=$(BUILD_NUMBER) -t rdkit-debian-build .
+	docker build --build-arg UBUNTU_IMAGE="$$(bash scripts/prepare-image.sh)" -t rdkit-resolute-builder .
+	mkdir -p dist
+	docker run --rm -e PACKAGING_COMMIT=$$(git rev-parse HEAD) -v "$(CURDIR)/dist:/out" rdkit-resolute-builder
 
-extract: build
-	docker create --name rdkit-deb-extract rdkit-debian-build true 2>/dev/null || true
-	docker cp rdkit-deb-extract:/work/librdkit-rs_*.deb .
-	docker cp rdkit-deb-extract:/work/librdkit-rs-dev_*.deb .
-	docker rm rdkit-deb-extract
-	@echo ""
-	@echo "Extracted packages:"
-	@ls -lh *.deb
+check:
+	docker run --rm -v "$(CURDIR):/packaging:ro" -v "$(CURDIR)/dist:/out" "$$(bash scripts/prepare-image.sh)" bash /packaging/scripts/test-install.sh
 
-clean:
-	rm -f *.deb
-	docker rm rdkit-deb-extract 2>/dev/null || true
-
-.PHONY: build extract clean
+.PHONY: build check
